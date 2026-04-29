@@ -1,20 +1,24 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { HomePage } from './pages/HomePage';
+import { TournamentsPage } from './pages/TournamentsPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-dark-900 flex flex-col">
         <Navbar />
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<div className="py-20 text-center">Home - Coming Soon</div>} />
-            <Route path="/tournaments" element={<div className="py-20 text-center">Tournaments - Coming Soon</div>} />
-            <Route path="/teams" element={<div className="py-20 text-center">Teams - Coming Soon</div>} />
-            <Route path="/about" element={<div className="py-20 text-center">About - Coming Soon</div>} />
-            <Route path="/login" element={<div className="py-20 text-center">Login - Coming Soon</div>} />
-            <Route path="/register" element={<div className="py-20 text-center">Register - Coming Soon</div>} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/tournaments" element={<TournamentsPage />} />
+            <Route path="/teams" element={<div className="pt-32 pb-20 text-center text-white">Teams - Coming Soon</div>} />
+            <Route path="/about" element={<div className="pt-32 pb-20 text-center text-white">About - Coming Soon</div>} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Routes>
         </main>
         <Footer />
