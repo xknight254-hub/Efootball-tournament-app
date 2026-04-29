@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api, Tournament, Match, Participant, isAuthenticated } from '../api';
+import { api, Tournament, Match, Participant, isAuthenticated, getCurrentUser } from '../api';
+import { socketService } from '../services/socket';
 
 export function TournamentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,10 @@ export function TournamentDetailPage() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'bracket' | 'participants' | 'chat'>('overview');
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatConnected, setChatConnected] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -44,6 +49,35 @@ export function TournamentDetailPage() {
     
     loadData();
   }, [tournamentId]);
+
+  useEffect(() => {
+    if (activeTab === 'chat' && isAuthenticated()) {
+      socketService.connect(tournamentId);
+      
+      const unsubMessage = socketService.onMessage((data) => {
+        setChatMessages(prev => [...prev, data]);
+      });
+      
+      const unsubConnect = socketService.onConnectionChange(setChatConnected);
+      
+      return () => {
+        unsubMessage();
+        unsubConnect();
+        socketService.disconnect();
+      };
+    }
+  }, [activeTab, tournamentId]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+    socketService.sendMessage(chatMessage);
+    setChatMessage('');
+  };
 
   const handleJoin = async () => {
     if (!isAuthenticated()) return;
@@ -293,7 +327,12 @@ export function TournamentDetailPage() {
         
         {activeTab === 'chat' && (
           <div className="glass-card-dark p-6 h-[500px] flex flex-col">
-            <h3 className="text-xl font-semibold text-white mb-4">Tournament Chat</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">Tournament Chat</h3>
+              {chatConnected && (
+                <span className="text-xs text-green-400">● Connected</span>
+              )}
+            </div>
             {!isAuthenticated() ? (
               <div className="flex-grow flex items-center justify-center">
                 <div className="text-center">
@@ -305,21 +344,41 @@ export function TournamentDetailPage() {
               </div>
             ) : (
               <>
-                <div className="flex-grow bg-dark-800/50 rounded-xl p-4 mb-4 overflow-y-auto">
-                  <div className="text-center text-gray-500 text-sm">
-                    Chat messages will appear here in real-time
-                  </div>
+                <div className="flex-grow bg-dark-800/50 rounded-xl p-4 mb-4 overflow-y-auto space-y-3">
+                  {chatMessages.length === 0 ? (
+                    <div className="text-center text-gray-500 text-sm">
+                      No messages yet. Start the conversation!
+                    </div>
+                  ) : (
+                    chatMessages.map((msg) => {
+                      const currentUser = getCurrentUser();
+                      const isOwn = msg.senderId === currentUser?.id;
+                      return (
+                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[70%] rounded-lg px-3 py-2 ${
+                            isOwn ? 'bg-primary/30 text-white' : 'bg-dark-700 text-gray-200'
+                          }`}>
+                            <div className="text-xs text-gray-400 mb-1">{msg.senderUsername}</div>
+                            <div>{msg.message}</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={chatEndRef} />
                 </div>
-                <div className="flex gap-2">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
                   <input
                     type="text"
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
                     placeholder="Type a message..."
                     className="flex-grow px-4 py-3 rounded-xl bg-dark-800 border border-dark-600 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
                   />
-                  <button className="btn-glow px-6 py-3 rounded-xl text-white font-medium">
+                  <button type="submit" className="btn-glow px-6 py-3 rounded-xl text-white font-medium">
                     Send
                   </button>
-                </div>
+                </form>
               </>
             )}
           </div>
