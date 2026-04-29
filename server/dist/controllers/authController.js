@@ -1,13 +1,32 @@
 import bcrypt from 'bcryptjs';
 import db from '../db.js';
 import { generateToken } from '../middleware/auth.js';
+import { sanitizeUsername, sanitizeEmail } from '../utils/sanitize.js';
 export async function register(req, res) {
-    const { username, email, password, firstName, lastName } = req.body;
+    const rawUsername = req.body.username;
+    const rawEmail = req.body.email;
+    const password = req.body.password;
+    const firstName = req.body.firstName;
+    const lastName = req.body.lastName;
+    const username = sanitizeUsername(rawUsername);
+    const email = sanitizeEmail(rawEmail);
     if (!username || !email || !password) {
         return res.status(400).json({ error: 'Username, email, and password are required' });
     }
-    if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (username.length < 3) {
+        return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    }
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    if (!/[A-Z]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one uppercase letter' });
+    }
+    if (!/[a-z]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one lowercase letter' });
+    }
+    if (!/[0-9]/.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one number' });
     }
     const existingUser = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
     if (existingUser) {
@@ -33,7 +52,9 @@ export async function register(req, res) {
     });
 }
 export async function login(req, res) {
-    const { username, password } = req.body;
+    const rawUsername = req.body.username;
+    const password = req.body.password;
+    const username = sanitizeUsername(rawUsername);
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
     }
@@ -127,5 +148,16 @@ export function updateProfile(req, res) {
         avatarUrl: updated.avatar_url,
         isAdmin: updated.is_admin === 1
     });
+}
+export function logout(req, res) {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const token = req.headers['authorization']?.replace('Bearer ', '') ||
+        req.headers['x-auth-token'];
+    if (token) {
+        db.prepare('INSERT INTO token_blacklist (token, expires_at) VALUES (?, datetime("now", "+7 days"))').run(token);
+    }
+    res.json({ message: 'Logged out successfully' });
 }
 //# sourceMappingURL=authController.js.map

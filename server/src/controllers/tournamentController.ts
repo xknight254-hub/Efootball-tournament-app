@@ -262,3 +262,67 @@ export async function deleteTournament(req: AuthRequest, res: Response) {
 
   res.json({ message: 'Tournament deleted successfully' });
 }
+
+export async function joinTournament(req: AuthRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const { id } = req.params;
+  const tournamentId = parseInt(id);
+
+  if (isNaN(tournamentId)) {
+    return res.status(400).json({ error: 'Invalid tournament ID' });
+  }
+
+  const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament | undefined;
+
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+
+  if (tournament.status !== 'registration_open' && tournament.status !== 'open') {
+    return res.status(400).json({ error: 'Registration is closed for this tournament' });
+  }
+
+  const existingParticipant = db.prepare(
+    'SELECT * FROM participants WHERE tournament_id = ? AND user_id = ?'
+  ).get(tournamentId, req.user.id);
+
+  if (existingParticipant) {
+    return res.status(400).json({ error: 'You are already registered in this tournament' });
+  }
+
+  const participantCount = db.prepare(
+    'SELECT COUNT(*) as count FROM participants WHERE tournament_id = ?'
+  ).get(tournamentId) as { count: number };
+
+  if (participantCount.count >= tournament.max_players) {
+    return res.status(400).json({ error: 'Tournament is full' });
+  }
+
+  const seed = participantCount.count + 1;
+  db.prepare(
+    'INSERT INTO participants (tournament_id, user_id, seed, status) VALUES (?, ?, ?, ?)'
+  ).run(tournamentId, req.user.id, seed, 'registered');
+
+  const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id) as { username: string };
+
+  logAdminAction(
+    req.user.id,
+    'tournament_join',
+    `Joined tournament: ${tournament.name} (ID: ${tournamentId})`
+  );
+
+  res.json({ 
+    message: 'Successfully joined tournament',
+    participant: {
+      id: Date.now(),
+      userId: req.user.id,
+      username: user.username,
+      seed,
+      status: 'registered',
+      joinedAt: new Date().toISOString()
+    }
+  });
+}

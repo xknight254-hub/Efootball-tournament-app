@@ -11,6 +11,9 @@ export function TournamentDetailPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinSuccess, setJoinSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'bracket' | 'participants' | 'chat'>('overview');
 
   useEffect(() => {
@@ -41,6 +44,26 @@ export function TournamentDetailPage() {
     
     loadData();
   }, [tournamentId]);
+
+  const handleJoin = async () => {
+    if (!isAuthenticated()) return;
+    
+    setJoining(true);
+    setJoinError(null);
+    
+    try {
+      await api.tournaments.join(tournamentId);
+      setJoinSuccess(true);
+      const participantsData = await api.tournaments.participants(tournamentId);
+      setParticipants(participantsData.participants || []);
+      const updatedTournament = await api.tournaments.get(tournamentId);
+      setTournament(updatedTournament);
+    } catch (err: any) {
+      setJoinError(err.error || 'Failed to join tournament');
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusClasses: Record<string, string> = {
@@ -174,11 +197,24 @@ export function TournamentDetailPage() {
                 </div>
                 <p className="text-gray-500 text-sm mb-6">players registered</p>
                 
-                {tournament.status === 'open' && (
+                {(tournament.status === 'registration_open' || tournament.status === 'open' || tournament.status === 'check_in') && (
                   isAuthenticated() ? (
-                    <button className="w-full btn-glow py-3 rounded-xl text-white font-semibold">
-                      Join Tournament
-                    </button>
+                    joinSuccess ? (
+                      <div className="w-full py-3 rounded-xl bg-green-500/20 text-green-400 font-semibold text-center">
+                        ✓ Joined!
+                      </div>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={handleJoin} 
+                          disabled={joining}
+                          className="w-full btn-glow py-3 rounded-xl text-white font-semibold disabled:opacity-50"
+                        >
+                          {joining ? 'Joining...' : 'Join Tournament'}
+                        </button>
+                        {joinError && <p className="text-red-400 text-sm mt-2">{joinError}</p>}
+                      </>
+                    )
                   ) : (
                     <Link to="/login" className="w-full block text-center btn-glow py-3 rounded-xl text-white font-semibold">
                       Login to Join

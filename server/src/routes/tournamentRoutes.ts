@@ -4,7 +4,8 @@ import {
   getTournaments, 
   getTournamentById, 
   updateTournament, 
-  deleteTournament 
+  deleteTournament,
+  joinTournament
 } from '../controllers/tournamentController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -15,5 +16,6 @@ router.get('/', getTournaments);
 router.get('/:id', authenticateToken, getTournamentById);
 router.put('/:id', authenticateToken, updateTournament);
 router.delete('/:id', authenticateToken, deleteTournament);
+router.post('/:id/join', authenticateToken, joinTournament);
 
 export default router;

@@ -6,6 +6,7 @@ export interface ServerToClientEvents {
     'notification:new': (notification: any) => void;
     'chat:message': (message: any) => void;
     'chat:history': (messages: any[]) => void;
+    'auth:error': (error: string) => void;
 }
 export interface ClientToServerEvents {
     'join:tournament': (tournamentId: string) => void;
@@ -17,6 +18,7 @@ export interface ClientToServerEvents {
         message: string;
     }) => void;
     'chat:history': (tournamentId: string) => void;
+    'authenticate': (token: string) => void;
 }
 export declare function initializeSocket(server: HttpServer): SocketIOServer;
 export declare function getIO(): SocketIOServer;
