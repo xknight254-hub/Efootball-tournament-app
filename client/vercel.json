@@ -1,0 +1,10 @@
+{
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://efootball-server.vercel.app/api"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
