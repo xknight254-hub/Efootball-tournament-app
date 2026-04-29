@@ -3,10 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createServer } from 'http';
 import { initializeDatabase } from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import tournamentRoutes from './routes/tournamentRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
+import { initializeSocket } from './socket/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
@@ -38,7 +40,9 @@ app.use((req, res) => {
         res.sendFile(join(clientDist, 'index.html'));
     }
 });
-app.listen(PORT, () => {
+const server = createServer(app);
+initializeSocket(server);
+server.listen(PORT, () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);
 });
 export default app;
