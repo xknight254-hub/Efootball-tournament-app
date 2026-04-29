@@ -1,55 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api, isAuthenticated } from '../api';
 
-const tournaments = [
-  {
-    id: 1,
-    name: 'eFootball Pro League',
-    format: 'knockout',
-    maxPlayers: 16,
-    participants: 12,
-    prizePool: '$500',
-    status: 'open',
-    startDate: 'May 15, 2026',
-  },
-  {
-    id: 2,
-    name: 'Weekend Warriors Cup',
-    format: 'league',
-    maxPlayers: 8,
-    participants: 8,
-    prizePool: '$200',
-    status: 'in_progress',
-    startDate: 'May 10, 2026',
-  },
-  {
-    id: 3,
-    name: 'Beginner Championship',
-    format: 'knockout',
-    maxPlayers: 32,
-    participants: 24,
-    prizePool: '$100',
-    status: 'open',
-    startDate: 'May 20, 2026',
-  },
-  {
-    id: 4,
-    name: '1v1 Masters',
-    format: 'knockout',
-    maxPlayers: 64,
-    participants: 48,
-    prizePool: '$1000',
-    status: 'in_progress',
-    startDate: 'May 8, 2026',
-  },
-];
+interface TournamentData {
+  id: number;
+  name: string;
+  description?: string;
+  platform: string;
+  format: string;
+  maxPlayers: number;
+  participantCount: number;
+  prizePool?: string;
+  status: string;
+  createdAt: string;
+}
 
 export function TournamentsPage() {
+  const [tournaments, setTournaments] = useState<TournamentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
-  
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadTournaments();
+  }, []);
+
+  const loadTournaments = async () => {
+    try {
+      setLoading(true);
+      const data = await api.tournaments.list();
+      setTournaments(data.tournaments || data);
+    } catch (err: any) {
+      console.error('Failed to load tournaments:', err);
+      setError('Failed to load tournaments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateClick = () => {
+    if (!isAuthenticated()) {
+      navigate('/login');
+      return;
+    }
+    alert('Create Tournament feature coming soon!');
+  };
+
+  const filteredTournaments = tournaments.filter(t => {
+    if (filter === 'all') return true;
+    return t.status === filter;
+  });
+
   const statusColors: Record<string, string> = {
     open: 'bg-green-500/20 text-green-400 border-green-500/30',
+    registration_open: 'bg-green-500/20 text-green-400 border-green-500/30',
     in_progress: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    active: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     completed: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    ended: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   };
   
   return (
@@ -61,78 +70,112 @@ export function TournamentsPage() {
             <h1 className="text-4xl font-bold text-white mb-2">Tournaments</h1>
             <p className="text-gray-400">Join a tournament and prove your skills</p>
           </div>
-          <button className="btn-glow px-6 py-3 rounded-xl text-white font-semibold mt-4 md:mt-0">
+          <button onClick={handleCreateClick} className="btn-glow px-6 py-3 rounded-xl text-white font-semibold mt-4 md:mt-0">
             + Create Tournament
           </button>
         </div>
         
         {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {['all', 'open', 'in_progress', 'completed'].map((f) => (
+          {[
+            { value: 'all', label: 'All' },
+            { value: 'registration_open', label: 'Open' },
+            { value: 'in_progress', label: 'In Progress' },
+            { value: 'completed', label: 'Completed' },
+          ].map((f) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={f.value}
+              onClick={() => setFilter(f.value)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                filter === f
+                filter === f.value
                   ? 'bg-primary text-white'
                   : 'bg-dark-800 text-gray-400 hover:text-white'
               }`}
             >
-              {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {f.label}
             </button>
           ))}
         </div>
         
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading tournaments...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-20">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button onClick={loadTournaments} className="btn-glow px-4 py-2 rounded-lg text-white">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && filteredTournaments.length === 0 && (
+          <div className="text-center py-20">
+            <p className="text-gray-400 text-lg">No tournaments found</p>
+            <p className="text-gray-500">Check back later or create one!</p>
+          </div>
+        )}
+
         {/* Tournament Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tournaments.map((tournament, i) => (
-            <div 
-              key={tournament.id}
-              className="tournament-card rounded-2xl p-6 hover:border-primary/50 transition-all duration-300 cursor-pointer slide-up"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            >
-              {/* Status Badge */}
-              <div className="flex items-center justify-between mb-4">
-                <span className={`status-badge ${statusColors[tournament.status]} border`}>
-                  {tournament.status === 'in_progress' ? 'Live' : tournament.status}
-                </span>
-                <span className="text-gray-500 text-sm">{tournament.format}</span>
-              </div>
-              
-              {/* Title */}
-              <h3 className="text-xl font-semibold text-white mb-4">{tournament.name}</h3>
-              
-              {/* Info */}
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Players</span>
-                  <span className="text-white">{tournament.participants}/{tournament.maxPlayers}</span>
+        {!loading && !error && filteredTournaments.length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTournaments.map((tournament, i) => (
+              <div 
+                key={tournament.id}
+                onClick={() => navigate(`/tournaments/${tournament.id}`)}
+                className="tournament-card rounded-2xl p-6 hover:border-primary/50 transition-all duration-300 cursor-pointer slide-up"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              >
+                {/* Status Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className={`status-badge ${statusColors[tournament.status] || statusColors.open} border`}>
+                    {tournament.status === 'in_progress' ? 'Live' : tournament.status === 'registration_open' ? 'Open' : tournament.status}
+                  </span>
+                  <span className="text-gray-500 text-sm">{tournament.format}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Prize Pool</span>
-                  <span className="text-neon-green font-semibold">{tournament.prizePool}</span>
+                
+                {/* Title */}
+                <h3 className="text-xl font-semibold text-white mb-4">{tournament.name}</h3>
+                
+                {/* Info */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Players</span>
+                    <span className="text-white">{tournament.participantCount}/{tournament.maxPlayers}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Prize Pool</span>
+                    <span className="text-neon-green font-semibold">{tournament.prizePool || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Platform</span>
+                    <span className="text-white">{tournament.platform}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Starts</span>
-                  <span className="text-white">{tournament.startDate}</span>
+                
+                {/* Progress Bar */}
+                <div className="w-full h-2 bg-dark-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-neon-blue rounded-full transition-all duration-500"
+                    style={{ width: `${(tournament.participantCount / tournament.maxPlayers) * 100}%` }}
+                  />
                 </div>
+                
+                {/* Action */}
+                <button className="w-full mt-4 py-3 rounded-xl bg-dark-700/50 text-white font-medium hover:bg-primary/20 transition-all">
+                  {tournament.status === 'registration_open' ? 'Join Tournament' : 'View Details'}
+                </button>
               </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full h-2 bg-dark-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-neon-blue rounded-full transition-all duration-500"
-                  style={{ width: `${(tournament.participants / tournament.maxPlayers) * 100}%` }}
-                />
-              </div>
-              
-              {/* Action */}
-              <button className="w-full mt-4 py-3 rounded-xl bg-dark-700/50 text-white font-medium hover:bg-primary/20 transition-all">
-                {tournament.status === 'open' ? 'Join Tournament' : 'View Details'}
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
