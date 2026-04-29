@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import db from './db.js';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import db from '../db.js';
 
 export interface AuthRequest extends Request {
   userId?: number;
@@ -73,5 +73,5 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
 export function generateToken(userId: number): string {
   const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
   const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
 }
