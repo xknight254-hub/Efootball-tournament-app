@@ -1,40 +1,21 @@
-:root {
-  --bg: #0a0a0f;
-  --surface: #14141f;
-  --surface-elevated: #1e1e2e;
-  --primary: #00ff88;
-  --primary-dim: #00cc6a;
-  --secondary: #ff6b35;
-  --text-primary: #ffffff;
-  --text-secondary: #8b8b9e;
-  --border: #2a2a3e;
-  --success: #00ff88;
-  --error: #ff4757;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-secondary: #10B981;
+  --color-accent: #F59E0B;
+  --color-surface: #FFFFFF;
+  --color-background: #F9FAFB;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  body {
+    @apply antialiased text-gray-900 bg-gray-50;
+  }
 }
 
-body {
-  font-family: 'Rajdhani', 'Orbitron', sans-serif;
-  background: var(--bg);
-  color: var(--text-primary);
-  min-height: 100vh;
-}
-
-a {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-button {
-  cursor: pointer;
-  font-family: inherit;
-}
-
-input, select, textarea {
-  font-family: inherit;
+@layer components {
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
 }
