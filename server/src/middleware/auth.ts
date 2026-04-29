@@ -21,7 +21,15 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+    const blacklisted = db.prepare(
+      'SELECT id FROM token_blacklist WHERE token = ? AND expires_at > datetime("now")'
+    ).get(token);
+
+    if (blacklisted) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
     
     const user = db.prepare('SELECT id, username, email, is_admin FROM users WHERE id = ?').get(decoded.userId) as any;
@@ -47,7 +55,7 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
   }
 
   try {
-    const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+    const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
     
     const user = db.prepare('SELECT id, username, email, is_admin FROM users WHERE id = ?').get(decoded.userId) as any;
@@ -71,7 +79,7 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
 }
 
 export function generateToken(userId: number): string {
-  const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+  const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
   const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
 }

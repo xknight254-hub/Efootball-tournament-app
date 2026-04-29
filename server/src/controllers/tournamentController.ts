@@ -1,6 +1,15 @@
 import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
+import { sanitizeString } from '../utils/sanitize.js';
+
+function logAdminAction(adminId: number, action: string, details: string) {
+  db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(
+    String(adminId),
+    action,
+    details.slice(0, 1000)
+  );
+}
 
 interface Tournament {
   id: number;
@@ -93,8 +102,12 @@ export async function getTournaments(req: AuthRequest, res: Response) {
   }
 
   if (search) {
-    query += ' AND (name LIKE ? OR description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    const sanitizedSearch = String(search)
+      .replace(/%/g, '\\%')
+      .replace(/_/g, '\\_')
+      .slice(0, 100);
+    query += ' AND (name LIKE ? ESCAPE "\\" OR description LIKE ? ESCAPE "\\")';
+    params.push(`%${sanitizedSearch}%`, `%${sanitizedSearch}%`);
   }
 
   query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
@@ -238,6 +251,12 @@ export async function deleteTournament(req: AuthRequest, res: Response) {
   if (tournament.owner_id !== req.user.id && req.user.is_admin !== 1) {
     return res.status(403).json({ error: 'Not authorized to delete this tournament' });
   }
+
+  logAdminAction(
+    req.user.id,
+    'tournament_delete',
+    `Deleted tournament: ${tournament.name} (ID: ${tournamentId})`
+  );
 
   db.prepare('DELETE FROM tournaments WHERE id = ?').run(tournamentId);
 

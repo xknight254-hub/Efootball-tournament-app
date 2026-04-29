@@ -1,5 +1,12 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import db from '../db.js';
+
+interface AuthenticatedSocket extends SocketIOServer {
+  userId?: number;
+  username?: string;
+}
 
 let io: SocketIOServer;
 
@@ -9,6 +16,7 @@ export interface ServerToClientEvents {
   'notification:new': (notification: any) => void;
   'chat:message': (message: any) => void;
   'chat:history': (messages: any[]) => void;
+  'auth:error': (error: string) => void;
 }
 
 export interface ClientToServerEvents {
@@ -18,6 +26,32 @@ export interface ClientToServerEvents {
   'leave:match': (matchId: string) => void;
   'chat:send': (data: { tournamentId: string; message: string }) => void;
   'chat:history': (tournamentId: string) => void;
+  'authenticate': (token: string) => void;
+}
+
+function authenticateSocket(token: string): { userId: number; username: string } | null {
+  try {
+    const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+
+    const blacklisted = db.prepare(
+      'SELECT id FROM token_blacklist WHERE token = ? AND expires_at > datetime("now")'
+    ).get(token);
+
+    if (blacklisted) {
+      return null;
+    }
+
+    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(decoded.userId) as { id: number; username: string } | undefined;
+
+    if (!user) {
+      return null;
+    }
+
+    return { userId: user.id, username: user.username };
+  } catch {
+    return null;
+  }
 }
 
 export function initializeSocket(server: HttpServer): SocketIOServer {
@@ -31,33 +65,70 @@ export function initializeSocket(server: HttpServer): SocketIOServer {
   io.on('connection', (socket) => {
     console.log('[Socket] Client connected:', socket.id);
 
+    let authenticatedUser: { userId: number; username: string } | null = null;
+
+    socket.on('authenticate', (token: string) => {
+      const user = authenticateSocket(token);
+      if (user) {
+        authenticatedUser = user;
+        (socket as any).userId = user.userId;
+        (socket as any).username = user.username;
+        socket.emit('auth:success', { userId: user.userId, username: user.username });
+        console.log(`[Socket] User authenticated: ${user.username} (${socket.id})`);
+      } else {
+        socket.emit('auth:error', 'Invalid or expired token');
+      }
+    });
+
     socket.on('join:tournament', (tournamentId: string) => {
+      if (!authenticatedUser) {
+        socket.emit('auth:error', 'Authentication required');
+        return;
+      }
       socket.join(`tournament:${tournamentId}`);
-      console.log(`[Socket] ${socket.id} joined tournament:${tournamentId}`);
+      console.log(`[Socket] ${authenticatedUser.username} joined tournament:${tournamentId}`);
     });
 
     socket.on('leave:tournament', (tournamentId: string) => {
+      if (!authenticatedUser) return;
       socket.leave(`tournament:${tournamentId}`);
     });
 
     socket.on('join:match', (matchId: string) => {
+      if (!authenticatedUser) {
+        socket.emit('auth:error', 'Authentication required');
+        return;
+      }
       socket.join(`match:${matchId}`);
     });
 
     socket.on('leave:match', (matchId: string) => {
+      if (!authenticatedUser) return;
       socket.leave(`match:${matchId}`);
     });
 
     socket.on('chat:send', (data) => {
+      if (!authenticatedUser) {
+        socket.emit('auth:error', 'Authentication required');
+        return;
+      }
+
       const { tournamentId, message } = data;
+
+      if (!message || message.trim().length === 0) {
+        return;
+      }
+
+      const sanitizedMessage = message.slice(0, 500).replace(/[<>]/g, '');
       const timestamp = new Date().toISOString();
       
       const chatMessage = {
-        id: `msg_${Date.now()}`,
+        id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         tournamentId,
-        message,
+        message: sanitizedMessage,
         timestamp,
-        senderId: socket.id,
+        senderId: authenticatedUser.userId,
+        senderUsername: authenticatedUser.username,
       };
       
       io.to(`tournament:${tournamentId}`).emit('chat:message', chatMessage);

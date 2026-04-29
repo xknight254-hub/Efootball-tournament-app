@@ -118,6 +118,15 @@ export function initializeDatabase() {
       FOREIGN KEY (processed_by) REFERENCES users(id),
       UNIQUE(user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS token_blacklist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
   `);
 
   console.log('[DB] Database initialized');

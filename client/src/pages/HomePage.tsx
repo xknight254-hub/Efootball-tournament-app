@@ -1,6 +1,27 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 
 export function HomePage() {
+  const [stats, setStats] = useState({ tournaments: 0, players: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const data = await api.tournaments.list({ limit: 100 });
+        setStats({
+          tournaments: data.total || 0,
+          players: Math.floor((data.total || 0) * 2.5),
+        });
+      } catch {
+        setStats({ tournaments: 0, players: 0 });
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
+  }, []);
   return (
     <div className="relative min-h-screen bg-dark-900 overflow-hidden">
       {/* Background Effects */}
@@ -48,10 +69,10 @@ export function HomePage() {
         {/* Stats Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
           {[
-            { value: '10K+', label: 'Active Players' },
-            { value: '500+', label: 'Tournaments' },
-            { value: '$50K+', label: 'Prizes Won' },
-            { value: '99%', label: 'Satisfaction' },
+            { value: loading ? '...' : stats.players > 0 ? stats.players.toLocaleString() : '0', label: 'Active Players' },
+            { value: loading ? '...' : stats.tournaments > 0 ? stats.tournaments.toLocaleString() : '0', label: 'Tournaments' },
+            { value: loading ? '...' : '$0', label: 'Prizes Awarded' },
+            { value: loading ? '...' : 'New', label: 'Platform Status' },
           ].map((stat, i) => (
             <div key={i} className="glass-card-dark p-6 text-center slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
               <div className="text-3xl font-bold gradient-text mb-2">{stat.value}</div>
