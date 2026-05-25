@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let sqlDb: SqlJsDatabase | null = null;
 let initialized = false;
@@ -8,7 +13,7 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   if (sqlDb && initialized) return sqlDb;
   
   const SQL = await initSqlJs({
-    locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+    locateFile: (file: string) => join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file)
   });
   
   sqlDb = new SQL.Database();

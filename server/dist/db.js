@@ -1,14 +1,20 @@
-import Database from 'better-sqlite3';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import initSqlJs from 'sql.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const dbPath = join(__dirname, '..', 'data', 'efootball.db');
-export const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-export function initializeDatabase() {
-    db.exec(`
+let sqlDb = null;
+let initialized = false;
+async function initDBInternal() {
+    if (sqlDb && initialized)
+        return sqlDb;
+    const SQL = await initSqlJs({
+        locateFile: (file) => join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file)
+    });
+    sqlDb = new SQL.Database();
+    initialized = true;
+    sqlDb.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -26,93 +32,45 @@ export function initializeDatabase() {
       name TEXT NOT NULL,
       description TEXT,
       platform TEXT DEFAULT 'efootball',
-      format TEXT NOT NULL CHECK(format IN ('knockout', 'league')),
-      max_players INTEGER NOT NULL CHECK(max_players IN (2, 4, 8, 16)),
+      format TEXT NOT NULL,
+      max_players INTEGER NOT NULL,
       best_of INTEGER DEFAULT 1,
-      status TEXT DEFAULT 'open' CHECK(status IN ('open', 'check_in', 'fixtures_ready', 'in_progress', 'completed')),
+      status TEXT DEFAULT 'registration_open',
       owner_id INTEGER NOT NULL,
       winner_id INTEGER,
       prize_pool TEXT,
       registration_deadline DATETIME,
       result_deadline_hours INTEGER DEFAULT 24,
       rules TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (owner_id) REFERENCES users(id),
-      FOREIGN KEY (winner_id) REFERENCES users(id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS tournament_participants (
+    CREATE TABLE IF NOT EXISTS participants (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tournament_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
-      status TEXT DEFAULT 'registered' CHECK(status IN ('registered', 'checked_in', 'ready', 'eliminated', 'winner', 'runner_up')),
+      status TEXT DEFAULT 'registered',
       seed INTEGER,
-      checked_in_at DATETIME,
-      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id),
-      UNIQUE(tournament_id, user_id)
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tournament_id INTEGER NOT NULL,
-      player1_id INTEGER NOT NULL,
-      player2_id INTEGER,
       round INTEGER NOT NULL,
       match_number INTEGER NOT NULL,
+      player1_id INTEGER,
+      player2_id INTEGER,
       player1_score INTEGER,
       player2_score INTEGER,
       winner_id INTEGER,
-      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'playing', 'completed', 'disputed')),
-      confirmation_status TEXT DEFAULT 'pending' CHECK(confirmation_status IN ('pending', 'confirmed', 'disputed')),
+      status TEXT DEFAULT 'pending',
+      confirmation_status TEXT DEFAULT 'pending',
       submitted_by INTEGER,
       submitted_at DATETIME,
       confirmed_at DATETIME,
       screenshot_url TEXT,
-      opponent_screenshot_url TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-      FOREIGN KEY (player1_id) REFERENCES users(id),
-      FOREIGN KEY (player2_id) REFERENCES users(id),
-      FOREIGN KEY (winner_id) REFERENCES users(id),
-      FOREIGN KEY (submitted_by) REFERENCES users(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS standings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tournament_id INTEGER NOT NULL,
-      team_name TEXT NOT NULL,
-      played INTEGER DEFAULT 0,
-      won INTEGER DEFAULT 0,
-      drawn INTEGER DEFAULT 0,
-      lost INTEGER DEFAULT 0,
-      gf INTEGER DEFAULT 0,
-      ga INTEGER DEFAULT 0,
-      gd INTEGER DEFAULT 0,
-      points INTEGER DEFAULT 0,
-      FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-      UNIQUE(tournament_id, team_name)
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      admin_id TEXT NOT NULL,
-      action TEXT NOT NULL,
-      details TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      message TEXT,
-      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
-      processed_by INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id),
-      FOREIGN KEY (processed_by) REFERENCES users(id),
-      UNIQUE(user_id)
     );
 
     CREATE TABLE IF NOT EXISTS token_blacklist (
@@ -122,9 +80,62 @@ export function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+    CREATE TABLE IF NOT EXISTS admin_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
     console.log('[DB] Database initialized');
+    return sqlDb;
 }
+let initPromise = null;
+export async function initDB() {
+    if (!initPromise) {
+        initPromise = initDBInternal();
+    }
+    return initPromise;
+}
+export function initializeDatabase() {
+    initDB().catch(console.error);
+}
+function getDb() {
+    if (!sqlDb)
+        throw new Error('Database not initialized');
+    return sqlDb;
+}
+export const db = {
+    prepare: (sql) => ({
+        run: (...params) => {
+            getDb().run(sql, params);
+            const result = getDb().exec("SELECT last_insert_rowid() as id");
+            return { lastInsertRowid: result[0]?.values[0]?.[0] };
+        },
+        get: (...params) => {
+            const stmt = getDb().prepare(sql);
+            stmt.bind(params);
+            if (stmt.step()) {
+                const row = stmt.getAsObject();
+                stmt.free();
+                return row;
+            }
+            stmt.free();
+            return undefined;
+        },
+        all: (...params) => {
+            const results = [];
+            const stmt = getDb().prepare(sql);
+            stmt.bind(params);
+            while (stmt.step()) {
+                results.push(stmt.getAsObject());
+            }
+            stmt.free();
+            return results;
+        }
+    }),
+    exec: (sql) => getDb().run(sql)
+};
 export default db;
 //# sourceMappingURL=db.js.map
