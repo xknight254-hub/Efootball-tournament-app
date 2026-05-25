@@ -3,7 +3,7 @@ import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { sanitizeString } from '../utils/sanitize.js';
 
-function logAdminAction(adminId: number, action: string, details: string) {
+export function logAdminAction(adminId: number, action: string, details: string) {
   db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(
     String(adminId),
     action,

@@ -47,10 +47,14 @@ export async function register(req: AuthRequest, res: Response) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // Check if this is the first user — make them admin
+  const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
+  const isFirstUser = userCount === 0;
+
   const result = db.prepare(`
-    INSERT INTO users (username, email, password_hash, first_name, last_name)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(username, email.toLowerCase(), passwordHash, firstName || null, lastName || null);
+    INSERT INTO users (username, email, password_hash, first_name, last_name, is_admin)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(username, email.toLowerCase(), passwordHash, firstName || null, lastName || null, isFirstUser ? 1 : 0);
 
   const user = db.prepare('SELECT id, username, email, first_name, last_name, is_admin, created_at FROM users WHERE id = ?').get(result.lastInsertRowid) as any;
 

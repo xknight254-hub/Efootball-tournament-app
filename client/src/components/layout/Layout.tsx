@@ -10,6 +10,7 @@ const navItems = [
 
 export function Sidenav() {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className="fixed left-0 top-[var(--navbar-height)] bottom-0 w-[var(--sidenav-width)] z-40 overflow-hidden flex flex-col"
@@ -53,6 +54,11 @@ export function Sidenav() {
 
       {/* Bottom section */}
       <div className="px-3 py-4 space-y-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+        {user?.isAdmin && (
+          <Link to="/admin" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-amber-400 hover:text-amber-300 transition-colors">
+            <span>🛡️</span> Admin Panel
+          </Link>
+        )}
         <Link to="/about" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors">
           <span>ℹ️</span> About
         </Link>
@@ -106,6 +112,7 @@ export function Topbar() {
               }
             >
               <DropdownLabel>Account</DropdownLabel>
+              {user.isAdmin && <DropdownItem icon={<span>🛡️</span>} onClick={() => window.location.href = '/admin'}>Admin Panel</DropdownItem>}
               <DropdownItem icon={<span>👤</span>} onClick={() => window.location.href = '/profile'}>Profile</DropdownItem>
               <DropdownItem icon={<span>⚙️</span>} onClick={() => window.location.href = '/profile'}>Settings</DropdownItem>
               <DropdownDivider />

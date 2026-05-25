@@ -2,12 +2,27 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const dbDir = join(__dirname, '..', '..', 'data');
+const dbPath = join(dbDir, 'efootball.db');
+
 let sqlDb: SqlJsDatabase | null = null;
 let initialized = false;
+
+function saveDb() {
+  if (!sqlDb) return;
+  try {
+    if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+    const data = sqlDb.export();
+    writeFileSync(dbPath, Buffer.from(data));
+  } catch (e) {
+    console.error('[DB] Save failed:', e);
+  }
+}
 
 async function initDBInternal(): Promise<SqlJsDatabase> {
   if (sqlDb && initialized) return sqlDb;
@@ -16,9 +31,23 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
     locateFile: (file: string) => join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file)
   });
   
-  sqlDb = new SQL.Database();
+  // Try to load existing DB from file
+  if (existsSync(dbPath)) {
+    try {
+      const buffer = readFileSync(dbPath);
+      sqlDb = new SQL.Database(new Uint8Array(buffer));
+      console.log('[DB] Loaded from file');
+    } catch (e) {
+      console.error('[DB] Failed to load file, creating new:', e);
+      sqlDb = new SQL.Database();
+    }
+  } else {
+    sqlDb = new SQL.Database();
+  }
+  
   initialized = true;
   
+  // Create tables if they don't exist
   sqlDb.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,6 +123,12 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
     );
   `);
   
+  // Auto-save every 30 seconds and on exit
+  setInterval(saveDb, 30000);
+  process.on('exit', saveDb);
+  process.on('SIGINT', () => { saveDb(); process.exit(0); });
+  process.on('SIGTERM', () => { saveDb(); process.exit(0); });
+  
   console.log('[DB] Database initialized');
   return sqlDb;
 }
@@ -121,6 +156,7 @@ export const db: any = {
     run: (...params: any[]) => {
       getDb().run(sql, params);
       const result = getDb().exec("SELECT last_insert_rowid() as id");
+      saveDb(); // Persist after writes
       return { lastInsertRowid: result[0]?.values[0]?.[0] };
     },
     get: (...params: any[]) => {
@@ -145,7 +181,7 @@ export const db: any = {
       return results;
     }
   }),
-  exec: (sql: string) => getDb().run(sql)
+  exec: (sql: string) => { getDb().run(sql); saveDb(); }
 };
 
 export default db;

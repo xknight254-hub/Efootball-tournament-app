@@ -9,6 +9,7 @@ import { TournamentDetailPage } from './pages/TournamentDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 function PlaceholderPage({ title, desc, icon }: { title: string; desc: string; icon: string }) {
   return (
@@ -37,6 +38,7 @@ function AppContent() {
         <Route path="/tournaments" element={<Layout><TournamentsPage /></Layout>} />
         <Route path="/tournaments/:id" element={<Layout><TournamentDetailPage /></Layout>} />
         <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
         <Route path="/leaderboard" element={<Layout><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" icon="🏆" /></Layout>} />
         <Route path="/about" element={<Layout><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" icon="⚽" /></Layout>} />
         <Route path="/privacy" element={<Layout><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." icon="🔒" /></Layout>} />
