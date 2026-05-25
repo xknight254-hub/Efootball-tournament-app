@@ -9,273 +9,176 @@ import type { Tournament } from '../api';
 export function HomePage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ tournaments: 0, players: 0, prizes: '$0' });
+  const [stats, setStats] = useState({ tournaments: 0, players: 0 });
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await api.tournaments.list({ limit: 6 });
+        const data = await api.tournaments.list({ limit: 12 });
         const list = data.tournaments || data || [];
         setTournaments(list);
-        setStats({
-          tournaments: data.total || list.length,
-          players: Math.floor((data.total || list.length) * 4.2),
-          prizes: '$0',
-        });
-      } catch {
-        // silent
-      } finally {
-        setLoading(false);
-      }
+        setStats({ tournaments: data.total || list.length, players: Math.floor((data.total || list.length) * 4.2) });
+      } catch { /* silent */ } finally { setLoading(false); }
     }
     load();
   }, []);
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-grid opacity-30" />
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary-500/10 rounded-full blur-[150px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-neon-blue/8 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-neon-pink/5 rounded-full blur-[100px]" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Live Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-8 animate-fade-in">
-              <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-              <span className="text-sm text-gray-300 font-medium">Live tournaments running now</span>
-            </div>
-
-            {/* Heading */}
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight tracking-tight animate-fade-in-up">
-              Compete in{' '}
-              <span className="gradient-text">eFootball</span>
-              <br />
-              <span className="text-white">Tournaments</span>
-            </h1>
-
-            {/* Subtitle */}
-            <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-              The ultimate competitive platform. Create tournaments, challenge players worldwide, and prove you're the best eFootball player.
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <Link to="/register">
-                <Button variant="neon" size="lg" leftIcon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                }>
-                  Start Playing
-                </Button>
-              </Link>
-              <Link to="/tournaments">
-                <Button variant="outline" size="lg">
-                  Browse Tournaments
-                </Button>
-              </Link>
-            </div>
+    <div className="space-y-8">
+      {/* === HERO SPOTLIGHT === */}
+      <section className="relative rounded-2xl overflow-hidden" style={{ height: '420px', background: 'var(--color-bg-card)' }}>
+        {/* Background gradient */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 50%, rgba(59,130,246,0.05) 100%)',
+        }} />
+        <div className="absolute inset-0 hero-gradient-overlay" />
+        
+        {/* Content */}
+        <div className="relative h-full flex flex-col justify-center px-8 md:px-12 max-w-[480px]">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
+            style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
+            <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+            <span className="text-xs text-[#4ade80] font-semibold">Live tournaments running</span>
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight tracking-tight">
+            Compete in <span className="gradient-text">eFootball</span> Tournaments
+          </h1>
+          <p className="text-[var(--color-text-secondary)] text-base mb-8 leading-relaxed">
+            The ultimate competitive platform. Create tournaments, challenge players worldwide, and prove you're the best.
+          </p>
+          <div className="flex gap-3">
+            <Link to="/register">
+              <Button variant="neon" size="lg">Start Playing</Button>
+            </Link>
+            <Link to="/tournaments">
+              <Button variant="outline" size="lg">Browse Tournaments</Button>
+            </Link>
           </div>
         </div>
+
+        {/* Decorative elements */}
+        <div className="absolute top-8 right-8 w-32 h-32 rounded-full opacity-20" style={{
+          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+        }} />
+        <div className="absolute bottom-12 right-24 w-24 h-24 rounded-full opacity-15" style={{
+          background: 'radial-gradient(circle, rgba(139,92,246,0.5) 0%, transparent 70%)',
+        }} />
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 border-y border-dark-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { value: loading ? '...' : stats.players.toLocaleString(), label: 'Active Players', icon: '👥' },
-              { value: loading ? '...' : stats.tournaments.toLocaleString(), label: 'Tournaments', icon: '🏆' },
-              { value: loading ? '...' : stats.prizes, label: 'Prizes Awarded', icon: '💰' },
-              { value: loading ? '...' : '24/7', label: 'Platform Status', icon: '🟢' },
-            ].map((stat, i) => (
-              <div key={i} className="glass rounded-2xl p-6 text-center glass-hover animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="text-3xl mb-3">{stat.icon}</div>
-                <div className="text-2xl md:text-3xl font-bold gradient-text mb-1">{stat.value}</div>
-                <div className="text-gray-400 text-sm">{stat.label}</div>
-              </div>
-            ))}
+      {/* === STATS ROW === */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { value: loading ? '...' : stats.players.toLocaleString(), label: 'Active Players', icon: '👥', color: '#6366f1' },
+          { value: loading ? '...' : stats.tournaments.toLocaleString(), label: 'Tournaments', icon: '🏆', color: '#8b5cf6' },
+          { value: loading ? '...' : '$0', label: 'Prizes Awarded', icon: '💰', color: '#22c55e' },
+          { value: loading ? '...' : '24/7', label: 'Platform Status', icon: '🟢', color: '#06b6d4' },
+        ].map((stat, i) => (
+          <div key={i} className="card-solid p-5 text-center" style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className="text-2xl mb-2">{stat.icon}</div>
+            <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+            <div className="text-[var(--color-text-muted)] text-xs">{stat.label}</div>
           </div>
-        </div>
+        ))}
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Everything you need to <span className="gradient-text">compete</span>
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              From tournament creation to match results, we've got every aspect of competitive eFootball covered.
+      {/* === BENTO GRID: Features === */}
+      <section>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-bold text-white">Everything you need to <span className="gradient-text">compete</span></h2>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {/* Featured card */}
+          <div className="tilt-card flex-1 min-w-[280px] max-w-[380px] p-6" style={{ minHeight: '240px' }}>
+            <div className="text-3xl mb-3">🏆</div>
+            <h3 className="text-lg font-semibold text-white mb-2">Tournament Brackets</h3>
+            <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
+              Create knockout or league tournaments. Automatic bracket generation with seed-based matchups.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: '🏆',
-                title: 'Tournament Brackets',
-                desc: 'Create knockout, league, or double elimination tournaments. Automatic bracket generation with seed-based matchups.',
-                color: 'purple' as const,
-              },
-              {
-                icon: '⚽',
-                title: 'Match Results',
-                desc: 'Submit scores with screenshot proof. Both players confirm results. Built-in dispute resolution system.',
-                color: 'green' as const,
-              },
-              {
-                icon: '💬',
-                title: 'Real-time Chat',
-                desc: 'Chat with your opponents and tournament participants. Live notifications for match updates.',
-                color: 'blue' as const,
-              },
-              {
-                icon: '📊',
-                title: 'Live Standings',
-                desc: 'Track your position in league tables. See goals, wins, and points update in real-time.',
-                color: 'purple' as const,
-              },
-              {
-                icon: '🎯',
-                title: 'Fair Play',
-                desc: 'Screenshot verification, dual confirmation, and dispute handling ensure every result is legitimate.',
-                color: 'green' as const,
-              },
-              {
-                icon: '⚡',
-                title: 'Instant Setup',
-                desc: 'Create a tournament in under 30 seconds. Share the link and let players join instantly.',
-                color: 'blue' as const,
-              },
-            ].map((feature, i) => (
-              <div key={i} className="glass rounded-2xl p-8 glass-hover animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="text-4xl mb-5">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
+          {/* Smaller cells */}
+          {[
+            { icon: '⚽', title: 'Match Results', desc: 'Submit scores with screenshot proof. Dual confirmation system.' },
+            { icon: '💬', title: 'Real-time Chat', desc: 'Chat with opponents. Live notifications for match updates.' },
+            { icon: '📊', title: 'Live Standings', desc: 'Track positions in league tables. Real-time points and stats.' },
+          ].map((feature, i) => (
+            <div key={i} className="tilt-card flex-1 min-w-[200px] max-width-[calc(33.333%-12px)] p-5" style={{ minHeight: '200px' }}>
+              <div className="text-2xl mb-2">{feature.icon}</div>
+              <h3 className="text-sm font-semibold text-white mb-1">{feature.title}</h3>
+              <p className="text-[var(--color-text-muted)] text-xs leading-relaxed">{feature.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Featured Tournaments */}
+      {/* === DEALS STRIP: Featured Tournaments === */}
       {tournaments.length > 0 && (
-        <section className="py-20 border-t border-dark-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-12">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Featured Tournaments</h2>
-                <p className="text-gray-400">Join these active competitions</p>
-              </div>
-              <Link to="/tournaments">
-                <Button variant="ghost" rightIcon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                }>
-                  View All
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tournaments.slice(0, 6).map((t) => (
-                <Link key={t.id} to={`/tournaments/${t.id}`}>
-                  <div className="tournament-card p-6 h-full">
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-4">
-                        <Badge
-                          variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}
-                          pulse={t.status === 'in_progress'}
-                        >
-                          {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
-                        </Badge>
-                        <span className="text-dark-400 text-sm font-medium">{t.format}</span>
-                      </div>
-
-                      <h3 className="text-lg font-semibold text-white mb-4">{t.name}</h3>
-
-                      <div className="space-y-2.5 mb-5">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Players</span>
-                          <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Prize Pool</span>
-                          <span className="text-neon-green font-semibold">{t.prizePool || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Platform</span>
-                          <span className="text-white">{t.platform}</span>
-                        </div>
-                      </div>
-
-                      <ProgressBar value={t.participantCount} max={t.maxPlayers} showLabel />
+        <section>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold text-white">Featured Tournaments</h2>
+            <Link to="/tournaments">
+              <Button variant="ghost" size="sm">View All →</Button>
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {tournaments.slice(0, 6).map((t) => (
+              <Link key={t.id} to={`/tournaments/${t.id}`} className="flex-1 min-w-[180px]">
+                <div className="tilt-card p-5 h-full">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}>
+                      {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
+                    </Badge>
+                    <span className="text-[var(--color-text-dim)] text-xs capitalize">{t.format}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2">{t.name}</h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[var(--color-text-muted)]">Players</span>
+                      <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[var(--color-text-muted)]">Prize</span>
+                      <span className="text-[#22c55e] font-semibold">{t.prizePool || 'N/A'}</span>
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
+                  <ProgressBar value={t.participantCount} max={t.maxPlayers} />
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}
 
-      {/* How It Works */}
-      <section className="py-20 border-t border-dark-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              How it <span className="gradient-text">works</span>
-            </h2>
-            <p className="text-gray-400 text-lg">Three simple steps to competitive gaming</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: '01', title: 'Create or Join', desc: 'Set up your tournament in seconds or browse open competitions to join.', icon: '🎮' },
-              { step: '02', title: 'Compete', desc: 'Play your matches, submit scores with screenshot proof, and confirm results.', icon: '⚔️' },
-              { step: '03', title: 'Win', desc: 'Climb the bracket, top the leaderboard, and claim your victory.', icon: '🏅' },
-            ].map((item, i) => (
-              <div key={i} className="text-center animate-fade-in-up" style={{ animationDelay: `${i * 0.15}s` }}>
-                <div className="text-5xl mb-4">{item.icon}</div>
-                <div className="text-neon-green font-bold text-sm font-[Orbitron] mb-2">STEP {item.step}</div>
-                <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
-                <p className="text-gray-400">{item.desc}</p>
-              </div>
-            ))}
-          </div>
+      {/* === HOW IT WORKS === */}
+      <section className="rounded-2xl p-8" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+        <h2 className="text-xl font-bold text-white text-center mb-8">How it <span className="gradient-text">works</span></h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            { step: '01', title: 'Create or Join', desc: 'Set up your tournament in seconds or browse open competitions.', icon: '🎮' },
+            { step: '02', title: 'Compete', desc: 'Play your matches, submit scores with proof, and confirm results.', icon: '⚔️' },
+            { step: '03', title: 'Win', desc: 'Climb the bracket, top the leaderboard, and claim victory.', icon: '🏅' },
+          ].map((item, i) => (
+            <div key={i} className="text-center">
+              <div className="text-4xl mb-3">{item.icon}</div>
+              <div className="text-[#6366f1] font-bold text-xs mb-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>STEP {item.step}</div>
+              <h3 className="text-base font-semibold text-white mb-2">{item.title}</h3>
+              <p className="text-[var(--color-text-muted)] text-sm">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 border-t border-dark-800/50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="glass rounded-3xl p-12 md:p-16 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-transparent to-neon-blue/10" />
-            <div className="relative">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to compete?
-              </h2>
-              <p className="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
-                Join thousands of players already competing in eFootball tournaments. Create your free account and start today.
-              </p>
-              <Link to="/register">
-                <Button variant="neon" size="lg" leftIcon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                }>
-                  Create Free Account
-                </Button>
-              </Link>
-            </div>
-          </div>
+      {/* === CTA === */}
+      <section className="rounded-2xl p-10 text-center relative overflow-hidden" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, transparent 50%, rgba(139,92,246,0.05) 100%)' }} />
+        <div className="relative">
+          <h2 className="text-2xl font-bold text-white mb-3">Ready to compete?</h2>
+          <p className="text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
+            Join thousands of players already competing. Create your free account and start today.
+          </p>
+          <Link to="/register">
+            <Button variant="neon" size="lg">Create Free Account</Button>
+          </Link>
         </div>
       </section>
     </div>

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { Navbar } from './components/layout/Navbar';
-import { Footer } from './components/layout/Footer';
+import { Layout } from './components/layout/Layout';
 import { ToastContainer } from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
 import { HomePage } from './pages/HomePage';
@@ -11,27 +10,38 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
 
+function PlaceholderPage({ title, desc, icon }: { title: string; desc: string; icon: string }) {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="text-5xl mb-4">{icon}</div>
+        <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
+        <p className="text-[var(--color-text-secondary)]">{desc}</p>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const { toasts, removeToast } = useToast();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/tournaments" element={<TournamentsPage />} />
-          <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/leaderboard" element={<div className="min-h-screen pt-32 pb-20 text-center"><div className="glass max-w-md mx-auto p-12"><div className="text-5xl mb-4">🏆</div><h2 className="text-2xl font-bold text-white mb-2">Leaderboard</h2><p className="text-gray-400">Coming soon — global player rankings</p></div></div>} />
-          <Route path="/about" element={<div className="min-h-screen pt-32 pb-20 text-center"><div className="glass max-w-md mx-auto p-12"><div className="text-5xl mb-4">⚽</div><h2 className="text-2xl font-bold text-white mb-2">About</h2><p className="text-gray-400">eFootball Arena — The ultimate competitive tournament platform for eFootball gamers.</p></div></div>} />
-          <Route path="/privacy" element={<div className="min-h-screen pt-32 pb-20"><div className="max-w-3xl mx-auto px-4"><h1 className="text-3xl font-bold text-white mb-6">Privacy Policy</h1><div className="prose prose-invert text-gray-400"><p>Your privacy is important to us. This policy describes how we collect, use, and protect your information.</p><p>We collect minimal data necessary for the operation of our services. Your personal information is never sold to third parties.</p><p className="mt-4">Last updated: May 2026</p></div></div></div>} />
-          <Route path="/terms" element={<div className="min-h-screen pt-32 pb-20"><div className="max-w-3xl mx-auto px-4"><h1 className="text-3xl font-bold text-white mb-6">Terms of Service</h1><div className="prose prose-invert text-gray-400"><p>By using eFootball Arena, you agree to these terms. Our platform is provided for competitive gaming purposes.</p><p>Users must be at least 13 years old to create an account. All participants are expected to maintain good conduct during tournaments.</p><p className="mt-4">Last updated: May 2026</p></div></div></div>} />
-        </Routes>
-      </main>
-      <Footer />
+    <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
+      <Routes>
+        {/* Auth pages — no layout */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Main app — with layout */}
+        <Route path="/" element={<Layout><HomePage /></Layout>} />
+        <Route path="/tournaments" element={<Layout><TournamentsPage /></Layout>} />
+        <Route path="/tournaments/:id" element={<Layout><TournamentDetailPage /></Layout>} />
+        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/leaderboard" element={<Layout><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" icon="🏆" /></Layout>} />
+        <Route path="/about" element={<Layout><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" icon="⚽" /></Layout>} />
+        <Route path="/privacy" element={<Layout><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." icon="🔒" /></Layout>} />
+        <Route path="/terms" element={<Layout><PlaceholderPage title="Terms of Service" desc="By using eFootball Arena, you agree to these terms." icon="📋" /></Layout>} />
+      </Routes>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );

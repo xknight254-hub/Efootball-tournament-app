@@ -4,60 +4,39 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 
 export function RegisterPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    password: '',
-  });
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', username: '', email: '', password: '' });
+  const [strength, setStrength] = useState(0);
   const [agreed, setAgreed] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (name === 'password') setPasswordStrength(calculateStrength(value));
+    if (name === 'password') setStrength(calcStrength(value));
   };
 
-  const calculateStrength = (pw: string): number => {
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (/[A-Z]/.test(pw)) score++;
-    if (/[a-z]/.test(pw)) score++;
-    if (/[0-9]/.test(pw)) score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-    return score;
+  const calcStrength = (pw: string) => {
+    let s = 0;
+    if (pw.length >= 8) s++;
+    if (/[A-Z]/.test(pw)) s++;
+    if (/[a-z]/.test(pw)) s++;
+    if (/[0-9]/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return s;
   };
-
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'][passwordStrength];
-  const strengthColor = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-neon-green'][passwordStrength];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreed) {
-      setError('You must agree to the Terms of Service and Privacy Policy');
-      return;
-    }
-
+    if (!agreed) { setError('You must agree to the Terms'); return; }
     setLoading(true);
     setError('');
-
     try {
-      const result = await api.auth.register({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName || undefined,
-        lastName: formData.lastName || undefined,
-      });
+      const result = await api.auth.register({ username: formData.username, email: formData.email, password: formData.password, firstName: formData.firstName || undefined, lastName: formData.lastName || undefined });
       login(result.token, result.user);
       navigate('/');
     } catch (err: any) {
@@ -67,133 +46,62 @@ export function RegisterPage() {
     }
   };
 
+  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'][strength];
+  const strengthColor = ['', '#ef4444', '#f59e0b', '#eab308', '#22c55e', '#06b6d4'][strength];
+
   return (
-    <div className="min-h-screen pt-20 pb-12 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: 'var(--color-bg)' }}>
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-neon-blue flex items-center justify-center shadow-glow">
-              <span className="text-white font-bold text-xl font-[Orbitron]">E</span>
+          <Link to="/" className="inline-flex items-center gap-2 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+              <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
             </div>
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-gray-400">Join the eFootball Arena</p>
+          <h1 className="text-2xl font-bold text-white mb-1">Create Account</h1>
+          <p className="text-[var(--color-text-muted)] text-sm">Join the eFootball Arena</p>
         </div>
 
-        <Card>
+        <div className="rounded-2xl p-6" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm" role="alert">
-              {error}
-            </div>
+            <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>{error}</div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="First Name"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                placeholder="John"
-              />
-              <Input
-                label="Last Name"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Doe"
-              />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="First Name" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="John" />
+              <Input label="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Doe" />
             </div>
-
-            <Input
-              label="Username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="johndoe123"
-              required
-              helper="At least 3 characters"
-              leftIcon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              }
-            />
-
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@example.com"
-              required
-              autoComplete="email"
-              leftIcon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              }
-            />
-
+            <Input label="Username" name="username" value={formData.username} onChange={handleChange} placeholder="johndoe123" required />
+            <Input label="Email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" required />
             <div>
-              <Input
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Create a strong password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                helper="At least 8 characters with uppercase, lowercase, and number"
-                leftIcon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                }
-              />
+              <Input label="Password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Create a strong password" required minLength={8} />
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className={`h-1 flex-1 rounded-full ${i <= passwordStrength ? strengthColor : 'bg-dark-700'} transition-colors`} />
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ background: i <= strength ? strengthColor : 'var(--color-bg-elevated)' }} />
                     ))}
                   </div>
-                  <p className="text-xs text-dark-400">Password strength: <span className={passwordStrength >= 4 ? 'text-neon-green' : passwordStrength >= 3 ? 'text-yellow-400' : 'text-red-400'}>{strengthLabel}</span></p>
+                  <p className="text-xs" style={{ color: strength >= 4 ? '#22c55e' : strength >= 3 ? '#eab308' : '#ef4444' }}>Password strength: {strengthLabel}</p>
                 </div>
               )}
             </div>
-
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="agree"
-                checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
-                className="w-4 h-4 mt-1 rounded bg-dark-800 border-dark-600 text-primary-500 focus:ring-primary-500/20"
-                required
-              />
-              <label htmlFor="agree" className="text-sm text-gray-400 cursor-pointer">
-                I agree to the{' '}
-                <Link to="/terms" className="text-primary-400 hover:text-primary-300">Terms of Service</Link>
-                {' '}and{' '}
-                <Link to="/privacy" className="text-primary-400 hover:text-primary-300">Privacy Policy</Link>
+            <div className="flex items-start gap-2">
+              <input type="checkbox" id="agree" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-4 h-4 mt-0.5 rounded" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }} required />
+              <label htmlFor="agree" className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                I agree to the <Link to="/terms" style={{ color: 'var(--color-neon-indigo)' }}>Terms of Service</Link> and <Link to="/privacy" style={{ color: 'var(--color-neon-indigo)' }}>Privacy Policy</Link>
               </label>
             </div>
-
             <Button type="submit" variant="neon" className="w-full" size="lg" isLoading={loading}>
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
-        </Card>
+        </div>
 
-        <p className="text-center text-gray-400 mt-6">
+        <p className="text-center mt-6 text-sm" style={{ color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium transition-colors">
-            Sign in
-          </Link>
+          <Link to="/login" className="font-medium" style={{ color: 'var(--color-neon-indigo)' }}>Sign in</Link>
         </p>
       </div>
     </div>
