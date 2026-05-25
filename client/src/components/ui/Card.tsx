@@ -3,23 +3,31 @@ import React from 'react';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
   hover?: boolean;
+  glow?: 'none' | 'green' | 'blue' | 'purple';
+  onClick?: () => void;
 }
+
+const glowClasses: Record<string, string> = {
+  none: '',
+  green: 'hover:shadow-neon-green',
+  blue: 'hover:shadow-neon-blue',
+  purple: 'hover:shadow-neon-purple',
+};
 
 export const Card: React.FC<CardProps> = ({
   children,
   className = '',
+  hover = false,
+  glow = 'none',
   onClick,
-  hover = false
 }) => {
-  const baseStyles = 'bg-white rounded-xl shadow-sm border border-gray-100';
-  const hoverStyles = hover ? 'hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer' : '';
-
   return (
     <div
-      className={`${baseStyles} ${hoverStyles} ${className}`}
+      className={`glass rounded-2xl p-6 ${hover ? `glass-hover cursor-pointer ${glowClasses[glow]}` : ''} ${className}`}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {children}
     </div>
