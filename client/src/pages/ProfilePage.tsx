@@ -32,7 +32,7 @@ export function ProfilePage() {
     setSaving(true); setSaveMsg('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch((import.meta.env.VITE_API_URL || 'http://localhost:3001/api') + '/auth/profile', {
+      const res = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(formData),
