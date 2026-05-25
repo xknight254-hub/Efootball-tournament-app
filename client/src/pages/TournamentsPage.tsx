@@ -21,7 +21,7 @@ export function TournamentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
-  const [formData, setFormData] = useState({ name: '', description: '', format: 'knockout', maxPlayers: '16', bestOf: '1', prizePool: '', platform: 'efootball', rules: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2' });
   const limit = 12;
 
   const loadTournaments = useCallback(async () => {
@@ -46,10 +46,13 @@ export function TournamentsPage() {
     setCreating(true);
     setCreateError('');
     try {
-      const result = await api.tournaments.create({ name: formData.name, description: formData.description || undefined, format: formData.format as 'knockout' | 'league', maxPlayers: parseInt(formData.maxPlayers), bestOf: parseInt(formData.bestOf), prizePool: formData.prizePool || undefined, platform: formData.platform, rules: formData.rules || undefined });
+      const payload: any = { name: formData.name, description: formData.description || undefined, format: formData.format, maxPlayers: parseInt(formData.maxPlayers), bestOf: parseInt(formData.bestOf), prizePool: formData.prizePool || undefined, platform: formData.platform, rules: formData.rules || undefined };
+      if (formData.format === 'multi_bracket') payload.groupCount = parseInt(formData.groupCount) || 2;
+      const result = await api.tournaments.create(payload);
       setShowCreate(false);
+      setFormData({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2' });
       navigate(`/tournaments/${result.id}`);
-    } catch (err: any) { setCreateError(err.error || 'Failed'); } finally { setCreating(false); }
+    } catch (err: any) { setCreateError(err.error || 'Failed to create tournament'); } finally { setCreating(false); }
   };
 
   const totalPages = Math.ceil(total / limit);
@@ -151,24 +154,51 @@ export function TournamentsPage() {
 
       {/* Create Modal */}
       <Modal isOpen={showCreate} onClose={() => { setShowCreate(false); setCreateError(''); }} title="Create Tournament" size="lg">
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleCreate} className="space-y-5">
           {createError && <div className="p-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>{createError}</div>}
+          
           <Input label="Tournament Name *" placeholder="e.g. Friday Night Championship" value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, name: e.target.value }))} required />
+          
           <div>
             <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">Description</label>
             <textarea className="input-field min-h-[60px] resize-y" placeholder="Describe your tournament..." value={formData.description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(p => ({ ...p, description: e.target.value }))} />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Format" value={formData.format} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, format: e.target.value }))} options={[{ value: 'knockout', label: 'Knockout' }, { value: 'league', label: 'League' }]} />
-            <Select label="Max Players" value={formData.maxPlayers} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, maxPlayers: e.target.value }))} options={[{ value: '2', label: '2' }, { value: '4', label: '4' }, { value: '8', label: '8' }, { value: '16', label: '16' }]} />
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">Format *</label>
+              <select className="input-field" value={formData.format} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, format: e.target.value }))}>
+                <option value="knockout">🏆 Knockout</option>
+                <option value="league">⚽ League (Round Robin)</option>
+                <option value="multi_bracket">🎯 Multi-Bracket (Groups + KO)</option>
+                <option value="swiss">♟️ Swiss System</option>
+              </select>
+            </div>
+            <Select label="Max Players" value={formData.maxPlayers} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, maxPlayers: e.target.value }))} options={[{ value: '2', label: '2' }, { value: '4', label: '4' }, { value: '8', label: '8' }, { value: '16', label: '16' }, { value: '32', label: '32' }]} />
           </div>
+
+          {formData.format === 'multi_bracket' && (
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <Input label="Number of Groups" type="number" min="2" max="8" value={formData.groupCount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, groupCount: e.target.value }))} />
+              <div className="flex items-end pb-1">
+                <p className="text-xs text-[var(--color-text-muted)]">Players divided into groups, top finishers advance to knockout</p>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <Select label="Match Format" value={formData.bestOf} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, bestOf: e.target.value }))} options={[{ value: '1', label: 'Best of 1' }, { value: '3', label: 'Best of 3' }, { value: '5', label: 'Best of 5' }]} />
             <Input label="Prize Pool" placeholder="e.g. $100" value={formData.prizePool} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, prizePool: e.target.value }))} />
           </div>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">Rules (Optional)</label>
+            <textarea className="input-field min-h-[50px] resize-y text-sm" placeholder="Tournament rules, settings, etc..." value={formData.rules} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(p => ({ ...p, rules: e.target.value }))} />
+          </div>
+
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button type="submit" variant="neon" className="flex-1" isLoading={creating}>{creating ? 'Creating...' : 'Create'}</Button>
+            <Button type="submit" variant="neon" className="flex-1" isLoading={creating}>{creating ? 'Creating...' : 'Create Tournament'}</Button>
           </div>
         </form>
       </Modal>

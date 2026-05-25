@@ -30,7 +30,7 @@ export interface Tournament {
   name: string;
   description?: string;
   platform: string;
-  format: 'knockout' | 'league';
+  format: 'knockout' | 'league' | 'multi_bracket' | 'swiss';
   maxPlayers: number;
   bestOf: number;
   status: string;
@@ -38,6 +38,8 @@ export interface Tournament {
   registrationDeadline?: string;
   resultDeadlineHours?: number;
   rules?: string;
+  groupCount?: number;
+  bracketType?: string;
   ownerId: number;
   winnerId?: number;
   participantCount: number;
@@ -162,6 +164,11 @@ export const api = {
     },
     participants: async (tournamentId: number) => {
       const res = await fetch(`${API_URL}/tournaments/${tournamentId}/participants`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    standings: async (tournamentId: number) => {
+      const res = await fetch(`${API_URL}/tournaments/${tournamentId}/standings`, { headers: getHeaders() });
       if (!res.ok) throw await res.json();
       return res.json();
     },

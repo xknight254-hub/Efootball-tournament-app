@@ -76,6 +76,8 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       registration_deadline DATETIME,
       result_deadline_hours INTEGER DEFAULT 24,
       rules TEXT,
+      group_count INTEGER DEFAULT 0,
+      bracket_type TEXT DEFAULT 'single',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -122,6 +124,10 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  
+  // Migrate existing tables with new columns
+  try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN group_count INTEGER DEFAULT 0'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN bracket_type TEXT DEFAULT \'single\''); } catch { /* column exists */ }
   
   // Auto-save every 30 seconds and on exit
   setInterval(saveDb, 30000);
