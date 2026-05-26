@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Skeleton } from '../components/ui/Skeleton';
+import { OCRUpload } from '../components/ocr/OCRUpload';
 import type { Tournament, Match, Participant } from '../api';
 
 type Tab = 'overview' | 'bracket' | 'standings' | 'players' | 'chat';
@@ -364,19 +365,44 @@ export function TournamentDetailPage() {
       )}
 
       {/* Result Modal */}
-      <Modal isOpen={resultModal.open} onClose={() => { setResultModal({ open: false, match: null }); setResultError(''); }} title="Submit Result">
+      <Modal isOpen={resultModal.open} onClose={() => { setResultModal({ open: false, match: null }); setResultError(''); setResultScore1(''); setResultScore2(''); }} title="Submit Result" size="lg">
         {resultModal.match && (
-          <form onSubmit={handleSubmitResult} className="space-y-4">
+          <div className="space-y-4">
             {resultError && <div className="p-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>{resultError}</div>}
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">{resultModal.match.player1?.username}</label><input type="number" min="0" max="99" value={resultScore1} onChange={e => setResultScore1(e.target.value)} className="input-field text-center text-xl font-bold" placeholder="0" required /></div>
-              <div><label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">{resultModal.match.player2?.username}</label><input type="number" min="0" max="99" value={resultScore2} onChange={e => setResultScore2(e.target.value)} className="input-field text-center text-xl font-bold" placeholder="0" required /></div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setResultModal({ open: false, match: null })}>Cancel</Button>
-              <Button type="submit" variant="neon" className="flex-1" isLoading={submittingResult}>Submit</Button>
-            </div>
-          </form>
+            
+            {/* Quick OCR Upload */}
+            <OCRUpload
+              onResult={(ocr) => {
+                if (ocr.player1Score != null) setResultScore1(String(ocr.player1Score));
+                if (ocr.player2Score != null) setResultScore2(String(ocr.player2Score));
+              }}
+              onAutoSubmit={(p1, p2) => {
+                setResultScore1(String(p1));
+                setResultScore2(String(p2));
+              }}
+            />
+
+            {/* Manual Score Entry */}
+            <form onSubmit={handleSubmitResult} className="space-y-4">
+              <div className="p-4 rounded-xl" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-subtle)' }}>
+                <p className="text-xs text-[var(--color-text-dim)] uppercase tracking-wider mb-3 font-medium">Or enter scores manually</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">{resultModal.match.player1?.username}</label>
+                    <input type="number" min="0" max="99" value={resultScore1} onChange={e => setResultScore1(e.target.value)} className="input-field text-center text-xl font-bold" placeholder="0" required />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">{resultModal.match.player2?.username}</label>
+                    <input type="number" min="0" max="99" value={resultScore2} onChange={e => setResultScore2(e.target.value)} className="input-field text-center text-xl font-bold" placeholder="0" required />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => { setResultModal({ open: false, match: null }); setResultScore1(''); setResultScore2(''); }}>Cancel</Button>
+                <Button type="submit" variant="neon" className="flex-1" isLoading={submittingResult}>Submit</Button>
+              </div>
+            </form>
+          </div>
         )}
       </Modal>
     </div>

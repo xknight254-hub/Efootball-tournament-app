@@ -212,6 +212,34 @@ export const api = {
     },
   },
 
+  ocr: {
+    /** Upload a screenshot for OCR processing */
+    analyze: async (file: File) => {
+      const formData = new FormData();
+      formData.append('screenshot', file);
+      const token = getToken();
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_URL}/matches/ocr`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    /** Auto-submit result from OCR (one-tap after confirming OCR data) */
+    autoSubmit: async (matchId: number, player1Score: number, player2Score: number, screenshotBase64?: string) => {
+      const res = await fetch(`${API_URL}/matches/ocr/submit`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ matchId, player1Score, player2Score, screenshotBase64 }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+  },
+
   users: {
     get: async (id: number) => {
       const res = await fetch(`${API_URL}/auth/users/${id}`, { headers: getHeaders() });

@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { getTournamentMatches, getMatchById, submitResult, confirmResult, disputeResult, resolveDispute } from '../controllers/matchController.js';
+import { ocrScreenshot, ocrAutoSubmit } from '../services/ocrService.js';
 import { authenticateToken } from '../middleware/auth.js';
+import multer from 'multer';
 const router = Router();
-router.get('/tournament/:tournamentId', authenticateToken, getTournamentMatches);
-router.get('/:id', authenticateToken, getMatchById);
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+router.get('/tournament/:tournamentId', getTournamentMatches);
+router.get('/:id', getMatchById);
+router.post('/ocr', authenticateToken, upload.single('screenshot'), ocrScreenshot);
+router.post('/ocr/submit', authenticateToken, ocrAutoSubmit);
 router.post('/:id/result', authenticateToken, submitResult);
 router.post('/:id/confirm', authenticateToken, confirmResult);
 router.post('/:id/dispute', authenticateToken, disputeResult);

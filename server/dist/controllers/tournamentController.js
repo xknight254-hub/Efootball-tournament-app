@@ -1,28 +1,30 @@
 import db from '../db.js';
-function logAdminAction(adminId, action, details) {
+export function logAdminAction(adminId, action, details) {
     db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(String(adminId), action, details.slice(0, 1000));
 }
 export async function createTournament(req, res) {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
-    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules } = req.body;
+    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType } = req.body;
     if (!name || !format) {
         return res.status(400).json({ error: 'Name and format are required' });
     }
-    const validFormats = ['knockout', 'league'];
+    const validFormats = ['knockout', 'league', 'multi_bracket', 'swiss'];
     if (!validFormats.includes(format)) {
-        return res.status(400).json({ error: 'Invalid format. Must be knockout or league' });
+        return res.status(400).json({ error: 'Invalid format. Must be knockout, league, multi_bracket, or swiss' });
     }
-    const validMaxPlayers = [2, 4, 8, 16];
+    const validMaxPlayers = [2, 4, 8, 16, 32];
     const maxPlayersValue = maxPlayers || 16;
     if (!validMaxPlayers.includes(maxPlayersValue)) {
-        return res.status(400).json({ error: 'Invalid maxPlayers. Must be 2, 4, 8, or 16' });
+        return res.status(400).json({ error: 'Invalid maxPlayers. Must be 2, 4, 8, 16, or 32' });
     }
+    const groupCountValue = format === 'multi_bracket' ? (groupCount || 2) : 0;
+    const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
     const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
-  `).run(name, description || null, platform || 'efootball', format, maxPlayersValue, bestOf || 1, prizePool || null, registrationDeadline || null, resultDeadlineHours || 24, rules || null, req.user.id);
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+  `).run(name, description || null, platform || 'efootball', format, maxPlayersValue, bestOf || 1, prizePool || null, registrationDeadline || null, resultDeadlineHours || 24, rules || null, req.user.id, groupCountValue, bracketTypeValue);
     const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
         id: tournament.id,
@@ -108,8 +110,108 @@ export async function getTournamentById(req, res) {
         ownerId: tournament.owner_id,
         winnerId: tournament.winner_id,
         participantCount: participantCount.count,
+        groupCount: tournament.group_count || 0,
+        bracketType: tournament.bracket_type || 'single',
         createdAt: tournament.created_at
     });
+}
+export async function getParticipants(req, res) {
+    const { id } = req.params;
+    const tournamentId = parseInt(id);
+    if (isNaN(tournamentId)) {
+        return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+    const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId);
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    const participants = db.prepare(`
+    SELECT p.id, p.user_id, p.seed, p.status as participant_status, p.joined_at, u.username
+    FROM participants p
+    JOIN users u ON p.user_id = u.id
+    WHERE p.tournament_id = ?
+    ORDER BY p.seed ASC
+  `).all(tournamentId);
+    res.json({
+        participants: participants.map(p => ({
+            id: p.id,
+            userId: p.user_id,
+            username: p.username,
+            seed: p.seed,
+            status: p.participant_status,
+            joinedAt: p.joined_at
+        }))
+    });
+}
+export async function getStandings(req, res) {
+    const { id } = req.params;
+    const tournamentId = parseInt(id);
+    if (isNaN(tournamentId)) {
+        return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+    const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId);
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    // Get all participants
+    const participants = db.prepare(`
+    SELECT p.id, p.user_id, p.seed, u.username
+    FROM participants p
+    JOIN users u ON p.user_id = u.id
+    WHERE p.tournament_id = ?
+    ORDER BY p.seed ASC
+  `).all(tournamentId);
+    // Get all completed matches
+    const completedMatches = db.prepare(`
+    SELECT * FROM matches 
+    WHERE tournament_id = ? AND status = 'completed' AND winner_id IS NOT NULL
+  `).all(tournamentId);
+    // Calculate standings per player
+    const stats = {};
+    participants.forEach(p => {
+        stats[p.user_id] = {
+            userId: p.user_id,
+            username: p.username,
+            seed: p.seed,
+            played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            points: 0
+        };
+    });
+    completedMatches.forEach((m) => {
+        const p1 = m.player1_id, p2 = m.player2_id;
+        const s1 = m.player1_score, s2 = m.player2_score;
+        if (!stats[p1] || !stats[p2])
+            return;
+        stats[p1].played++;
+        stats[p2].played++;
+        stats[p1].goalsFor += s1;
+        stats[p1].goalsAgainst += s2;
+        stats[p2].goalsFor += s2;
+        stats[p2].goalsAgainst += s1;
+        if (s1 > s2) {
+            stats[p1].wins++;
+            stats[p1].points += 3;
+            stats[p2].losses++;
+        }
+        else if (s2 > s1) {
+            stats[p2].wins++;
+            stats[p2].points += 3;
+            stats[p1].losses++;
+        }
+        else {
+            stats[p1].draws++;
+            stats[p2].draws++;
+            stats[p1].points += 1;
+            stats[p2].points += 1;
+        }
+    });
+    const standings = Object.values(stats).sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || a.seed - b.seed);
+    res.json({ standings, matches: completedMatches.length, tournament: { name: tournament.name, format: tournament.format } });
 }
 export async function updateTournament(req, res) {
     if (!req.user) {

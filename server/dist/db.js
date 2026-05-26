@@ -2,18 +2,49 @@
 import initSqlJs from 'sql.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const dbDir = join(__dirname, '..', '..', 'data');
+const dbPath = join(dbDir, 'efootball.db');
 let sqlDb = null;
 let initialized = false;
+function saveDb() {
+    if (!sqlDb)
+        return;
+    try {
+        if (!existsSync(dbDir))
+            mkdirSync(dbDir, { recursive: true });
+        const data = sqlDb.export();
+        writeFileSync(dbPath, Buffer.from(data));
+    }
+    catch (e) {
+        console.error('[DB] Save failed:', e);
+    }
+}
 async function initDBInternal() {
     if (sqlDb && initialized)
         return sqlDb;
     const SQL = await initSqlJs({
         locateFile: (file) => join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file)
     });
-    sqlDb = new SQL.Database();
+    // Try to load existing DB from file
+    if (existsSync(dbPath)) {
+        try {
+            const buffer = readFileSync(dbPath);
+            sqlDb = new SQL.Database(new Uint8Array(buffer));
+            console.log('[DB] Loaded from file');
+        }
+        catch (e) {
+            console.error('[DB] Failed to load file, creating new:', e);
+            sqlDb = new SQL.Database();
+        }
+    }
+    else {
+        sqlDb = new SQL.Database();
+    }
     initialized = true;
+    // Create tables if they don't exist
     sqlDb.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,6 +73,8 @@ async function initDBInternal() {
       registration_deadline DATETIME,
       result_deadline_hours INTEGER DEFAULT 24,
       rules TEXT,
+      group_count INTEGER DEFAULT 0,
+      bracket_type TEXT DEFAULT 'single',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -88,6 +121,20 @@ async function initDBInternal() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+    // Migrate existing tables with new columns
+    try {
+        sqlDb.run('ALTER TABLE tournaments ADD COLUMN group_count INTEGER DEFAULT 0');
+    }
+    catch { /* column exists */ }
+    try {
+        sqlDb.run('ALTER TABLE tournaments ADD COLUMN bracket_type TEXT DEFAULT \'single\'');
+    }
+    catch { /* column exists */ }
+    // Auto-save every 30 seconds and on exit
+    setInterval(saveDb, 30000);
+    process.on('exit', saveDb);
+    process.on('SIGINT', () => { saveDb(); process.exit(0); });
+    process.on('SIGTERM', () => { saveDb(); process.exit(0); });
     console.log('[DB] Database initialized');
     return sqlDb;
 }
@@ -111,6 +158,7 @@ export const db = {
         run: (...params) => {
             getDb().run(sql, params);
             const result = getDb().exec("SELECT last_insert_rowid() as id");
+            saveDb(); // Persist after writes
             return { lastInsertRowid: result[0]?.values[0]?.[0] };
         },
         get: (...params) => {
@@ -135,7 +183,7 @@ export const db = {
             return results;
         }
     }),
-    exec: (sql) => getDb().run(sql)
+    exec: (sql) => { getDb().run(sql); saveDb(); }
 };
 export default db;
 //# sourceMappingURL=db.js.map
