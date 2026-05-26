@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { CSSProperties } from 'react';
 
 interface SkeletonProps {
   className?: string;
   variant?: 'text' | 'title' | 'avatar' | 'card' | 'button';
   lines?: number;
+  style?: CSSProperties;
 }
 
 export const Skeleton: React.FC<SkeletonProps> = ({
   className = '',
   variant = 'text',
   lines = 1,
+  style,
 }) => {
   if (variant === 'text') {
     return (
@@ -28,7 +30,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     button: 'skeleton h-10 w-24',
   };
 
-  return <div className={`${variantClass[variant]} ${className}`} />;
+  return <div className={`${variantClass[variant]} ${className}`} style={style} />;
 };
 
 interface ProgressBarProps {

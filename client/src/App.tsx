@@ -33,16 +33,16 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Main app — with layout */}
-        <Route path="/" element={<Layout><HomePage /></Layout>} />
-        <Route path="/tournaments" element={<Layout><TournamentsPage /></Layout>} />
-        <Route path="/tournaments/:id" element={<Layout><TournamentDetailPage /></Layout>} />
-        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
-        <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
-        <Route path="/leaderboard" element={<Layout><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" icon="🏆" /></Layout>} />
-        <Route path="/about" element={<Layout><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" icon="⚽" /></Layout>} />
-        <Route path="/privacy" element={<Layout><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." icon="🔒" /></Layout>} />
-        <Route path="/terms" element={<Layout><PlaceholderPage title="Terms of Service" desc="By using eFootball Arena, you agree to these terms." icon="📋" /></Layout>} />
+      {/* Main app — with layout */}
+      <Route path="/" element={<Layout showSidenav><HomePage /></Layout>} />
+      <Route path="/tournaments" element={<Layout showSidenav><TournamentsPage /></Layout>} />
+      <Route path="/tournaments/:id" element={<Layout showSidenav><TournamentDetailPage /></Layout>} />
+      <Route path="/profile" element={<Layout showSidenav><ProfilePage /></Layout>} />
+      <Route path="/admin" element={<Layout showSidenav><AdminDashboard /></Layout>} />
+      <Route path="/leaderboard" element={<Layout showSidenav><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" icon="🏆" /></Layout>} />
+      <Route path="/about" element={<Layout showSidenav={false}><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" icon="⚽" /></Layout>} />
+      <Route path="/privacy" element={<Layout showSidenav={false}><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." icon="🔒" /></Layout>} />
+      <Route path="/terms" element={<Layout showSidenav={false}><PlaceholderPage title="Terms of Service" desc="By using eFootball Arena, you agree to these terms." icon="📋" /></Layout>} />
       </Routes>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

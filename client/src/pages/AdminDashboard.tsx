@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 
 interface AdminStats {
@@ -48,8 +50,9 @@ interface AdminLog {
 type Tab = 'overview' | 'users' | 'tournaments' | 'logs';
 
 export function AdminDashboard() {
-  const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('overview');
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<'overview' | 'users' | 'tournaments' | 'logs'>('overview');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -62,6 +65,17 @@ export function AdminDashboard() {
   const [actionMsg, setActionMsg] = useState('');
 
   const isAdmin = user?.isAdmin;
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!isLoading && isAuthenticated && !isAdmin) {
+      navigate('/');
+      return;
+    }
+  }, [isLoading, isAuthenticated, isAdmin, navigate]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -184,15 +198,9 @@ export function AdminDashboard() {
     setTimeout(() => setActionMsg(''), 3000);
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-4xl mb-4">🛡️</p>
-        <h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2>
-        <p className="text-[var(--color-text-muted)]">You don't have permission to view this page.</p>
-      </div>
-    );
-  }
+  // Redirect if not admin
+  if (!isLoading && !isAuthenticated) return <div className="text-center py-20"><p className="text-[var(--color-text-muted)] mb-4">Please login</p><Button variant="primary" onClick={() => navigate('/login')}>Login</Button></div>;
+  if (!isLoading && isAuthenticated && !isAdmin) return <div className="text-center py-20"><p className="text-4xl mb-4">🛡️</p><h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2><p className="text-[var(--color-text-muted)]">You don't have permission to view this page.</p></div>;
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'overview', label: 'Overview', icon: '📊' },

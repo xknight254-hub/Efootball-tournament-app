@@ -1,31 +1,28 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
-import type { Tournament } from '../api';
 
 export function ProfilePage() {
-  const { user, updateUser } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, isLoading: authLoading, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({ username: '', email: '', firstName: '', lastName: '' });
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await api.tournaments.list({ limit: 100 });
-        setTournaments(data.tournaments || data || []);
-        if (user) setFormData({ username: user.username || '', email: user.email || '', firstName: user.firstName || '', lastName: user.lastName || '' });
-      } catch { } finally { setLoading(false); }
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+      return;
     }
-    load();
-  }, [user]);
+    if (user) {
+      setFormData({ username: user.username || '', email: user.email || '', firstName: user.firstName || '', lastName: user.lastName || '' });
+    }
+  }, [authLoading, isAuthenticated, user, navigate]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -46,15 +43,14 @@ export function ProfilePage() {
     } catch (err: any) { setSaveMsg(err.error || 'Failed'); } finally { setSaving(false); }
   };
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
-  if (!user) return <div className="text-center py-20"><p className="text-[var(--color-text-muted)] mb-4">Please login</p><Button variant="primary" onClick={() => window.location.href = '/login'}>Login</Button></div>;
+  if (authLoading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>;
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Profile</h1>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Profile Card */}
         <div className="md:col-span-1">
           <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
             <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
@@ -66,13 +62,12 @@ export function ProfilePage() {
             <div className="h-px my-4" style={{ background: 'var(--color-border)' }} />
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-[var(--color-text-muted)]">Member Since</span><span className="text-white">{new Date().toLocaleDateString()}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--color-text-muted)]">Tournaments</span><span className="text-[#22c55e] font-bold">{tournaments.length}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-text-muted)]">Role</span><span className="text-[#22c55e] font-bold">{user.isAdmin ? 'Admin' : 'Player'}</span></div>
             </div>
           </div>
         </div>
 
-        {/* Details */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-2">
           <div className="rounded-2xl p-5" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-white">Account Details</h3>
@@ -94,20 +89,6 @@ export function ProfilePage() {
                   <div key={i} className="flex justify-between py-2" style={{ borderBottom: i < 3 ? '1px solid var(--color-border-subtle)' : 'none' }}>
                     <span className="text-[var(--color-text-muted)]">{label}</span>
                     <span className="text-white">{value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl p-5" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-            <h3 className="text-base font-semibold text-white mb-4">Tournament History</h3>
-            {tournaments.length === 0 ? <p className="text-[var(--color-text-muted)] text-center py-6 text-sm">No tournaments yet.</p> : (
-              <div className="space-y-2">
-                {tournaments.slice(0, 10).map(t => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--color-bg-surface)' }}>
-                    <div><p className="text-white text-sm font-medium">{t.name}</p><p className="text-[var(--color-text-dim)] text-xs capitalize">{t.format} • {t.status}</p></div>
-                    <Badge variant={t.status === 'completed' ? 'completed' : t.status === 'in_progress' ? 'live' : 'open'}>{t.status}</Badge>
                   </div>
                 ))}
               </div>

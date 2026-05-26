@@ -184,6 +184,39 @@ export async function getTournamentById(req: AuthRequest, res: Response) {
   });
 }
 
+export async function getParticipants(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  const tournamentId = parseInt(id);
+
+  if (isNaN(tournamentId)) {
+    return res.status(400).json({ error: 'Invalid tournament ID' });
+  }
+
+  const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament | undefined;
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+
+  const participants = db.prepare(`
+    SELECT p.id, p.user_id, p.seed, p.status as participant_status, p.joined_at, u.username
+    FROM participants p
+    JOIN users u ON p.user_id = u.id
+    WHERE p.tournament_id = ?
+    ORDER BY p.seed ASC
+  `).all(tournamentId) as any[];
+
+  res.json({
+    participants: participants.map(p => ({
+      id: p.id,
+      userId: p.user_id,
+      username: p.username,
+      seed: p.seed,
+      status: p.participant_status,
+      joinedAt: p.joined_at
+    }))
+  });
+}
+
 export async function getStandings(req: AuthRequest, res: Response) {
   const { id } = req.params;
   const tournamentId = parseInt(id);
