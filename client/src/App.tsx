@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { TelegramProvider } from './context/TelegramContext';
 import { Layout } from './components/layout/Layout';
 import { ToastContainer } from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
@@ -53,7 +54,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <TelegramProvider>
+          <AppContent />
+        </TelegramProvider>
       </AuthProvider>
     </BrowserRouter>
   );

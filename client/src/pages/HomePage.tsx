@@ -25,45 +25,103 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      {/* === HERO SPOTLIGHT === */}
-      <section className="relative rounded-2xl overflow-hidden" style={{ height: '420px', background: 'var(--color-bg-card)' }}>
-        {/* Background gradient */}
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 50%, rgba(59,130,246,0.05) 100%)',
-        }} />
-        <div className="absolute inset-0 hero-gradient-overlay" />
-        
-        {/* Content */}
-        <div className="relative h-full flex flex-col justify-center px-8 md:px-12 max-w-[480px]">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
-            style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
-            <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-            <span className="text-xs text-[#4ade80] font-semibold">Live tournaments running</span>
-          </div>
-          
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight tracking-tight">
-            Compete in <span className="gradient-text">eFootball</span> Tournaments
-          </h1>
-          <p className="text-[var(--color-text-secondary)] text-base mb-8 leading-relaxed">
-            The ultimate competitive platform. Create tournaments, challenge players worldwide, and prove you're the best.
-          </p>
-          <div className="flex gap-3">
-            <Link to="/register">
-              <Button variant="neon" size="lg">Start Playing</Button>
-            </Link>
-            <Link to="/tournaments">
-              <Button variant="outline" size="lg">Browse Tournaments</Button>
-            </Link>
+      {/* === HERO: 3-Image Side-by-Side === */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: '460px' }}>
+        {/* Card 1: Cup / Trophy — Main Hero (spans 2 cols on lg) */}
+        <div className="lg:col-span-2 relative rounded-2xl overflow-hidden group"
+          style={{ minHeight: '460px' }}>
+          <img
+            src="/tournament-images/cup.jpg"
+            alt="Champion Trophy"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          {/* Dark overlay gradient — left side clear for text */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(90deg, rgba(9,9,11,0.92) 0%, rgba(9,9,11,0.7) 40%, rgba(9,9,11,0.3) 70%, transparent 100%)',
+          }} />
+          {/* Neon glow accent */}
+          <div className="absolute top-0 left-0 w-1 h-full" style={{
+            background: 'linear-gradient(180deg, #6366f1, #8b5cf6, transparent)',
+          }} />
+          {/* Content */}
+          <div className="relative h-full flex flex-col justify-center px-8 md:px-12 max-w-[560px]">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
+              <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+              <span className="text-xs text-[#4ade80] font-semibold tracking-wide">LIVE TOURNAMENTS</span>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+              Chase the <span className="gradient-text">Championship</span>
+            </h1>
+            <p className="text-[var(--color-text-secondary)] text-base md:text-lg mb-8 leading-relaxed">
+              Create or join eFootball tournaments. Compete in knockout brackets, climb leaderboards, and lift the trophy.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <Link to="/register">
+                <Button variant="neon" size="lg">🏆 Start Competing</Button>
+              </Link>
+              <Link to="/tournaments">
+                <Button variant="outline" size="lg">Browse Tournaments</Button>
+              </Link>
+            </div>
+            {/* Mini stats */}
+            <div className="flex gap-8 mt-8">
+              {[
+                { value: loading ? '...' : stats.tournaments.toLocaleString(), label: 'Tournaments' },
+                { value: loading ? '...' : stats.players.toLocaleString(), label: 'Players' },
+                { value: '24/7', label: 'Live' },
+              ].map((s, i) => (
+                <div key={i}>
+                  <div className="text-xl font-bold text-white">{s.value}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Decorative elements */}
-        <div className="absolute top-8 right-8 w-32 h-32 rounded-full opacity-20" style={{
-          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-        }} />
-        <div className="absolute bottom-12 right-24 w-24 h-24 rounded-full opacity-15" style={{
-          background: 'radial-gradient(circle, rgba(139,92,246,0.5) 0%, transparent 70%)',
-        }} />
+        {/* Card 2: Night Match — Right Top */}
+        <div className="relative rounded-2xl overflow-hidden group"
+          style={{ minHeight: '220px' }}>
+          <img
+            src="/tournament-images/night-match.jpg"
+            alt="Night Match"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(180deg, rgba(9,9,11,0.5) 0%, rgba(9,9,11,0.85) 100%)',
+          }} />
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <div className="text-xs text-[#6366f1] font-bold mb-2 tracking-wider uppercase">Real Matches</div>
+            <h3 className="text-lg font-bold text-white mb-1">Play Under the Lights</h3>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Schedule matches, submit scores with screenshot proof, and confirm results.
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Football Soccer — Right Bottom */}
+        <div className="relative rounded-2xl overflow-hidden group"
+          style={{ minHeight: '220px' }}>
+          <img
+            src="/tournament-images/football-soccer.jpg"
+            alt="Football Pitch"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(180deg, rgba(9,9,11,0.5) 0%, rgba(9,9,11,0.85) 100%)',
+          }} />
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <div className="text-xs text-[#22c55e] font-bold mb-2 tracking-wider uppercase">All Formats</div>
+            <h3 className="text-lg font-bold text-white mb-1">Knockout or League</h3>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Single elimination, double elimination, or round-robin brackets.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* === STATS ROW === */}

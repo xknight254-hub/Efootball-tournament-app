@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api, isAuthenticated } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,11 @@ import { Modal } from '../components/ui/Modal';
 import { Skeleton, ProgressBar } from '../components/ui/Skeleton';
 import { Select } from '../components/ui/Input';
 import type { Tournament } from '../api';
+
+interface TournamentImage {
+  filename: string;
+  url: string;
+}
 
 export function TournamentsPage() {
   const navigate = useNavigate();
@@ -24,7 +29,14 @@ export function TournamentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
-  const [formData, setFormData] = useState({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2' });
+  const [formData, setFormData] = useState({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2', imageUrl: '' });
+
+  // Image picker state
+  const [availableImages, setAvailableImages] = useState<TournamentImage[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const limit = 12;
 
   const loadTournaments = useCallback(async () => {
@@ -42,6 +54,49 @@ export function TournamentsPage() {
 
   useEffect(() => { loadTournaments(); }, [loadTournaments]);
 
+  // Load available images when modal opens
+  const loadAvailableImages = async () => {
+    try {
+      setImagesLoading(true);
+      const data = await api.images.listTournamentImages();
+      setAvailableImages(data.images || []);
+    } catch (err) {
+      console.error('Failed to load images:', err);
+    } finally {
+      setImagesLoading(false);
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setShowCreate(true);
+    setFormData({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2', imageUrl: '' });
+    setSelectedImage('');
+    loadAvailableImages();
+  };
+
+  const handleImageSelect = (url: string) => {
+    setSelectedImage(url);
+    setFormData(p => ({ ...p, imageUrl: url }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const result = await api.images.upload(file);
+      // Add to available images and select it
+      const newImage: TournamentImage = { filename: result.url.split('/').pop() || '', url: result.url };
+      setAvailableImages(prev => [...prev, newImage]);
+      handleImageSelect(result.url);
+    } catch (err: any) {
+      setCreateError(err.error || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated()) { navigate('/login'); return; }
@@ -51,9 +106,11 @@ export function TournamentsPage() {
     try {
       const payload: any = { name: formData.name, description: formData.description || undefined, format: formData.format, maxPlayers: parseInt(formData.maxPlayers), bestOf: parseInt(formData.bestOf), prizePool: formData.prizePool || undefined, platform: formData.platform, rules: formData.rules || undefined };
       if (formData.format === 'multi_bracket') payload.groupCount = parseInt(formData.groupCount) || 2;
+      if (formData.imageUrl) payload.imageUrl = formData.imageUrl;
       const result = await api.tournaments.create(payload);
       setShowCreate(false);
-      setFormData({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2' });
+      setFormData({ name: '', description: '', format: 'knockout', maxPlayers: '8', bestOf: '1', prizePool: '', platform: 'efootball', rules: '', groupCount: '2', imageUrl: '' });
+      setSelectedImage('');
       navigate(`/tournaments/${result.id}`);
     } catch (err: any) { setCreateError(err.error || 'Failed to create tournament'); } finally { setCreating(false); }
   };
@@ -69,7 +126,7 @@ export function TournamentsPage() {
           <p className="text-[var(--color-text-muted)] text-sm">Join a tournament and prove your skills</p>
         </div>
         {isAdmin && (
-          <Button variant="neon" onClick={() => setShowCreate(true)}>
+          <Button variant="neon" onClick={handleOpenCreate}>
             + Create Tournament
           </Button>
         )}
@@ -121,26 +178,64 @@ export function TournamentsPage() {
           <div className="flex flex-wrap gap-4">
             {tournaments.map((t) => (
               <Link key={t.id} to={`/tournaments/${t.id}`} className="flex-1 min-w-[280px] max-w-[calc(33.333%-12px)]">
-                <div className="tilt-card p-5 h-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}>
-                      {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
-                    </Badge>
-                    <span className="text-[var(--color-text-dim)] text-xs capitalize">{t.format}</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-white mb-2 line-clamp-2">{t.name}</h3>
-                  {t.description && <p className="text-[var(--color-text-muted)] text-xs mb-3 line-clamp-2">{t.description}</p>}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[var(--color-text-muted)]">Players</span>
-                      <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
+                <div className="tilt-card h-full relative overflow-hidden rounded-2xl" style={t.imageUrl ? { minHeight: '220px' } : undefined}>
+                  {t.imageUrl ? (
+                    <>
+                      {/* Background Image */}
+                      <img
+                        src={t.imageUrl}
+                        alt={t.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      {/* Dark Gradient Overlay */}
+                      <div className="absolute inset-0" style={{
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0.85) 100%)',
+                      }} />
+                      {/* Content */}
+                      <div className="relative p-5 h-full flex flex-col justify-end" style={{ minHeight: '220px' }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}>
+                            {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
+                          </Badge>
+                          <span className="text-white/70 text-xs capitalize">{t.format}</span>
+                        </div>
+                        <h3 className="text-sm font-semibold text-white mb-2 line-clamp-2">{t.name}</h3>
+                        <div className="space-y-2 mb-3">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-white/70">Players</span>
+                            <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-white/70">Prize</span>
+                            <span className="text-[#22c55e] font-semibold">{t.prizePool || 'N/A'}</span>
+                          </div>
+                        </div>
+                        <ProgressBar value={t.participantCount} max={t.maxPlayers} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-5 h-full" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <Badge variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}>
+                          {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
+                        </Badge>
+                        <span className="text-[var(--color-text-dim)] text-xs capitalize">{t.format}</span>
+                      </div>
+                      <h3 className="text-sm font-semibold text-white mb-2 line-clamp-2">{t.name}</h3>
+                      {t.description && <p className="text-[var(--color-text-muted)] text-xs mb-3 line-clamp-2">{t.description}</p>}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--color-text-muted)]">Players</span>
+                          <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--color-text-muted)]">Prize</span>
+                          <span className="text-[#22c55e] font-semibold">{t.prizePool || 'N/A'}</span>
+                        </div>
+                      </div>
+                      <ProgressBar value={t.participantCount} max={t.maxPlayers} />
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[var(--color-text-muted)]">Prize</span>
-                      <span className="text-[#22c55e] font-semibold">{t.prizePool || 'N/A'}</span>
-                    </div>
-                  </div>
-                  <ProgressBar value={t.participantCount} max={t.maxPlayers} />
+                  )}
                 </div>
               </Link>
             ))}
@@ -166,6 +261,80 @@ export function TournamentsPage() {
           <div>
             <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">Description</label>
             <textarea className="input-field min-h-[60px] resize-y" placeholder="Describe your tournament..." value={formData.description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(p => ({ ...p, description: e.target.value }))} />
+          </div>
+
+          {/* Image Picker Section */}
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">
+              Tournament Image
+            </label>
+            {formData.imageUrl && (
+              <div className="relative mb-3 rounded-xl overflow-hidden" style={{ height: '120px' }}>
+                <img src={formData.imageUrl} alt="Selected" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setSelectedImage(''); setFormData(p => ({ ...p, imageUrl: '' })); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            
+            {/* Image Grid */}
+            {imagesLoading ? (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="w-20 h-14 flex-shrink-0" />
+                ))}
+              </div>
+            ) : availableImages.length > 0 ? (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3 max-h-[180px] overflow-y-auto p-1">
+                {availableImages.map((img) => (
+                  <button
+                    key={img.filename}
+                    type="button"
+                    onClick={() => handleImageSelect(img.url)}
+                    className={`relative rounded-lg overflow-hidden transition-all ${
+                      selectedImage === img.url
+                        ? 'ring-2 ring-[#6366f1] ring-offset-2 ring-offset-[var(--color-bg)] scale-105'
+                        : 'hover:opacity-80'
+                    }`}
+                    style={{ height: '56px' }}
+                  >
+                    <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
+                    {selectedImage === img.url && (
+                      <div className="absolute inset-0 bg-[#6366f1]/20 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">✓</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-[var(--color-text-muted)] mb-3">No images available. Upload one below.</div>
+            )}
+
+            {/* Upload Button */}
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                isLoading={uploadingImage}
+              >
+                {uploadingImage ? 'Uploading...' : '+ Upload New Image'}
+              </Button>
+              <span className="text-xs text-[var(--color-text-muted)]">JPG, PNG, WebP (max 5MB)</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

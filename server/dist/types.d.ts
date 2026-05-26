@@ -8,6 +8,9 @@ export interface User {
     avatar_url: string | null;
     is_admin: number;
     is_super_admin: number;
+    telegram_id: string | null;
+    telegram_username: string | null;
+    telegram_photo_url: string | null;
     created_at: string;
 }
 export interface Tournament {

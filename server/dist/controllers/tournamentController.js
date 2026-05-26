@@ -10,7 +10,7 @@ export async function createTournament(req, res) {
     if (req.user.is_admin !== 1 && req.user.is_super_admin !== 1) {
         return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
     }
-    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType } = req.body;
+    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl } = req.body;
     if (!name || !format) {
         return res.status(400).json({ error: 'Name and format are required' });
     }
@@ -26,9 +26,9 @@ export async function createTournament(req, res) {
     const groupCountValue = format === 'multi_bracket' ? (groupCount || 2) : 0;
     const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
     const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
-  `).run(name, description || null, platform || 'efootball', format, maxPlayersValue, bestOf || 1, prizePool || null, registrationDeadline || null, resultDeadlineHours || 24, rules || null, req.user.id, groupCountValue, bracketTypeValue);
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+  `).run(name, description || null, platform || 'efootball', format, maxPlayersValue, bestOf || 1, prizePool || null, registrationDeadline || null, resultDeadlineHours || 24, rules || null, req.user.id, groupCountValue, bracketTypeValue, imageUrl || null);
     const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
         id: tournament.id,
@@ -41,6 +41,7 @@ export async function createTournament(req, res) {
         status: tournament.status,
         prizePool: tournament.prize_pool,
         registrationDeadline: tournament.registration_deadline,
+        imageUrl: tournament.image_url,
         createdAt: tournament.created_at
     });
 }
@@ -80,6 +81,7 @@ export async function getTournaments(req, res) {
             status: t.status,
             prizePool: t.prize_pool,
             registrationDeadline: t.registration_deadline,
+            imageUrl: t.image_url,
             createdAt: t.created_at
         })),
         total: total.count,
@@ -116,6 +118,7 @@ export async function getTournamentById(req, res) {
         participantCount: participantCount.count,
         groupCount: tournament.group_count || 0,
         bracketType: tournament.bracket_type || 'single',
+        imageUrl: tournament.image_url,
         createdAt: tournament.created_at
     });
 }
@@ -233,7 +236,7 @@ export async function updateTournament(req, res) {
     if (tournament.owner_id !== req.user.id && req.user.is_admin !== 1) {
         return res.status(403).json({ error: 'Not authorized to update this tournament' });
     }
-    const { name, description, status, prizePool, registrationDeadline, rules } = req.body;
+    const { name, description, status, prizePool, registrationDeadline, rules, imageUrl } = req.body;
     db.prepare(`
     UPDATE tournaments SET
       name = COALESCE(?, name),
@@ -241,9 +244,10 @@ export async function updateTournament(req, res) {
       status = COALESCE(?, status),
       prize_pool = COALESCE(?, prize_pool),
       registration_deadline = COALESCE(?, registration_deadline),
-      rules = COALESCE(?, rules)
+      rules = COALESCE(?, rules),
+      image_url = COALESCE(?, image_url)
     WHERE id = ?
-  `).run(name || null, description || null, status || null, prizePool || null, registrationDeadline || null, rules || null, tournamentId);
+  `).run(name || null, description || null, status || null, prizePool || null, registrationDeadline || null, rules || null, imageUrl !== undefined ? imageUrl : null, tournamentId);
     const updated = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId);
     res.json({
         id: updated.id,
@@ -251,7 +255,8 @@ export async function updateTournament(req, res) {
         description: updated.description,
         status: updated.status,
         prizePool: updated.prize_pool,
-        registrationDeadline: updated.registration_deadline
+        registrationDeadline: updated.registration_deadline,
+        imageUrl: updated.image_url
     });
 }
 export async function deleteTournament(req, res) {

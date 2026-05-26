@@ -28,6 +28,7 @@ interface Tournament {
   rules: string | null;
   group_count: number;
   bracket_type: string;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -41,7 +42,7 @@ export async function createTournament(req: AuthRequest, res: Response) {
     return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
   }
 
-  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType } = req.body;
+  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl } = req.body;
 
   if (!name || !format) {
     return res.status(400).json({ error: 'Name and format are required' });
@@ -62,8 +63,8 @@ export async function createTournament(req: AuthRequest, res: Response) {
   const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
 
   const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
   `).run(
     name,
     description || null,
@@ -77,7 +78,8 @@ export async function createTournament(req: AuthRequest, res: Response) {
     rules || null,
     req.user.id,
     groupCountValue,
-    bracketTypeValue
+    bracketTypeValue,
+    imageUrl || null
   );
 
   const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid) as Tournament;
@@ -93,6 +95,7 @@ export async function createTournament(req: AuthRequest, res: Response) {
     status: tournament.status,
     prizePool: tournament.prize_pool,
     registrationDeadline: tournament.registration_deadline,
+    imageUrl: tournament.image_url,
     createdAt: tournament.created_at
   });
 }
@@ -141,6 +144,7 @@ export async function getTournaments(req: AuthRequest, res: Response) {
       status: t.status,
       prizePool: t.prize_pool,
       registrationDeadline: t.registration_deadline,
+      imageUrl: t.image_url,
       createdAt: t.created_at
     })),
     total: total.count,
@@ -185,6 +189,7 @@ export async function getTournamentById(req: AuthRequest, res: Response) {
     participantCount: participantCount.count,
     groupCount: tournament.group_count || 0,
     bracketType: tournament.bracket_type || 'single',
+    imageUrl: tournament.image_url,
     createdAt: tournament.created_at
   });
 }
@@ -309,7 +314,7 @@ export async function updateTournament(req: AuthRequest, res: Response) {
     return res.status(403).json({ error: 'Not authorized to update this tournament' });
   }
 
-  const { name, description, status, prizePool, registrationDeadline, rules } = req.body;
+  const { name, description, status, prizePool, registrationDeadline, rules, imageUrl } = req.body;
 
   db.prepare(`
     UPDATE tournaments SET
@@ -318,7 +323,8 @@ export async function updateTournament(req: AuthRequest, res: Response) {
       status = COALESCE(?, status),
       prize_pool = COALESCE(?, prize_pool),
       registration_deadline = COALESCE(?, registration_deadline),
-      rules = COALESCE(?, rules)
+      rules = COALESCE(?, rules),
+      image_url = COALESCE(?, image_url)
     WHERE id = ?
   `).run(
     name || null,
@@ -327,6 +333,7 @@ export async function updateTournament(req: AuthRequest, res: Response) {
     prizePool || null,
     registrationDeadline || null,
     rules || null,
+    imageUrl !== undefined ? imageUrl : null,
     tournamentId
   );
 
@@ -338,7 +345,8 @@ export async function updateTournament(req: AuthRequest, res: Response) {
     description: updated.description,
     status: updated.status,
     prizePool: updated.prize_pool,
-    registrationDeadline: updated.registration_deadline
+    registrationDeadline: updated.registration_deadline,
+    imageUrl: updated.image_url
   });
 }
 

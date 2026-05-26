@@ -9,6 +9,9 @@ export interface User {
   avatarUrl?: string;
   isAdmin: boolean;
   isSuperAdmin?: boolean;
+  telegramId?: string;
+  telegramUsername?: string;
+  isPremium?: boolean;
 }
 
 interface AuthContextType {
@@ -29,6 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Listen for Telegram auto-login events
+    const handleTelegramAuth = (event: CustomEvent) => {
+      const { token, user } = event.detail;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setToken(token);
+      setUser(user);
+      setIsLoading(false);
+    };
+
+    window.addEventListener('telegram-authenticated', handleTelegramAuth as EventListener);
+
+    // Check for existing saved auth (non-Telegram)
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     if (savedToken && savedUser) {
@@ -41,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setIsLoading(false);
+
+    return () => {
+      window.removeEventListener('telegram-authenticated', handleTelegramAuth as EventListener);
+    };
   }, []);
 
   const login = useCallback((newToken: string, newUser: User) => {

@@ -23,12 +23,17 @@ export interface User {
   lastName?: string;
   avatarUrl?: string;
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
+  telegramId?: string;
+  telegramUsername?: string;
+  isPremium?: boolean;
 }
 
 export interface Tournament {
   id: number;
   name: string;
   description?: string;
+  imageUrl?: string;
   platform: string;
   format: 'knockout' | 'league' | 'multi_bracket' | 'swiss';
   maxPlayers: number;
@@ -105,6 +110,32 @@ export const api = {
     },
     me: async () => {
       const res = await fetch(`${API_URL}/auth/me`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    telegramLogin: async (initData: string) => {
+      const res = await fetch(`${API_URL}/auth/telegram-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    linkTelegram: async (initData: string) => {
+      const res = await fetch(`${API_URL}/auth/link-telegram`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ initData }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    unlinkTelegram: async () => {
+      const res = await fetch(`${API_URL}/auth/unlink-telegram`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
       if (!res.ok) throw await res.json();
       return res.json();
     },
@@ -243,6 +274,42 @@ export const api = {
   users: {
     get: async (id: number) => {
       const res = await fetch(`${API_URL}/auth/users/${id}`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+  },
+
+  images: {
+    listTournamentImages: async (): Promise<{ images: { filename: string; url: string }[] }> => {
+      const res = await fetch(`${API_URL}/images/tournament-images`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    upload: async (file: File): Promise<{ url: string }> => {
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = getToken();
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_URL}/images/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    uploadAvatar: async (file: File): Promise<{ url: string }> => {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const token = getToken();
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_URL}/images/avatar`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
       if (!res.ok) throw await res.json();
       return res.json();
     },

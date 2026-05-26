@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: join(import.meta.dirname, '..', '..', '.env') });
 import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
@@ -10,6 +11,7 @@ import authRoutes from './routes/authRoutes.js';
 import tournamentRoutes from './routes/tournamentRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import imageRoutes from './routes/imageRoutes.js';
 import { initializeSocket } from './socket/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +45,9 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/images', imageRoutes);
+// Serve static files from client/public (for uploaded images)
+app.use(express.static(join(__dirname, '..', 'client', 'public')));
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
