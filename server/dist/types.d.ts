@@ -7,6 +7,7 @@ export interface User {
     last_name: string | null;
     avatar_url: string | null;
     is_admin: number;
+    is_super_admin: number;
     created_at: string;
 }
 export interface Tournament {

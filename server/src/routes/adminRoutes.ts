@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import {
   getStats,
   listUsers,
@@ -9,6 +9,11 @@ import {
   deleteTournament,
   getLogs
 } from '../controllers/adminController.js';
+import {
+  generateAdminCodes,
+  listAdminCodes,
+  revokeAdminCode
+} from '../controllers/adminCodeController.js';
 
 const router = Router();
 
@@ -29,5 +34,10 @@ router.delete('/tournaments/:id', deleteTournament);
 
 // Admin logs
 router.get('/logs', getLogs);
+
+// ─── SUPER ADMIN ONLY: Admin Code Management ───
+router.get('/codes', requireSuperAdmin, listAdminCodes);
+router.post('/codes/generate', requireSuperAdmin, generateAdminCodes);
+router.delete('/codes/:id', requireSuperAdmin, revokeAdminCode);
 
 export default router;

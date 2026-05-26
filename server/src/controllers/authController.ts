@@ -47,16 +47,16 @@ export async function register(req: AuthRequest, res: Response) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Check if this is the first user — make them admin
+  // Check if this is the first user — make them SUPER admin
   const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
   const isFirstUser = userCount === 0;
 
   const result = db.prepare(`
-    INSERT INTO users (username, email, password_hash, first_name, last_name, is_admin)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(username, email.toLowerCase(), passwordHash, firstName || null, lastName || null, isFirstUser ? 1 : 0);
+    INSERT INTO users (username, email, password_hash, first_name, last_name, is_admin, is_super_admin)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(username, email.toLowerCase(), passwordHash, firstName || null, lastName || null, isFirstUser ? 1 : 0, isFirstUser ? 1 : 0);
 
-  const user = db.prepare('SELECT id, username, email, first_name, last_name, is_admin, created_at FROM users WHERE id = ?').get(result.lastInsertRowid) as any;
+  const user = db.prepare('SELECT id, username, email, first_name, last_name, is_admin, is_super_admin, created_at FROM users WHERE id = ?').get(result.lastInsertRowid) as any;
 
   const token = generateToken(user.id);
 
@@ -67,7 +67,8 @@ export async function register(req: AuthRequest, res: Response) {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      isAdmin: user.is_admin === 1
+      isAdmin: user.is_admin === 1,
+      isSuperAdmin: user.is_super_admin === 1
     },
     token
   });
@@ -105,7 +106,8 @@ export async function login(req: AuthRequest, res: Response) {
       firstName: user.first_name,
       lastName: user.last_name,
       avatarUrl: user.avatar_url,
-      isAdmin: user.is_admin === 1
+      isAdmin: user.is_admin === 1,
+      isSuperAdmin: user.is_super_admin === 1
     },
     token
   });
@@ -120,7 +122,8 @@ export function getMe(req: AuthRequest, res: Response) {
     id: req.user.id,
     username: req.user.username,
     email: req.user.email,
-    isAdmin: req.user.is_admin === 1
+    isAdmin: req.user.is_admin === 1,
+    isSuperAdmin: req.user.is_super_admin === 1
   });
 }
 

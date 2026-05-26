@@ -247,6 +247,41 @@ export const api = {
       return res.json();
     },
   },
+
+  admin: {
+    generateCodes: async (count: number = 1, length: number = 6, note: string = '') => {
+      const res = await fetch(`${API_URL}/admin/codes/generate`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ count, length, note }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    listCodes: async () => {
+      const res = await fetch(`${API_URL}/admin/codes`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    revokeCode: async (codeId: number) => {
+      const res = await fetch(`${API_URL}/admin/codes/${codeId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+  },
+
+  redeemCode: async (code: string) => {
+    const res = await fetch(`${API_URL}/auth/redeem-code`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) throw await res.json();
+    return res.json();
+  },
 };
 
 export function isAuthenticated(): boolean {

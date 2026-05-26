@@ -36,6 +36,11 @@ export async function createTournament(req: AuthRequest, res: Response) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
+  // Only admins and super admins can create tournaments
+  if (req.user.is_admin !== 1 && req.user.is_super_admin !== 1) {
+    return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
+  }
+
   const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType } = req.body;
 
   if (!name || !format) {

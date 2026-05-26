@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api, isAuthenticated } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
@@ -11,6 +12,8 @@ import type { Tournament } from '../api';
 
 export function TournamentsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || user?.isSuperAdmin;
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -65,9 +68,11 @@ export function TournamentsPage() {
           <h1 className="text-2xl font-bold text-white">Tournaments</h1>
           <p className="text-[var(--color-text-muted)] text-sm">Join a tournament and prove your skills</p>
         </div>
-        <Button variant="neon" onClick={() => isAuthenticated() ? setShowCreate(true) : navigate('/login')}>
-          + Create Tournament
-        </Button>
+        {isAdmin && (
+          <Button variant="neon" onClick={() => setShowCreate(true)}>
+            + Create Tournament
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -106,8 +111,7 @@ export function TournamentsPage() {
         <div className="rounded-2xl p-12 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           <div className="text-4xl mb-3">🏟️</div>
           <h3 className="text-lg font-semibold text-white mb-2">No tournaments found</h3>
-          <p className="text-[var(--color-text-muted)] mb-6 text-sm">Be the first to create one!</p>
-          <Button variant="primary" onClick={() => isAuthenticated() ? setShowCreate(true) : navigate('/login')}>Create Tournament</Button>
+          <p className="text-[var(--color-text-muted)] mb-6 text-sm">Check back later for new tournaments</p>
         </div>
       )}
 
