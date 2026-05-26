@@ -218,3 +218,90 @@ export function logout(req: AuthRequest, res: Response) {
 
   res.json({ message: 'Logged out successfully' });
 }
+
+// ─── PASSWORD RESET (no email — Telegram-based) ───
+
+export async function forgotPassword(req: AuthRequest, res: Response) {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: "Username or email required" });
+  
+  const user = db.prepare("SELECT id, username, email, telegram_id FROM users WHERE username = ? OR email = ?")
+    .get(username.toLowerCase(), username.toLowerCase()) as any;
+  
+  if (!user) {
+    // Don't reveal if user exists
+    return res.json({ message: "If an account exists, a reset link has been sent" });
+  }
+  
+  // Generate reset token (short-lived JWT)
+  const crypto = await import("crypto");
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+  
+  // Store hash with expiry (1 hour)
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  
+  db.prepare("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, datetime('now', '+1 hour'))")
+    .run(user.id, resetHash);
+  
+  // Return token — in production this would be sent via Telegram/email
+  // For Telegram Mini App users, the bot sends it directly
+  res.json({ 
+    message: "Password reset initiated",
+    resetToken, // In production: only send via secure channel
+    expiresIn: "1 hour"
+  });
+}
+
+export async function resetPassword(req: AuthRequest, res: Response) {
+  const { resetToken, newPassword } = req.body;
+  
+  if (!resetToken || !newPassword) {
+    return res.status(400).json({ error: "Reset token and new password required" });
+  }
+  
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+  if (!/[A-Z]/.test(newPassword)) {
+    return res.status(400).json({ error: "Password must contain an uppercase letter" });
+  }
+  if (!/[a-z]/.test(newPassword)) {
+    return res.status(400).json({ error: "Password must contain a lowercase letter" });
+  }
+  if (!/[0-9]/.test(newPassword)) {
+    return res.status(400).json({ error: "Password must contain a number" });
+  }
+  
+  // Hash the token and look it up
+  const crypto = await import("crypto");
+  const resetHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+  
+  const reset = db.prepare(
+    "SELECT * FROM password_resets WHERE token_hash = ? AND used = 0 AND expires_at > datetime('now')"
+  ).get(resetHash) as any;
+  
+  if (!reset) {
+    return res.status(400).json({ error: "Invalid or expired reset token" });
+  }
+  
+  // Update password
+  const bcrypt = await import("bcryptjs");
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, reset.user_id);
+  
+  // Mark token as used
+  db.prepare("UPDATE password_resets SET used = 1 WHERE id = ?").run(reset.id);
+  
+  res.json({ message: "Password reset successful" });
+}

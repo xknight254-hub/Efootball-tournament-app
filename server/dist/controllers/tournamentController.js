@@ -1,4 +1,5 @@
 import db from '../db.js';
+import { sanitizeString, sanitizeHtml } from '../utils/sanitize.js';
 export function logAdminAction(adminId, action, details) {
     db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(String(adminId), action, details.slice(0, 1000));
 }
@@ -28,7 +29,7 @@ export async function createTournament(req, res) {
     const result = db.prepare(`
     INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
-  `).run(name, description || null, platform || 'efootball', format, maxPlayersValue, bestOf || 1, prizePool || null, registrationDeadline || null, resultDeadlineHours || 24, rules || null, req.user.id, groupCountValue, bracketTypeValue, imageUrl || null);
+  `).run(name, description ? sanitizeHtml(description, 2000) : null, sanitizeString(platform || 'efootball', 50), format, maxPlayersValue, bestOf || 1, prizePool ? sanitizeString(prizePool, 200) : null, registrationDeadline || null, resultDeadlineHours || 24, rules ? sanitizeHtml(rules, 5000) : null, req.user.id, groupCountValue, bracketTypeValue, imageUrl || null);
     const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
         id: tournament.id,

@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
-import { sanitizeString } from '../utils/sanitize.js';
+import { sanitizeString, sanitizeHtml } from '../utils/sanitize.js';
 
 export function logAdminAction(adminId: number, action: string, details: string) {
   db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(
@@ -67,15 +67,15 @@ export async function createTournament(req: AuthRequest, res: Response) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
   `).run(
     name,
-    description || null,
-    platform || 'efootball',
+    description ? sanitizeHtml(description, 2000) : null,
+    sanitizeString(platform || 'efootball', 50),
     format,
     maxPlayersValue,
     bestOf || 1,
-    prizePool || null,
+    prizePool ? sanitizeString(prizePool, 200) : null,
     registrationDeadline || null,
     resultDeadlineHours || 24,
-    rules || null,
+    rules ? sanitizeHtml(rules, 5000) : null,
     req.user.id,
     groupCountValue,
     bracketTypeValue,

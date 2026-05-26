@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -38,6 +39,22 @@ const uploadTournamentImg = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const imageUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many uploads, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const avatarUploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many avatar changes, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const uploadAvatar = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, avatarsDir),
@@ -71,7 +88,7 @@ router.get('/tournament-images', (_req: AuthRequest, res: Response) => {
 router.post('/upload', (req: AuthRequest, res: Response, next) => {
   if (!req.user) return res.status(401).json({ error: 'Auth required' });
   next();
-}, uploadTournamentImg.single('image'), (req: AuthRequest, res: Response) => {
+}, imageUploadLimiter, uploadTournamentImg.single('image'), (req: AuthRequest, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No image' });
   res.json({ url: `/tournament-images/${req.file.filename}` });
 });
@@ -80,7 +97,7 @@ router.post('/upload', (req: AuthRequest, res: Response, next) => {
 router.post('/avatar', (req: AuthRequest, res: Response, next) => {
   if (!req.user) return res.status(401).json({ error: 'Auth required' });
   next();
-}, uploadAvatar.single('avatar'), (req: AuthRequest, res: Response) => {
+}, avatarUploadLimiter, uploadAvatar.single('avatar'), (req: AuthRequest, res: Response) => {
   if (!req.user || !req.file) return res.status(400).json({ error: 'No file' });
   const url = `/avatars/${req.file.filename}`;
   try {
