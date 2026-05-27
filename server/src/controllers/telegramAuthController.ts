@@ -162,21 +162,12 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
         'SELECT * FROM users WHERE id = ?'
       ).get(user.id) as any;
     } else {
-      // Only super admin can log in via Telegram Mini App
-      const superAdmin = db.prepare(
-        'SELECT telegram_id FROM users WHERE is_super_admin = 1 LIMIT 1'
-      ).get() as any;
-
-      if (!superAdmin || superAdmin.telegram_id !== telegramId) {
-        console.warn(`[TelegramAuth] Rejected non-super-admin Telegram login: ${telegramId}`);
-        return res.status(403).json({ error: 'Access denied. Only the super admin can log in via Telegram.' });
-      }
-
-      // Super admin without a user account yet — create one
+      // New user — auto-create account from Telegram profile
       const username = tgUser.username
         ? `tg_${tgUser.username}`
         : `player_${telegramId}`;
 
+      // Ensure username is unique
       let finalUsername = username;
       let counter = 1;
       while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
@@ -188,7 +179,7 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
 
       const result = db.prepare(`
         INSERT INTO users (username, email, password_hash, first_name, last_name, avatar_url, telegram_id, telegram_username, telegram_photo_url, is_admin, is_super_admin)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
       `).run(
         finalUsername,
         email,

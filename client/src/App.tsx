@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { TelegramProvider, useTelegram } from './context/TelegramContext';
+import { TelegramProvider } from './context/TelegramContext';
 import { Layout } from './components/layout/Layout';
 import { ToastContainer } from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
@@ -24,36 +24,8 @@ function PlaceholderPage({ title, desc, icon }: { title: string; desc: string; i
   );
 }
 
-function AccessDeniedScreen({ message }: { message: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--color-bg)' }}>
-      <div className="text-center px-6">
-        <div className="text-6xl mb-6">🚫</div>
-        <h1 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-          Access Denied
-        </h1>
-        <p className="text-[var(--color-text-secondary)] text-sm mb-6 max-w-sm mx-auto">
-          {message}
-        </p>
-        <div className="rounded-xl p-4 max-w-sm mx-auto" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-          <p className="text-[var(--color-text-muted)] text-xs">
-            This Telegram Mini App is restricted to the super admin only.
-            If you believe this is an error, contact the platform administrator.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AppContent() {
   const { toasts, removeToast } = useToast();
-  const { error, isInTelegram } = useTelegram();
-
-  // If in Telegram and got an access-denied error, show blocked screen
-  if (isInTelegram && error && error.toLowerCase().includes('access denied')) {
-    return <AccessDeniedScreen message={error} />;
-  }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
