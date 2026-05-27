@@ -5,6 +5,7 @@ interface BadgeProps {
   pulse?: boolean;
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const variantClass: Record<string, string> = {
@@ -20,9 +21,10 @@ export const Badge: React.FC<BadgeProps> = ({
   pulse = false,
   children,
   className = '',
+  style,
 }) => {
   return (
-    <span className={`badge ${variantClass[variant]} ${className}`}>
+    <span className={`badge ${variantClass[variant]} ${className}`} style={style}>
       {pulse && (
         <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
       )}

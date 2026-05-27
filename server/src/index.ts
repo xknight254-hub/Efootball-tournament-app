@@ -51,7 +51,15 @@ const authLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'https://xtournament.duckdns.org',
+    'http://xtournament.duckdns.org',
+    'http://178.105.198.217',
+  ],
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 
 const clientDist = join(__dirname, '..', 'client', 'dist');
