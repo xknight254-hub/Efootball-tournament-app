@@ -149,7 +149,7 @@ async function initDBInternal() {
     }
     catch { /* column exists */ }
     try {
-        sqlDb.run('ALTER TABLE users ADD COLUMN telegram_id TEXT UNIQUE');
+        sqlDb.run('ALTER TABLE users ADD COLUMN telegram_id TEXT');
     }
     catch { /* column exists */ }
     try {
