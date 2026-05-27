@@ -90,6 +90,10 @@ app.use((req, res) => {
     if (req.path.startsWith('/api')) {
         res.status(404).json({ error: 'Not found' });
     }
+    else if (req.path.startsWith('/tournament-images/') || req.path.startsWith('/avatars/')) {
+        // Let static middleware handle these — serve from client/public
+        res.status(404).json({ error: 'File not found' });
+    }
     else {
         res.sendFile(join(clientDist, 'index.html'));
     }

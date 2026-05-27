@@ -281,36 +281,35 @@ export function TournamentsPage() {
               </div>
             )}
             
-            {/* Image Grid */}
-            {imagesLoading ? (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="w-20 h-14 flex-shrink-0" />
-                ))}
-              </div>
-            ) : availableImages.length > 0 ? (
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3 max-h-[180px] overflow-y-auto p-1">
-                {availableImages.map((img) => (
-                  <button
-                    key={img.filename}
-                    type="button"
-                    onClick={() => handleImageSelect(img.url)}
-                    className={`relative rounded-lg overflow-hidden transition-all ${
-                      selectedImage === img.url
-                        ? 'ring-2 ring-[#6366f1] ring-offset-2 ring-offset-[var(--color-bg)] scale-105'
-                        : 'hover:opacity-80'
-                    }`}
-                    style={{ height: '56px' }}
-                  >
-                    <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
-                    {selectedImage === img.url && (
-                      <div className="absolute inset-0 bg-[#6366f1]/20 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">✓</span>
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
+          {/* Image Grid */}
+          {imagesLoading ? (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="w-16 h-14 flex-shrink-0" />
+              ))}
+            </div>
+          ) : availableImages.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-3 max-h-[160px] overflow-y-auto p-1">
+              {availableImages.map((img) => (
+                <button
+                  key={img.filename}
+                  type="button"
+                  onClick={() => handleImageSelect(img.url)}
+                  className={`relative rounded-lg overflow-hidden transition-all aspect-square ${
+                    selectedImage === img.url
+                      ? 'ring-2 ring-[#6366f1] ring-offset-2 ring-offset-[var(--color-bg)] scale-105'
+                      : 'hover:opacity-80'
+                  }`}
+                >
+                  <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
+                  {selectedImage === img.url && (
+                    <div className="absolute inset-0 bg-[#6366f1]/20 flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">✓</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
             ) : (
               <div className="text-xs text-[var(--color-text-muted)] mb-3">No images available. Upload one below.</div>
             )}
@@ -337,7 +336,7 @@ export function TournamentsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-[var(--color-text-secondary)] block mb-2">Format *</label>
               <select className="input-field" value={formData.format} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, format: e.target.value }))}>
@@ -351,7 +350,7 @@ export function TournamentsPage() {
           </div>
 
           {formData.format === 'multi_bracket' && (
-            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
               <Input label="Number of Groups" type="number" min="2" max="8" value={formData.groupCount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, groupCount: e.target.value }))} />
               <div className="flex items-end pb-1">
                 <p className="text-xs text-[var(--color-text-muted)]">Players divided into groups, top finishers advance to knockout</p>
@@ -359,7 +358,7 @@ export function TournamentsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="Match Format" value={formData.bestOf} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, bestOf: e.target.value }))} options={[{ value: '1', label: 'Best of 1' }, { value: '3', label: 'Best of 3' }, { value: '5', label: 'Best of 5' }]} />
             <Input label="Prize Pool" placeholder="e.g. $100" value={formData.prizePool} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, prizePool: e.target.value }))} />
           </div>
@@ -369,7 +368,7 @@ export function TournamentsPage() {
             <textarea className="input-field min-h-[50px] resize-y text-sm" placeholder="Tournament rules, settings, etc..." value={formData.rules} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(p => ({ ...p, rules: e.target.value }))} />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button type="submit" variant="neon" className="flex-1" isLoading={creating}>{creating ? 'Creating...' : 'Create Tournament'}</Button>
           </div>

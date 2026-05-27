@@ -25,8 +25,8 @@ router.get('/stats', getStats);
 
 // User management
 router.get('/users', listUsers);
-router.put('/users/:id', updateUser);
-router.delete('/users/:id', deleteUser);
+router.put('/users/:id', requireSuperAdmin, updateUser);
+router.delete('/users/:id', requireSuperAdmin, deleteUser);
 
 // Tournament management
 router.get('/tournaments', listAllTournaments);

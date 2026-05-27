@@ -177,9 +177,13 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
 
       const email = `${telegramId}@telegram.efootball`;
 
+      // First user becomes super admin automatically
+      const existingCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get() as any;
+      const isFirstUser = existingCount.cnt === 0;
+
       const result = db.prepare(`
         INSERT INTO users (username, email, password_hash, first_name, last_name, avatar_url, telegram_id, telegram_username, telegram_photo_url, is_admin, is_super_admin)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         finalUsername,
         email,
@@ -189,7 +193,9 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
         tgUser.photo_url || null,
         telegramId,
         tgUser.username || null,
-        tgUser.photo_url || null
+        tgUser.photo_url || null,
+        isFirstUser ? 1 : 0,
+        isFirstUser ? 1 : 0
       );
 
       user = db.prepare(
