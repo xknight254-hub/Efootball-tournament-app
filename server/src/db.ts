@@ -143,7 +143,7 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN group_count INTEGER DEFAULT 0'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN bracket_type TEXT DEFAULT \'single\''); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0'); } catch { /* column exists */ }
-  try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_id TEXT UNIQUE'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_id TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_username TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_photo_url TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN image_url TEXT'); } catch { /* column exists */ }
