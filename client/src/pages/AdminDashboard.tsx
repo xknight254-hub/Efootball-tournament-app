@@ -167,30 +167,30 @@ export function AdminDashboard() {
 
   // Redirects
   if (!isLoading && !isAuthenticated) return <div className="text-center py-20"><p className="text-[var(--color-text-muted)] mb-4">Please login</p><Button variant="primary" onClick={() => navigate('/login')}>Login</Button></div>;
-  if (!isLoading && isAuthenticated && !isAdmin) return <div className="text-center py-20"><p className="text-4xl mb-4">🛡️</p><h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2><p className="text-[var(--color-text-muted)]">You don't have permission to view this page.</p></div>;
+  if (!isLoading && isAuthenticated && !isAdmin) return <div className="text-center py-20"><div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}><span className="text-2xl font-extrabold text-[var(--color-text-dim)]">A</span></div><h2 className="text-lg font-bold text-white mb-2">Admin Access Required</h2><p className="text-sm text-[var(--color-text-muted)]">You do not have permission to view this page.</p></div>;
 
   const isSuperAdmin = user?.isSuperAdmin;
 
-  const tabs: { key: Tab; label: string; icon: string; superOnly?: boolean }[] = [
-    { key: 'overview', label: 'Overview', icon: '📊' },
-    { key: 'users', label: 'Users', icon: '👥' },
-    { key: 'tournaments', label: 'Tournaments', icon: '🏆' },
-    { key: 'logs', label: 'Logs', icon: '📋' },
-    { key: 'codes', label: 'Admin Codes', icon: '🔑', superOnly: true },
+  const tabs: { key: Tab; label: string; superOnly?: boolean }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'users', label: 'Users' },
+    { key: 'tournaments', label: 'Tournaments' },
+    { key: 'logs', label: 'Logs' },
+    { key: 'codes', label: 'Admin Codes', superOnly: true },
   ];
 
   const statusColor: Record<string, string> = {
     open: '#22c55e', check_in: '#f59e0b', fixtures_ready: '#3b82f6',
-    in_progress: '#8b5cf6', completed: '#6b7280', registration_open: '#22c55e'
+    in_progress: '#F59E0B', completed: '#6b7280', registration_open: '#22c55e'
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            {isSuperAdmin ? '👑' : '🛡️'} {isSuperAdmin ? 'Super Admin' : 'Admin'} Dashboard
-          </h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              {isSuperAdmin ? 'Super Admin' : 'Admin'} Dashboard
+            </h1>
           <p className="text-[var(--color-text-muted)] text-sm mt-1">
             {isSuperAdmin ? 'Full platform control' : 'Manage users, tournaments, and view logs'}
           </p>
@@ -206,9 +206,9 @@ export function AdminDashboard() {
       <div className="flex gap-1 p-1 rounded-xl flex-wrap" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
         {tabs.filter(t => !t.superOnly || isSuperAdmin).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.key ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
-            style={tab === t.key ? { background: 'rgba(99,102,241,0.15)' } : {}}>
-            <span>{t.icon}</span> {t.label}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${tab === t.key ? 'text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}"
+            style={tab === t.key ? { background: 'rgba(249,115,22,0.15)' } : {}}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -222,17 +222,16 @@ export function AdminDashboard() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: 'Users', value: stats.stats.userCount, icon: '👥', color: '#6366f1' },
-                  { label: 'Tournaments', value: stats.stats.tournamentCount, icon: '🏆', color: '#22c55e' },
-                  { label: 'Matches', value: stats.stats.matchCount, icon: '⚔️', color: '#f59e0b' },
-                  { label: 'Participants', value: stats.stats.participantCount, icon: '🎮', color: '#8b5cf6' },
+                  { label: 'Users', value: stats.stats.userCount, color: '#F97316' },
+                  { label: 'Tournaments', value: stats.stats.tournamentCount, color: '#22c55e' },
+                  { label: 'Matches', value: stats.stats.matchCount, color: '#f59e0b' },
+                  { label: 'Participants', value: stats.stats.participantCount, color: '#F59E0B' },
                 ].map(s => (
                   <div key={s.label} className="rounded-xl p-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">{s.icon}</span>
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${s.color}15`, color: s.color }}>{s.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: s.color }}>{s.label}</span>
                     </div>
-                    <p className="text-3xl font-bold text-white">{s.value}</p>
+                    <p className="text-2xl font-extrabold text-white tracking-tight">{s.value}</p>
                   </div>
                 ))}
               </div>
@@ -253,7 +252,7 @@ export function AdminDashboard() {
                   {stats.recentUsers.map(u => (
                     <div key={u.id} className="flex items-center justify-between py-2 px-3 rounded-lg" style={{ background: 'var(--color-bg-surface)' }}>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: '#F97316' }}>
                           {u.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -289,7 +288,7 @@ export function AdminDashboard() {
             {users.map(u => (
               <div key={u.id} className="flex items-center justify-between p-3 rounded-xl gap-2" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: '#F97316' }}>
                     {u.username.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -360,7 +359,7 @@ export function AdminDashboard() {
               <div key={l.id} className="p-3 rounded-xl" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" style={{ background: 'rgba(99,102,241,0.15)', color: '#6366f1' }}>{l.action}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" style={{ background: 'rgba(249,115,22,0.15)', color: '#F97316' }}>{l.action}</span>
                     <span className="text-sm text-white truncate">{l.details}</span>
                   </div>
                   <span className="text-xs text-[var(--color-text-dim)] shrink-0">{new Date(l.created_at).toLocaleString()}</span>
@@ -410,12 +409,12 @@ export function AdminDashboard() {
 
             {/* Recently generated codes display */}
             {genSuccess && codes.length > 0 && (
-              <div className="mt-4 p-3 rounded-lg" style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <div className="mt-4 p-3 rounded-lg" style={{ background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.15)' }}>
                 <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">Recently generated codes:</p>
                 <div className="flex flex-wrap gap-2">
                   {codes.slice(-20).filter(c => !c.used_by_name && c.is_active).map(c => (
                     <code key={c.id} className="px-2 py-1 rounded text-xs font-mono font-bold"
-                      style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
+                      style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c' }}>
                       {c.code}
                       {c.note && <span className="font-normal text-[var(--color-text-dim)] ml-1">({c.note})</span>}
                     </code>
@@ -434,7 +433,7 @@ export function AdminDashboard() {
                   <span className="px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
                     {codeStats.active} active
                   </span>
-                  <span className="px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: 'rgba(249,115,22,0.1)', color: '#F97316' }}>
                     {codeStats.used} used
                   </span>
                   {codeStats.deactivated > 0 && (
@@ -454,21 +453,21 @@ export function AdminDashboard() {
                   <div key={c.id} className="flex items-center justify-between p-3 rounded-lg gap-2"
                     style={{
                       background: 'var(--color-bg-surface)',
-                      border: `1px solid ${c.used_by_name ? 'rgba(99,102,241,0.2)' : c.is_active ? 'var(--color-border-subtle)' : 'rgba(113,113,122,0.15)'}`,
+                      border: `1px solid ${c.used_by_name ? 'rgba(249,115,22,0.2)' : c.is_active ? 'var(--color-border-subtle)' : 'rgba(113,113,122,0.15)'}`,
                       opacity: c.is_active === 0 ? 0.5 : 1,
                     }}>
                     <div className="flex items-center gap-3 min-w-0">
                       <code className="text-sm font-mono font-bold px-2 py-0.5 rounded"
                         style={{
-                          background: c.used_by_name ? 'rgba(99,102,241,0.15)' : 'rgba(34,197,94,0.1)',
-                          color: c.used_by_name ? '#818cf8' : '#22c55e',
+                          background: c.used_by_name ? 'rgba(249,115,22,0.15)' : 'rgba(34,197,94,0.1)',
+                          color: c.used_by_name ? '#fb923c' : '#22c55e',
                         }}>
                         {c.code}
                       </code>
                       <div className="text-xs min-w-0">
                         {c.note && <span className="text-[var(--color-text-secondary)]">{c.note}</span>}
                         {c.used_by_name && (
-                          <span className="text-[var(--color-text-muted)] block">Used by <strong className="text-[#818cf8]">{c.used_by_name}</strong> {c.used_at && new Date(c.used_at).toLocaleDateString()}</span>
+                          <span className="text-[var(--color-text-muted)] block">Used by <strong className="text-[#fb923c]">{c.used_by_name}</strong> {c.used_at && new Date(c.used_at).toLocaleDateString()}</span>
                         )}
                         {!c.used_by_name && c.is_active && (
                           <span className="text-[var(--color-text-dim)]">Unused • Created {new Date(c.created_at).toLocaleDateString()}</span>

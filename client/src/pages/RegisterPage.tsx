@@ -54,7 +54,7 @@ export function RegisterPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F97316, #F59E0B)' }}>
               <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
             </div>
           </Link>
@@ -90,7 +90,7 @@ export function RegisterPage() {
             <div className="flex items-start gap-2">
               <input type="checkbox" id="agree" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="w-4 h-4 mt-0.5 rounded" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }} required />
               <label htmlFor="agree" className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                I agree to the <Link to="/terms" style={{ color: 'var(--color-neon-indigo)' }}>Terms of Service</Link> and <Link to="/privacy" style={{ color: 'var(--color-neon-indigo)' }}>Privacy Policy</Link>
+                I agree to the <Link to="/terms" style={{ color: 'var(--color-accent)' }}>Terms of Service</Link> and <Link to="/privacy" style={{ color: 'var(--color-accent)' }}>Privacy Policy</Link>
               </label>
             </div>
             <Button type="submit" variant="neon" className="w-full" size="lg" isLoading={loading}>
@@ -101,7 +101,7 @@ export function RegisterPage() {
 
         <p className="text-center mt-6 text-sm" style={{ color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" className="font-medium" style={{ color: 'var(--color-neon-indigo)' }}>Sign in</Link>
+          <Link to="/login" className="font-medium" style={{ color: 'var(--color-accent)' }}>Sign in</Link>
         </p>
       </div>
     </div>

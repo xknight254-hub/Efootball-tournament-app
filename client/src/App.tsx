@@ -12,13 +12,16 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
 
-function PlaceholderPage({ title, desc, icon }: { title: string; desc: string; icon: string }) {
+function PlaceholderPage({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
-        <div className="text-5xl mb-4">{icon}</div>
-        <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-        <p className="text-[var(--color-text-secondary)]">{desc}</p>
+        <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+          style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+          <span className="text-2xl font-extrabold text-[var(--color-text-dim)]">?</span>
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">{title}</h2>
+        <p className="text-sm text-[var(--color-text-secondary)]">{desc}</p>
       </div>
     </div>
   );
@@ -30,20 +33,17 @@ function AppContent() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
       <Routes>
-        {/* Auth pages — no layout */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-
-      {/* Main app — with layout */}
-      <Route path="/" element={<Layout showSidenav><HomePage /></Layout>} />
-      <Route path="/tournaments" element={<Layout showSidenav><TournamentsPage /></Layout>} />
-      <Route path="/tournaments/:id" element={<Layout showSidenav><TournamentDetailPage /></Layout>} />
-      <Route path="/profile" element={<Layout showSidenav><ProfilePage /></Layout>} />
-      <Route path="/admin" element={<Layout showSidenav><AdminDashboard /></Layout>} />
-      <Route path="/leaderboard" element={<Layout showSidenav><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" icon="🏆" /></Layout>} />
-      <Route path="/about" element={<Layout showSidenav={false}><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" icon="⚽" /></Layout>} />
-      <Route path="/privacy" element={<Layout showSidenav={false}><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." icon="🔒" /></Layout>} />
-      <Route path="/terms" element={<Layout showSidenav={false}><PlaceholderPage title="Terms of Service" desc="By using eFootball Arena, you agree to these terms." icon="📋" /></Layout>} />
+        <Route path="/" element={<Layout showSidenav><HomePage /></Layout>} />
+        <Route path="/tournaments" element={<Layout showSidenav><TournamentsPage /></Layout>} />
+        <Route path="/tournaments/:id" element={<Layout showSidenav><TournamentDetailPage /></Layout>} />
+        <Route path="/profile" element={<Layout showSidenav><ProfilePage /></Layout>} />
+        <Route path="/admin" element={<Layout showSidenav><AdminDashboard /></Layout>} />
+        <Route path="/leaderboard" element={<Layout showSidenav><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" /></Layout>} />
+        <Route path="/about" element={<Layout showSidenav={false}><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" /></Layout>} />
+        <Route path="/privacy" element={<Layout showSidenav={false}><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." /></Layout>} />
+        <Route path="/terms" element={<Layout showSidenav={false}><PlaceholderPage title="Terms of Service" desc="By using eFootball Arena, you agree to these terms." /></Layout>} />
       </Routes>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

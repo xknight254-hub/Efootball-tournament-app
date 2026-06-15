@@ -10,6 +10,7 @@ export interface AuthRequest extends Request {
     email: string;
     is_admin: number;
     is_super_admin: number;
+    telegram_id: string | null;
   };
 }
 
@@ -33,7 +34,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
     
-    const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin FROM users WHERE id = ?').get(decoded.userId) as any;
+    const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, telegram_id FROM users WHERE id = ?').get(decoded.userId) as any;
     
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
@@ -48,7 +49,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 }
 
 export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.headers['authorization']?.replace('Bearer ', '') || 
+  const token = req.headers['authorization']?.replace('Bearer ', '') ||
                 req.headers['x-auth-token'] as string;
 
   if (!token) {
@@ -59,7 +60,7 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
     const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
     
-    const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin FROM users WHERE id = ?').get(decoded.userId) as any;
+    const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, telegram_id FROM users WHERE id = ?').get(decoded.userId) as any;
     
     if (user) {
       req.userId = user.id;

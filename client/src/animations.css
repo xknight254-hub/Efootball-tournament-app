@@ -38,10 +38,10 @@
   90% { opacity: 0; }
 }
 
-/* --- Neon border pulse --- */
+/* --- Neon border pulse (orange) --- */
 @keyframes neon-border-pulse {
-  0%, 100% { border-color: rgba(99,102,241,0.15); }
-  50% { border-color: rgba(99,102,241,0.4); }
+  0%, 100% { border-color: rgba(249,115,22,0.15); }
+  50% { border-color: rgba(249,115,22,0.4); }
 }
 
 /* --- Glow sweep across cards --- */
@@ -53,7 +53,7 @@
 /* --- Stat counter flash --- */
 @keyframes stat-flash {
   0% { transform: scale(1); }
-  50% { transform: scale(1.15); color: #a5b4fc; }
+  50% { transform: scale(1.15); color: #fb923c; }
   100% { transform: scale(1); }
 }
 
@@ -86,7 +86,7 @@
   animation: float-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* --- Alive Card: hover scale + glow border + icon bounce --- */
+/* --- Alive Card: hover scale + orange glow border + icon bounce --- */
 .alive-card {
   position: relative;
   background: var(--color-bg-card);
@@ -102,15 +102,15 @@
   position: absolute;
   inset: 0;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, transparent 50%, rgba(139,92,246,0.05) 100%);
+  background: linear-gradient(135deg, rgba(249,115,22,0.08) 0%, transparent 50%, rgba(245,158,11,0.05) 100%);
   opacity: 0;
   transition: opacity 0.4s;
   pointer-events: none;
 }
 .alive-card:hover {
   transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(99,102,241,0.12);
-  border-color: rgba(99,102,241,0.35);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(249,115,22,0.12);
+  border-color: rgba(249,115,22,0.35);
 }
 .alive-card:hover::before {
   opacity: 1;
@@ -122,7 +122,7 @@
   animation: icon-bounce 0.6s ease;
 }
 
-/* --- Shimmer bar for featured card --- */
+/* --- Shimmer bar for featured card (orange) --- */
 .card-shimmer {
   position: relative;
   overflow: hidden;
@@ -134,12 +134,12 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), rgba(139,92,246,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(249,115,22,0.6), rgba(245,158,11,0.6), transparent);
   background-size: 200% 100%;
   animation: glow-sweep 3s infinite;
 }
 
-/* --- Stat card with number animation --- */
+/* --- Stat card with number animation (orange) --- */
 .stat-card {
   position: relative;
   overflow: hidden;
@@ -151,7 +151,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, #F97316, #F59E0B);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -159,7 +159,7 @@
   opacity: 1;
 }
 
-/* --- How-it-works step card --- */
+/* --- How-it-works step card (orange) --- */
 .step-card {
   position: relative;
 }
@@ -168,7 +168,7 @@
   position: absolute;
   inset: -1px;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), transparent, rgba(139,92,246,0.2));
+  background: linear-gradient(135deg, rgba(249,115,22,0.2), transparent, rgba(245,158,11,0.2));
   z-index: -1;
   opacity: 0;
   transition: opacity 0.4s;
@@ -177,7 +177,7 @@
   opacity: 1;
 }
 
-/* --- CTA Section with animated gradient border --- */
+/* --- CTA Section with animated gradient border (orange) --- */
 .cta-animated {
   position: relative;
 }
@@ -186,7 +186,7 @@
   position: absolute;
   inset: -1px;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #22c55e, #6366f1);
+  background: linear-gradient(135deg, #F97316, #F59E0B, #22c55e, #F97316);
   background-size: 300% 300%;
   animation: glow-sweep 4s linear infinite;
   z-index: -1;

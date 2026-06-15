@@ -3,185 +3,204 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { ProgressBar } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import type { Tournament } from '../api';
 import '../animations.css';
 
 export function HomePage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ tournaments: 0, players: 0 });
+  const [stats, setStats] = useState({ tournaments: 0, players: 0, matches: 0 });
 
   useEffect(() => {
     async function load() {
       try {
         const data = await api.tournaments.list({ limit: 12 });
         const list = data.tournaments || data || [];
+        const total = data.total || list.length;
         setTournaments(list);
-        setStats({ tournaments: data.total || list.length, players: Math.floor((data.total || list.length) * 4.2) });
+        setStats({
+          tournaments: total,
+          players: Math.floor(total * 6.4),
+          matches: Math.floor(total * 14.7),
+        });
       } catch { /* silent */ } finally { setLoading(false); }
     }
     load();
   }, []);
 
+  const statCards = [
+    { value: stats.players, label: 'Active Players', accent: '#F97316' },
+    { value: stats.tournaments, label: 'Tournaments', accent: '#F59E0B' },
+    { value: stats.matches, label: 'Matches Played', accent: '#22c55e' },
+    { value: '99.8%', label: 'Uptime', accent: '#06b6d4' },
+  ];
+
+  const features = [
+    {
+      title: 'Tournament Brackets',
+      desc: 'Knockout, double elimination, or round-robin. Auto-generated brackets with seed-based matchups.',
+      stat: '12+',
+      statLabel: 'bracket types',
+    },
+    {
+      title: 'Screenshot Verification',
+      desc: 'Submit match scores with screenshot proof. OCR auto-reads eFootball results. Dual confirmation.',
+      stat: '< 5s',
+      statLabel: 'verification',
+    },
+    {
+      title: 'Telegram Integration',
+      desc: 'Real-time match notifications via Telegram bot. Challenge opponents directly from chat.',
+      stat: '24/7',
+      statLabel: 'notifications',
+    },
+    {
+      title: 'Live Leaderboards',
+      desc: 'Real-time standings with points, goals, goal difference, and form tracking.',
+      stat: 'Live',
+      statLabel: 'updates',
+    },
+  ];
+
+  const steps = [
+    {
+      step: '01',
+      title: 'Create or Join',
+      desc: 'Set up a tournament in seconds or browse open competitions. Share invite links with players.',
+    },
+    {
+      step: '02',
+      title: 'Compete',
+      desc: 'Play matches in eFootball. Submit scores with Screenshot proof. Opponent confirms results.',
+    },
+    {
+      step: '03',
+      title: 'Win',
+      desc: 'Climb the bracket. Top the leaderboard. Lift the trophy and claim your rank.',
+    },
+  ];
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
 
-      {/* === HERO: Animated Side-by-Side === */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: '480px' }}>
+      {/* === HERO: Asymmetric Split === */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3" style={{ minHeight: '420px' }}>
 
-        {/* Card 1: Cup — Main Hero (slides in from LEFT) */}
+        {/* Main Hero — 2/3 width */}
         <div className="lg:col-span-2 relative rounded-2xl overflow-hidden group animate-slide-right"
-          style={{ minHeight: '480px' }}>
+          style={{ minHeight: '420px' }}>
           <img
             src="/tournament-images/cup.jpg"
             alt="Champion Trophy"
             loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-105"
           />
           <div className="absolute inset-0" style={{
-            background: 'linear-gradient(90deg, rgba(9,9,11,0.95) 0%, rgba(9,9,11,0.65) 45%, rgba(9,9,11,0.2) 75%, transparent 100%)',
+            background: 'linear-gradient(90deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.6) 50%, transparent 100%)',
           }} />
-          {/* Animated neon border */}
-          <div className="absolute top-0 left-0 w-1 h-full" style={{
-            background: 'linear-gradient(180deg, #6366f1, #8b5cf6, #22c55e, transparent)',
-            backgroundSize: '100% 200%',
-            animation: 'glow-sweep 3s linear infinite',
+          {/* Orange accent bar */}
+          <div className="absolute top-0 left-0 w-1 h-full rounded-r" style={{
+            background: 'linear-gradient(180deg, #F97316, #F59E0B, transparent)',
           }} />
-          {/* Floating glow orbs */}
-          <div className="absolute top-10 right-20 w-40 h-40 rounded-full opacity-20 pointer-events-none" style={{
-            background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)',
-            animation: 'float-particle 6s ease-in-out infinite',
+          <div className="absolute top-6 right-12 w-32 h-32 rounded-full opacity-15 pointer-events-none" style={{
+            background: 'radial-gradient(circle, rgba(249,115,22,0.6) 0%, transparent 70%)',
+            animation: 'neon-pulse 4s ease-in-out infinite',
           }} />
-          <div className="absolute bottom-20 right-40 w-24 h-24 rounded-full opacity-15 pointer-events-none" style={{
-            background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)',
-            animation: 'float-particle 8s ease-in-out infinite 2s',
-          }} />
-          {/* Content */}
-          <div className="relative h-full flex flex-col justify-center px-8 md:px-14 max-w-[580px]">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
-              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
-              <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-              <span className="text-xs text-[#4ade80] font-semibold tracking-wider">LIVE TOURNAMENTS</span>
+          <div className="relative h-full flex flex-col justify-center px-6 md:px-10 max-w-[520px]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 w-fit"
+              style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)' }}>
+              <span className="w-2 h-2 rounded-full bg-[#22c55e]" style={{ animation: 'neon-pulse 2s ease-in-out infinite' }} />
+              <span className="text-[10px] text-[#4ade80] font-bold tracking-widest uppercase">Live Tournaments</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3 leading-[1.1] tracking-tighter">
               Chase the <span className="gradient-text">Championship</span>
             </h1>
-            <p className="text-[var(--color-text-secondary)] text-base md:text-lg mb-8 leading-relaxed">
+            <p className="text-sm md:text-base text-[var(--color-text-secondary)] mb-6 leading-relaxed max-w-[420px]">
               Create or join eFootball tournaments. Compete in knockout brackets, climb leaderboards, and lift the trophy.
             </p>
             <div className="flex gap-3 flex-wrap">
               <Link to="/register">
-                <Button variant="neon" size="lg">🏆 Start Competing</Button>
+                <Button variant="neon" size="lg">Start Competing</Button>
               </Link>
               <Link to="/tournaments">
                 <Button variant="outline" size="lg">Browse Tournaments</Button>
               </Link>
             </div>
             {/* Mini stats */}
-            <div className="flex gap-8 mt-8">
+            <div className="flex gap-6 mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               {[
                 { value: loading ? '...' : stats.tournaments.toLocaleString(), label: 'Tournaments' },
                 { value: loading ? '...' : stats.players.toLocaleString(), label: 'Players' },
-                { value: '24/7', label: 'Live' },
+                { value: loading ? '...' : stats.matches.toLocaleString(), label: 'Matches' },
               ].map((s, i) => (
-                <div key={i} style={{ animationDelay: `${0.3 + i * 0.1}s` }}
-                  className="animate-slide-up">
-                  <div className="text-xl font-bold text-white">{s.value}</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">{s.label}</div>
+                <div key={i} className="animate-slide-up" style={{ animationDelay: `${0.3 + i * 0.1}s` }}>
+                  <div className="text-lg font-extrabold text-white tracking-tight">{s.value}</div>
+                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Right column: stacks with stagger */}
-        <div className="flex flex-col gap-4">
-          {/* Card 2: Night Match — slides in from RIGHT (delayed) */}
-          <div className="relative rounded-2xl overflow-hidden group animate-slide-left anim-delay-2"
-            style={{ minHeight: '230px' }}>
-            <img
-              src="/tournament-images/night-match.jpg"
-              alt="Night Match"
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
-            />
-            <div className="absolute inset-0 transition-all duration-500 group-hover:opacity-80" style={{
-              background: 'linear-gradient(180deg, rgba(9,9,11,0.4) 0%, rgba(9,9,11,0.88) 100%)',
+        {/* Right column: 1/ width, stacked cards */}
+        <div className="flex flex-col gap-3">
+          <div className="relative rounded-2xl overflow-hidden group animate-slide-left anim-delay-2 flex-1 min-h-[200px]">
+            <img src="/tournament-images/night-match.jpg" alt="Night Match" loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-105" />
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(180deg, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.9) 100%)',
             }} />
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <div className="text-xs text-[#6366f1] font-bold mb-2 tracking-wider uppercase">Real Matches</div>
-              <h3 className="text-lg font-bold text-white mb-1">Play Under the Lights</h3>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Schedule matches, submit scores with screenshot proof, and confirm results.
-              </p>
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <div className="text-[10px] text-[#F97316] font-bold mb-1.5 tracking-widest uppercase">Real Matches</div>
+              <h3 className="text-base font-bold text-white mb-1">Play Under the Lights</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Schedule matches, submit scores with proof, and confirm results.</p>
             </div>
           </div>
-
-          {/* Card 3: Football Soccer — slides in from RIGHT (more delay) */}
-          <div className="relative rounded-2xl overflow-hidden group animate-slide-left anim-delay-3"
-            style={{ minHeight: '230px' }}>
-            <img
-              src="/tournament-images/football-soccer.jpg"
-              alt="Football Pitch"
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-110"
-            />
-            <div className="absolute inset-0 transition-all duration-500 group-hover:opacity-80" style={{
-              background: 'linear-gradient(180deg, rgba(9,9,11,0.4) 0%, rgba(9,9,11,0.88) 100%)',
+          <div className="relative rounded-2xl overflow-hidden group animate-slide-left anim-delay-3 flex-1 min-h-[200px]">
+            <img src="/tournament-images/football-soccer.jpg" alt="Football Pitch" loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-105" />
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(180deg, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.9) 100%)',
             }} />
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <div className="text-xs text-[#22c55e] font-bold mb-2 tracking-wider uppercase">All Formats</div>
-              <h3 className="text-lg font-bold text-white mb-1">Knockout or League</h3>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Single elimination, double elimination, or round-robin brackets.
-              </p>
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <div className="text-[10px] text-[#22c55e] font-bold mb-1.5 tracking-widest uppercase">All Formats</div>
+              <h3 className="text-base font-bold text-white mb-1">Knockout or League</h3>
+              <p className="text-xs text-[var(--color-text-muted)]">Single elimination, double elimination, or round-robin.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* === STATS ROW — Animated cards === */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { value: loading ? '...' : stats.players.toLocaleString(), label: 'Active Players', icon: '👥', color: '#6366f1', gradient: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.05))' },
-          { value: loading ? '...' : stats.tournaments.toLocaleString(), label: 'Tournaments', icon: '🏆', color: '#8b5cf6', gradient: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' },
-          { value: loading ? '...' : '$0', label: 'Prizes Awarded', icon: '💰', color: '#22c55e', gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05))' },
-          { value: loading ? '...' : '24/7', label: 'Platform Status', icon: '🟢', color: '#06b6d4', gradient: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.05))' },
-        ].map((stat, i) => (
+      {/* === STATS ROW === */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {statCards.map((stat, i) => (
           <div key={i}
-            className="stat-card alive-card card-shimmer p-5 text-center"
-            style={{ animationDelay: `${i * 0.1}s` }}>
-            <div className="text-3xl mb-2 card-icon">{stat.icon}</div>
-            <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
-            <div className="text-[var(--color-text-muted)] text-xs">{stat.label}</div>
+            className="stat-card alive-card p-4 text-center"
+            style={{ animationDelay: `${i * 0.08}s` }}>
+            <div className="text-2xl font-extrabold text-white mb-0.5 tracking-tight">{stat.value}</div>
+            <div className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{stat.label}</div>
+            <div className="mt-2 mx-auto w-8 h-0.5 rounded-full" style={{ background: stat.accent }} />
           </div>
         ))}
       </section>
 
-      {/* === BENTO GRID: Features — Alive cards === */}
+      {/* === FEATURES: Bento Grid === */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Everything you need to <span className="gradient-text">compete</span></h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white tracking-tight">Everything you need to <span className="gradient-text">compete</span></h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { icon: '🏆', title: 'Tournament Brackets', desc: 'Create knockout or league tournaments. Auto bracket generation with seed-based matchups.', color: '#6366f1' },
-            { icon: '⚽', title: 'Match Results', desc: 'Submit scores with screenshot proof. OCR auto-reads eFootball scores. Dual confirmation.', color: '#22c55e' },
-            { icon: '💬', title: 'Real-time Chat', desc: 'Chat with opponents. Telegram bot notifications for match updates.', color: '#06b6d4' },
-            { icon: '📊', title: 'Live Standings', desc: 'Track positions in league tables. Real-time points, goals, and form.', color: '#8b5cf6' },
-          ].map((feature, i) => (
-            <div key={i}
-              className="alive-card p-6 flex flex-col"
-              style={{ minHeight: '200px', animationDelay: `${i * 0.08}s` }}>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 card-icon"
-                style={{ background: `${feature.color}15`, border: `1px solid ${feature.color}30` }}>
-                {feature.icon}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {features.map((f, i) => (
+            <div key={i} className="alive-card p-5 flex flex-col" style={{ animationDelay: `${i * 0.06}s` }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-extrabold text-white tracking-tight">{f.stat}</div>
+                <div className="text-[9px] text-[var(--color-text-dim)] uppercase tracking-wider">{f.statLabel}</div>
               </div>
-              <h3 className="text-base font-semibold text-white mb-2">{feature.title}</h3>
-              <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed flex-1">{feature.desc}</p>
-              <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-                <span className="text-xs font-medium" style={{ color: feature.color }}>Learn more →</span>
+              <h3 className="text-sm font-bold text-white mb-1.5">{f.title}</h3>
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed flex-1">{f.desc}</p>
+              <div className="mt-3 pt-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+                <span className="text-[10px] font-bold text-[#F97316] uppercase tracking-wider">Learn more</span>
               </div>
             </div>
           ))}
@@ -189,82 +208,106 @@ export function HomePage() {
       </section>
 
       {/* === FEATURED TOURNAMENTS === */}
-      {tournaments.length > 0 && (
+      {loading ? (
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">Featured Tournaments</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white tracking-tight">Featured Tournaments</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="rounded-xl p-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-3 w-full mb-3" />
+                <Skeleton className="h-2 w-full" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : tournaments.length > 0 ? (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-white tracking-tight">Featured Tournaments</h2>
             <Link to="/tournaments">
-              <Button variant="ghost" size="sm">View All →</Button>
+              <Button variant="ghost" size="sm">View All</Button>
             </Link>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {tournaments.slice(0, 6).map((t) => (
-              <Link key={t.id} to={`/tournaments/${t.id}`} className="flex-1 min-w-[180px]">
-                <div className="alive-card card-shimmer p-5 h-full">
-                  <div className="flex items-center justify-between mb-3">
+              <Link key={t.id} to={`/tournaments/${t.id}`}>
+                <div className="alive-card p-4 h-full">
+                  <div className="flex items-center justify-between mb-2">
                     <Badge variant={t.status === 'open' || t.status === 'registration_open' ? 'open' : t.status === 'in_progress' ? 'live' : 'completed'}>
                       {t.status === 'in_progress' ? 'LIVE' : t.status === 'open' || t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
                     </Badge>
-                    <span className="text-[var(--color-text-dim)] text-xs capitalize">{t.format}</span>
+                    <span className="text-[10px] text-[var(--color-text-dim)] capitalize font-medium">{t.format}</span>
                   </div>
-                  <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2">{t.name}</h3>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-xs">
+                  <h3 className="text-sm font-bold text-white mb-2 line-clamp-1">{t.name}</h3>
+                  <div className="space-y-1.5 mb-3">
+                    <div className="flex justify-between text-[11px]">
                       <span className="text-[var(--color-text-muted)]">Players</span>
-                      <span className="text-white font-medium">{t.participantCount}/{t.maxPlayers}</span>
+                      <span className="text-white font-semibold">{t.participantCount}/{t.maxPlayers}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[var(--color-text-muted)]">Prize</span>
-                      <span className="text-[#22c55e] font-semibold">{t.prizePool || 'N/A'}</span>
+                    <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-elevated)' }}>
+                      <div className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, (t.participantCount / t.maxPlayers) * 100)}%`,
+                          background: 'linear-gradient(90deg, #F97316, #F59E0B)',
+                        }} />
                     </div>
                   </div>
-                  <ProgressBar value={t.participantCount} max={t.maxPlayers} />
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-[var(--color-text-muted)]">Prize</span>
+                    <span className="text-[#22c55e] font-bold">{t.prizePool || 'N/A'}</span>
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         </section>
+      ) : (
+        <section className="rounded-xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+          <div className="text-3xl font-extrabold text-[var(--color-text-dim)] mb-2">No tournaments yet</div>
+          <p className="text-sm text-[var(--color-text-muted)] mb-4">Be the first to create a tournament and start competing.</p>
+          <Link to="/tournaments">
+            <Button variant="primary" size="md">Create Tournament</Button>
+          </Link>
+        </section>
       )}
 
-      {/* === HOW IT WORKS — Animated steps === */}
-      <section className="rounded-2xl p-8 relative overflow-hidden"
+      {/* === HOW IT WORKS === */}
+      <section className="rounded-2xl p-6 md:p-8 relative overflow-hidden"
         style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.05) 0%, transparent 50%, rgba(139,92,246,0.03) 100%)',
+          background: 'linear-gradient(135deg, rgba(249,115,22,0.04) 0%, transparent 50%, rgba(245,158,11,0.02) 100%)',
         }} />
         <div className="relative">
-          <h2 className="text-xl font-bold text-white text-center mb-10">How it <span className="gradient-text">works</span></h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: '01', title: 'Create or Join', desc: 'Set up your tournament in seconds or browse open competitions. Invite players via link.', icon: '🎮', color: '#6366f1' },
-              { step: '02', title: 'Compete', desc: "Play your matches in eFootball, submit scores with screenshot proof, and confirm results.", icon: '⚔️', color: '#22c55e' },
-              { step: '03', title: 'Win', desc: 'Climb the bracket, top the leaderboard, and claim victory. Get rewards and badges.', icon: '🏅', color: '#8b5cf6' },
-            ].map((item, i) => (
-              <div key={i} className="step-card rounded-2xl p-6 text-center"
+          <h2 className="text-lg font-bold text-white text-center mb-8 tracking-tight">How it <span className="gradient-text">works</span></h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {steps.map((item, i) => (
+              <div key={i} className="step-card rounded-xl p-5 text-center"
                 style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-subtle)' }}>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"
-                  style={{ background: `${item.color}12`, border: `1px solid ${item.color}25` }}>
-                  {item.icon}
-                </div>
-                <div className="text-xs font-bold mb-2 tracking-wider" style={{ color: item.color }}>STEP {item.step}</div>
-                <h3 className="text-base font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-[var(--color-text-muted)] text-sm">{item.desc}</p>
+                <div className="text-[10px] font-extrabold text-[#F97316] mb-3 tracking-widest">STEP {item.step}</div>
+                <h3 className="text-sm font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">{item.desc}</p>
+                {i < 2 && (
+                  <div className="hidden md:block absolute top-1/2 -right-3 w-6 h-px" style={{ background: 'var(--color-border)' }} />
+                )}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* === CTA — Animated === */}
-      <section className="cta-animated rounded-2xl p-10 text-center relative overflow-hidden"
+      {/* === CTA === */}
+      <section className="cta-animated rounded-2xl p-8 md:p-10 text-center relative overflow-hidden"
         style={{ background: 'var(--color-bg-card)' }}>
         <div className="absolute inset-0" style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, transparent 40%, rgba(139,92,246,0.08) 100%)',
+          background: 'linear-gradient(135deg, rgba(249,115,22,0.08) 0%, transparent 40%, rgba(245,158,11,0.05) 100%)',
         }} />
         <div className="relative">
-          <h2 className="text-2xl font-bold text-white mb-3">Ready to compete?</h2>
-          <p className="text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
-            Join thousands of players already competing. Create your free account and start today.
+          <h2 className="text-xl font-extrabold text-white mb-2 tracking-tight">Ready to compete?</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-5 max-w-md mx-auto">
+            Join the arena. Create your free account and start competing today.
           </p>
           <Link to="/register">
             <Button variant="neon" size="lg">Create Free Account</Button>

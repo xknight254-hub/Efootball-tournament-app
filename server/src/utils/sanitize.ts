@@ -32,7 +32,3 @@ export function sanitizeEmail(input: unknown): string {
   return input.slice(0, 254).toLowerCase().trim();
 }
 
-export function isSafeInteger(input: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): boolean {
-  if (typeof input !== 'number') return false;
-  return Number.isInteger(input) && input >= min && input <= max;
-}

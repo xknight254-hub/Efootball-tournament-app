@@ -7,13 +7,15 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createServer } from 'http';
 import rateLimit from 'express-rate-limit';
-import { initializeDatabase, db } from './db.js';
+import { initializeDatabase } from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import tournamentRoutes from './routes/tournamentRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
 import { initializeSocket } from './socket/index.js';
+import wagerRoutes from './routes/wagerRoutes.js';
+import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -77,6 +79,10 @@ app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api/wagers', wagerRoutes);
+
+// ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
+app.use('/api/paynecta', paynectaWebhookRoutes);
 
 // Serve static files from client/public (for uploaded images)
 app.use(express.static(join(__dirname, '..', 'client', 'public')));

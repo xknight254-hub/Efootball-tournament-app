@@ -349,6 +349,86 @@ export const api = {
     if (!res.ok) throw await res.json();
     return res.json();
   },
+
+  wagers: {
+    create: async (stakeAmount: number, phoneNumber: string) => {
+      const res = await fetch(`${API_URL}/wagers`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ stakeAmount, phoneNumber }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    list: async (params?: { minStake?: number; maxStake?: number; limit?: number; offset?: number }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.minStake) searchParams.set('minStake', String(params.minStake));
+      if (params?.maxStake) searchParams.set('maxStake', String(params.maxStake));
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      if (params?.offset) searchParams.set('offset', String(params.offset));
+      const res = await fetch(`${API_URL}/wagers?${searchParams}`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    get: async (id: number) => {
+      const res = await fetch(`${API_URL}/wagers/${id}`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    getByCode: async (matchCode: string) => {
+      const res = await fetch(`${API_URL}/wagers/by-code/${encodeURIComponent(matchCode)}`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    accept: async (id: number, phoneNumber: string) => {
+      const res = await fetch(`${API_URL}/wagers/${id}/accept`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ phoneNumber }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    confirm: async (id: number, winner: 'creator' | 'challenger') => {
+      const res = await fetch(`${API_URL}/wagers/${id}/confirm`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ winner }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    dispute: async (id: number, reason: string) => {
+      const res = await fetch(`${API_URL}/wagers/${id}/dispute`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    cancel: async (id: number) => {
+      const res = await fetch(`${API_URL}/wagers/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+
+    myWagers: async () => {
+      const res = await fetch(`${API_URL}/wagers/my`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+  },
 };
 
 export function isAuthenticated(): boolean {

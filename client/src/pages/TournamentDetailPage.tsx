@@ -99,17 +99,17 @@ export function TournamentDetailPage() {
       </div>
       {match.status !== 'completed' && match.status !== 'disputed' && isAuthenticated() && (
         <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-          <button onClick={() => setResultModal({ open: true, match })} className="flex-1 text-xs py-1 rounded transition-colors" style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>Submit</button>
+          <button onClick={() => setResultModal({ open: true, match })} className="flex-1 text-xs py-1 rounded transition-colors" style={{ background: 'rgba(249,115,22,0.1)', color: '#fb923c' }}>Submit</button>
           {match.status === 'playing' && (
             <>
-              <button onClick={() => api.matches.confirm(match.id).then(loadData)} className="flex-1 text-xs py-1 rounded" style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80' }}>✓</button>
-              <button onClick={() => api.matches.dispute(match.id).then(loadData)} className="flex-1 text-xs py-1 rounded" style={{ background: 'rgba(245,158,11,0.1)', color: '#fbbf24' }}>⚠</button>
+              <button onClick={() => api.matches.confirm(match.id).then(loadData)} className="flex-1 text-xs py-1 rounded font-medium" style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80' }}>Confirm</button>
+              <button onClick={() => api.matches.dispute(match.id).then(loadData)} className="flex-1 text-xs py-1 rounded font-medium" style={{ background: 'rgba(245,158,11,0.1)', color: '#fbbf24' }}>Dispute</button>
             </>
           )}
         </div>
       )}
-      {match.status === 'completed' && <div className="mt-2 text-xs text-center text-[#22c55e] font-medium">✓ {match.winner?.username}</div>}
-      {match.status === 'disputed' && <div className="mt-2 text-xs text-center text-[#fbbf24] font-medium">⚠ Disputed</div>}
+      {match.status === 'completed' && <div className="mt-2 text-[10px] text-center text-[#22c55e] font-bold uppercase tracking-wider">{match.winner?.username} wins</div>}
+      {match.status === 'disputed' && <div className="mt-2 text-[10px] text-center text-[#fbbf24] font-bold uppercase tracking-wider">Disputed</div>}
     </div>
   );
 
@@ -170,7 +170,7 @@ export function TournamentDetailPage() {
               <p className="text-[var(--color-text-muted)] text-xs mb-5">players registered</p>
               {(tournament.status === 'registration_open' || tournament.status === 'open' || tournament.status === 'check_in') && (
                 isAuthenticated() ? (
-                  joinSuccess ? <div className="w-full py-2.5 rounded-xl text-center text-sm font-semibold" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80' }}>✓ Joined!</div> : <>
+                  joinSuccess ? <div className="w-full py-2.5 rounded-xl text-center text-xs font-bold uppercase tracking-wider" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80' }}>Joined</div> : <>
                     <Button variant="neon" className="w-full" onClick={handleJoin} isLoading={joining}>{joining ? 'Joining...' : 'Join Tournament'}</Button>
                     {joinError && <p className="text-xs mt-2" style={{ color: '#f87171' }}>{joinError}</p>}
                   </>
@@ -190,8 +190,7 @@ export function TournamentDetailPage() {
           </div>
           {matches.length === 0 ? (
             <div className="text-center text-[var(--color-text-muted)] py-12">
-              <div className="text-4xl mb-3">📋</div>
-              <p className="mb-1">No matches scheduled yet.</p>
+              <div className="text-2xl font-extrabold text-[var(--color-text-dim)] mb-2">No matches yet</div>
               <p className="text-xs">Matches will be generated when the tournament starts.</p>
             </div>
           ) : tournament.format === 'multi_bracket' || tournament.format === 'swiss' ? (
@@ -204,7 +203,7 @@ export function TournamentDetailPage() {
                   <>
                     {groupRounds.length > 0 && (
                       <div>
-                        <h4 className="text-xs font-medium text-[#818cf8] mb-3 uppercase tracking-wider">Group Stage</h4>
+                        <h4 className="text-xs font-medium text-[#fb923c] mb-3 uppercase tracking-wider">Group Stage</h4>
                         <div className="flex gap-4 overflow-x-auto pb-2">
                           {groupRounds.map(round => {
                             const rm = matches.filter(m => m.round === round);
@@ -269,10 +268,10 @@ export function TournamentDetailPage() {
         <div className="rounded-2xl p-5" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           <h3 className="text-base font-semibold text-white mb-4">Standings</h3>
           {tournament.format === 'knockout' ? (
-            <div className="text-center text-[var(--color-text-muted)] py-8">
-              <div className="text-3xl mb-3">🏆</div>
-              <p>Knockout tournaments use bracket view.</p>
-              <button onClick={() => setActiveTab('bracket')} className="mt-3 text-sm text-[#818cf8] hover:underline">View Bracket →</button>
+              <div className="text-center text-[var(--color-text-muted)] py-8">
+              <div className="text-2xl font-extrabold text-[var(--color-text-dim)] mb-2">Bracket View</div>
+              <p className="text-xs">Knockout tournaments use the bracket tab.</p>
+              <button onClick={() => setActiveTab('bracket')} className="mt-3 text-sm text-[#fb923c] hover:underline">View Bracket →</button>
             </div>
           ) : participants.length === 0 ? (
             <div className="text-center text-[var(--color-text-muted)] py-8">No participants yet.</div>
@@ -299,7 +298,7 @@ export function TournamentDetailPage() {
                 <tbody>{sorted.map((p: any, i) => (
                   <tr key={p.userId}>
                     <td className="text-[var(--color-text-muted)] font-medium">{i + 1}</td>
-                    <td><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>{p.username.charAt(0).toUpperCase()}</div><span className="text-white text-sm font-medium">{p.username}</span></div></td>
+                    <td><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #F97316, #F59E0B)' }}>{p.username.charAt(0).toUpperCase()}</div><span className="text-white text-sm font-medium">{p.username}</span></div></td>
                     <td className="text-center text-[var(--color-text-secondary)]">{p.played}</td>
                     <td className="text-center text-[#22c55e]">{p.wins}</td>
                     <td className="text-center text-[#fbbf24]">{p.draws}</td>
@@ -324,7 +323,7 @@ export function TournamentDetailPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {participants.map((p, i) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--color-bg-surface)' }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>{p.username.charAt(0).toUpperCase()}</div>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: 'linear-gradient(135deg, #F97316, #F59E0B)' }}>{p.username.charAt(0).toUpperCase()}</div>
                   <div className="flex-1 min-w-0"><p className="text-white text-sm font-medium truncate">{p.username}</p><p className="text-[var(--color-text-dim)] text-xs">{p.seed ? `Seed #${p.seed}` : `Pos ${i + 1}`}</p></div>
                 </div>
               ))}
@@ -347,7 +346,7 @@ export function TournamentDetailPage() {
               <div className="flex-1 p-4 overflow-y-auto space-y-2 scrollbar-hide">
                 {chatMessages.length === 0 ? <div className="text-center text-[var(--color-text-dim)] text-sm py-8">No messages yet.</div> : chatMessages.map(msg => (
                   <div key={msg.id} className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <div className="max-w-[75%] rounded-lg px-3 py-2" style={{ background: msg.isOwn ? 'rgba(99,102,241,0.15)' : 'var(--color-bg-surface)' }}>
+                    <div className="max-w-[75%] rounded-lg px-3 py-2" style={{ background: msg.isOwn ? 'rgba(249,115,22,0.15)' : 'var(--color-bg-surface)' }}>
                       <div className="text-xs text-[var(--color-text-muted)] mb-0.5">{msg.senderUsername}</div>
                       <div className="text-sm text-[var(--color-text-primary)]">{msg.message}</div>
                     </div>

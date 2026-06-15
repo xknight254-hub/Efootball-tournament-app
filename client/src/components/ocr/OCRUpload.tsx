@@ -138,24 +138,24 @@ export const OCRUpload: React.FC<OCRUploadProps> = ({ onResult, onAutoSubmit, co
           onClick={() => fileInputRef.current?.click()}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all"
           style={{
-            background: 'rgba(99,102,241,0.1)',
-            border: '1px solid rgba(99,102,241,0.25)',
-            color: '#818cf8',
+            background: 'rgba(249,115,22,0.1)',
+            border: '1px solid rgba(249,115,22,0.25)',
+            color: '#fb923c',
           }}
           disabled={processing}
         >
           {processing ? (
             <>
-              <span className="animate-spin">⏳</span> Processing...
+              <span className="animate-spin">Processing...</span>
             </>
           ) : (
-            <>📸 Upload Screenshot</>
+            <span>Upload Screenshot</span>
           )}
         </button>
         {error && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{error}</p>}
         {ocrResult && ocrResult.player1Score != null && (
           <div className="mt-2 p-2 rounded-lg text-xs" style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80' }}>
-            ✓ Detected: {ocrResult.player1Score} - {ocrResult.player2Score}
+            Detected: {ocrResult.player1Score} - {ocrResult.player2Score}
             {ocrResult.player1Name && ` (${ocrResult.player1Name} vs ${ocrResult.player2Name})`}
           </div>
         )}
@@ -174,8 +174,8 @@ export const OCRUpload: React.FC<OCRUploadProps> = ({ onResult, onAutoSubmit, co
         onClick={() => fileInputRef.current?.click()}
         className="relative rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all"
         style={{
-          borderColor: dragOver ? '#6366f1' : 'var(--color-border)',
-          background: dragOver ? 'rgba(99,102,241,0.05)' : 'var(--color-bg-surface)',
+          borderColor: dragOver ? '#F97316' : 'var(--color-border)',
+          background: dragOver ? 'rgba(249,115,22,0.05)' : 'var(--color-bg-surface)',
         }}
         role="button"
         aria-label="Upload eFootball screenshot. Drag and drop, click, or paste (Ctrl+V)"
@@ -197,14 +197,14 @@ export const OCRUpload: React.FC<OCRUploadProps> = ({ onResult, onAutoSubmit, co
               className="max-h-48 mx-auto rounded-lg"
             />
             {processing && (
-              <div className="flex items-center justify-center gap-2 text-sm" style={{ color: '#818cf8' }}>
-                <span className="animate-spin">⏳</span> Analyzing with OCR...
+              <div className="flex items-center justify-center gap-2 text-sm" style={{ color: '#fb923c' }}>
+                <span className="animate-spin">Analyzing...</span>
               </div>
             )}
           </div>
         ) : (
           <>
-            <div className="text-3xl mb-2">📸</div>
+            <div className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center" style={{ background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.25)" }}><span className="text-sm font-bold text-[#F97316]">OCR</span></div>
             <p className="text-sm text-[var(--color-text-secondary)] font-medium">
               Drop screenshot here or click to upload
             </p>
@@ -292,7 +292,7 @@ export const OCRUpload: React.FC<OCRUploadProps> = ({ onResult, onAutoSubmit, co
                 className="flex-1 py-2 rounded-lg text-xs font-semibold"
                 style={{ background: 'linear-gradient(135deg, #22c55e, #06b6d4)', color: '#09090b' }}
               >
-                ✓ Use These Scores
+                Use These Scores
               </button>
             )}
             <button

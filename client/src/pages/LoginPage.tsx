@@ -37,7 +37,7 @@ export function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F97316, #F59E0B)' }}>
               <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
             </div>
           </Link>
@@ -58,7 +58,7 @@ export function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-[var(--color-text-secondary)]">Password</label>
-                <a href="#" className="text-xs" style={{ color: 'var(--color-neon-indigo)' }}>Forgot password?</a>
+                <a href="#" className="text-xs" style={{ color: 'var(--color-accent)' }}>Forgot password?</a>
               </div>
               <Input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Enter your password" required />
             </div>
@@ -84,7 +84,7 @@ export function LoginPage() {
 
         <p className="text-center mt-6 text-sm" style={{ color: 'var(--color-text-muted)' }}>
           Don't have an account?{' '}
-          <Link to="/register" className="font-medium" style={{ color: 'var(--color-neon-indigo)' }}>Sign up</Link>
+          <Link to="/register" className="font-medium" style={{ color: 'var(--color-accent)' }}>Sign up</Link>
         </p>
       </div>
     </div>

@@ -76,7 +76,7 @@ export function ProfilePage() {
     try {
       const result = await api.redeemCode(codeInput.trim());
       if (result.success) {
-        setRedeemMsg('🎉 Congratulations! You are now an admin!');
+        setRedeemMsg('Success! You are now an admin!');
         updateUser(result.user);
         setCodeInput('');
         setTimeout(() => setRedeemMsg(''), 5000);
@@ -204,9 +204,9 @@ export function ProfilePage() {
               <div
                 className="w-full h-full rounded-full overflow-hidden flex items-center justify-center text-white text-2xl font-bold transition-all"
                 style={{
-                  background: displayAvatar ? 'transparent' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  border: `3px solid ${isDragging ? '#6366f1' : 'rgba(99,102,241,0.3)'}`,
-                  boxShadow: isDragging ? '0 0 20px rgba(99,102,241,0.4)' : 'none',
+                  background: displayAvatar ? 'transparent' : 'linear-gradient(135deg, #F97316, #F59E0B)',
+                  border: `3px solid ${isDragging ? '#F97316' : 'rgba(249,115,22,0.3)'}`,
+                  boxShadow: isDragging ? '0 0 20px rgba(249,115,22,0.4)' : 'none',
                 }}
               >
                 {displayAvatar ? (
@@ -230,7 +230,7 @@ export function ProfilePage() {
 
               {/* Drag overlay */}
               {isDragging && (
-                <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.3)', border: '2px dashed #6366f1' }}>
+                <div className="absolute inset-0 rounded-full flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.3)', border: '2px dashed #F97316' }}>
                   <span className="text-white text-xs font-bold">Drop here</span>
                 </div>
               )}
@@ -258,9 +258,9 @@ export function ProfilePage() {
                 onClick={() => avatarInputRef.current?.click()}
                 className="text-xs px-4 py-1.5 rounded-lg transition-all"
                 style={{
-                  background: 'rgba(99,102,241,0.1)',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                  color: '#a5b4fc',
+                  background: 'rgba(249,115,22,0.1)',
+                  border: '1px solid rgba(249,115,22,0.3)',
+                  color: '#fdba74',
                 }}
               >
                 Upload Avatar
@@ -353,15 +353,15 @@ export function ProfilePage() {
           {/* Admin Code Redemption — only for non-admins */}
           {canRedeem && (
             <div className="rounded-2xl p-5" style={{ background: 'var(--color-bg-card)', border: '1px solid rgba(245,158,11,0.3)' }}>
-              <h3 className="text-base font-semibold text-white mb-1">🔑 Request Admin Access</h3>
+              <h3 className="text-base font-semibold text-white mb-1">Request Admin Access</h3>
               <p className="text-xs text-[var(--color-text-muted)] mb-4">
                 Have an admin code? Enter it below to become an admin and create tournaments.
               </p>
 
               {redeemMsg && (
                 <div className="mb-3 p-2.5 rounded-lg text-xs" style={{
-                  background: redeemMsg.includes('🎉') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                  color: redeemMsg.includes('🎉') ? '#4ade80' : '#f87171',
+                  background: redeemMsg.startsWith('Success') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                  color: redeemMsg.startsWith('Success') ? '#4ade80' : '#f87171',
                 }}>
                   {redeemMsg}
                 </div>
@@ -464,7 +464,7 @@ export function ProfilePage() {
           {/* Super Admin badge */}
           {user.isSuperAdmin && (
             <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <div className="text-2xl">👑</div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)" }}><span className="text-sm font-bold text-[#F59E0B]">SA</span></div>
               <div>
                 <p className="text-sm font-medium text-[#fbbf24]">You are the Super Admin</p>
                 <p className="text-xs text-[var(--color-text-muted)]">You have full control over the platform. Go to Admin Panel → Admin Codes to generate codes for new admins.</p>

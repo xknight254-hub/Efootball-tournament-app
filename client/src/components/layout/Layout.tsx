@@ -6,9 +6,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '../ui/Skeleton';
 
 const navItems = [
-  { path: '/', label: 'Home', icon: '🏠', ariaLabel: 'Navigate to Home' },
-  { path: '/tournaments', label: 'Tournaments', icon: '🏆', ariaLabel: 'Browse Tournaments' },
-  { path: '/leaderboard', label: 'Leaderboard', icon: '📊', ariaLabel: 'View Leaderboard' },
+  { path: '/', label: 'Home' },
+  { path: '/tournaments', label: 'Tournaments' },
+  { path: '/leaderboard', label: 'Leaderboard' },
 ];
 
 /* ============================================
@@ -66,9 +66,9 @@ export const Sidenav: React.FC<SidenavProps> = ({ isOpen, onClose }) => {
         >
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            style={{ background: '#F97316' }}
           >
-            <span className="text-white font-bold text-sm" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
+            <span className="text-black font-bold text-sm" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
           </div>
           <div>
             <span className="text-white font-bold text-sm" style={{ fontFamily: 'Orbitron, sans-serif' }}>eFootball</span>
@@ -85,20 +85,19 @@ export const Sidenav: React.FC<SidenavProps> = ({ isOpen, onClose }) => {
                 key={item.path}
                 to={item.path}
                 role="menuitem"
-                aria-label={item.ariaLabel}
+                aria-label={item.label}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
                     ? 'text-white'
                     : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[rgba(255,255,255,0.03)]'
                 }`}
-                style={isActive ? { background: 'rgba(99,102,241,0.12)' } : {}}
+                style={isActive ? { background: 'rgba(249,115,22,0.12)' } : {}}
               >
-                <span className="text-base" aria-hidden="true">{item.icon}</span>
                 <span className="truncate">{item.label}</span>
                 {isActive && (
                   <div
                     className="ml-auto w-1.5 h-1.5 rounded-full"
-                    style={{ background: '#6366f1', boxShadow: '0 0 8px rgba(99,102,241,0.6)' }}
+                    style={{ background: '#F97316', boxShadow: '0 0 8px rgba(249,115,22,0.6)' }}
                     aria-hidden="true"
                   />
                 )}
@@ -115,20 +114,20 @@ export const Sidenav: React.FC<SidenavProps> = ({ isOpen, onClose }) => {
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-amber-400 hover:text-amber-300 transition-colors"
               aria-label="Admin Panel"
             >
-              <span aria-hidden="true">🛡️</span> Admin Panel
+              Admin Panel
             </Link>
           )}
           <Link
             to="/about"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
           >
-            <span aria-hidden="true">ℹ️</span> About
+            About
           </Link>
           <Link
             to="/privacy"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
           >
-            <span aria-hidden="true">🔒</span> Privacy
+            Privacy
           </Link>
         </div>
       </aside>
@@ -206,7 +205,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidenav }) => {
                 <div className="flex items-center gap-2 cursor-pointer" role="button" aria-haspopup="true" aria-expanded="false">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                    style={{ background: '#F97316' }}
                   >
                     {user.username.charAt(0).toUpperCase()}
                   </div>
@@ -221,18 +220,18 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidenav }) => {
             >
               <DropdownLabel>Account</DropdownLabel>
               {user.isAdmin && (
-                <DropdownItem icon={<span aria-hidden="true">🛡️</span>} onClick={() => navigate('/admin')}>
+                <DropdownItem onClick={() => navigate('/admin')}>
                   Admin Panel
                 </DropdownItem>
               )}
-              <DropdownItem icon={<span aria-hidden="true">👤</span>} onClick={() => navigate('/profile')}>
+              <DropdownItem onClick={() => navigate('/profile')}>
                 Profile
               </DropdownItem>
-              <DropdownItem icon={<span aria-hidden="true">⚙️</span>} onClick={() => navigate('/profile')}>
+              <DropdownItem onClick={() => navigate('/profile')}>
                 Settings
               </DropdownItem>
               <DropdownDivider />
-              <DropdownItem icon={<span aria-hidden="true">🚪</span>} onClick={logout} danger>
+              <DropdownItem onClick={logout} danger>
                 Logout
               </DropdownItem>
             </Dropdown>

@@ -137,6 +137,43 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       details TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS wager_challenges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      creator_id INTEGER NOT NULL,
+      challenger_id INTEGER,
+      stake_amount INTEGER NOT NULL,
+      commission INTEGER DEFAULT 0,
+      total_pot INTEGER NOT NULL,
+      match_code TEXT UNIQUE NOT NULL,
+      creator_telegram_id TEXT,
+      challenger_telegram_id TEXT,
+      status TEXT DEFAULT 'awaiting_payment',
+      winner_id INTEGER,
+      creator_confirmed INTEGER DEFAULT 0,
+      challenger_confirmed INTEGER DEFAULT 0,
+      creator_winner_choice TEXT,
+      challenger_winner_choice TEXT,
+      dispute_reason TEXT,
+      resolved_by INTEGER,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS wager_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      challenge_id INTEGER NOT NULL,
+      payer_id INTEGER NOT NULL,
+      amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      paynecta_transaction_ref TEXT,
+      mpesa_receipt TEXT,
+      paid_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (challenge_id) REFERENCES wager_challenges(id),
+      FOREIGN KEY (payer_id) REFERENCES users(id)
+    );
   `);
   
   // Migrate existing tables with new columns

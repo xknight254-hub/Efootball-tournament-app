@@ -5,7 +5,7 @@ import db from '../db.js';
 import { generateToken } from '../middleware/auth.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import type { User } from '../types.js';
-import { sanitizeString, sanitizeUsername, sanitizeEmail } from '../utils/sanitize.js';
+import { sanitizeUsername, sanitizeEmail } from '../utils/sanitize.js';
 
 export async function register(req: AuthRequest, res: Response) {
   const rawUsername = req.body.username;

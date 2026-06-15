@@ -1,0 +1,224 @@
+{
+  "project": {
+    "name": "TOSS",
+    "domain": "xtournament.duckdns.org",
+    "description": "eFootball tournament platform — compete in tournaments, wager head-to-head battles, win M-Pesa payouts",
+    "location": "/root/Efootball-tournament-app",
+    "stack": {
+      "frontend": ["React 19", "TypeScript 6", "Vite 8", "Tailwind CSS 3", "Framer Motion", "Phosphor Icons"],
+      "backend": ["Express 5", "SQLite (better-sqlite3)", "Node 22", "Socket.io", "node-telegram-bot-api"],
+      "integrations": ["M-Pesa Daraja API", "Telegram OAuth Bot", "JWT auth"]
+    },
+    "monetization": {
+      "entry_fees": "KES 50-200 per tournament",
+      "wager_commission": "10% platform fee on wagers",
+      "premium_admin": "KES 500/mo for tournament organizers"
+    }
+  },
+  "architecture": {
+    "pattern": "Monorepo — client/ and server/ in one repo",
+    "routing": "SPA client-side routing (no React Router), page state via useState<PageName>",
+    "auth": "JWT in localStorage, Bearer token in API requests, Telegram OAuth via bot",
+    "database": "SQLite single file at /root/eFootball.db",
+    "api_proxy": "Nginx on :443 proxies /api/* to server port 3001, serves client/dist as static"
+  },
+  "file_structure": {
+    "client": {
+      "description": "React SPA frontend",
+      "entry": "client/src/main.tsx",
+      "config": {
+        "vite.config.ts": "Vite build config, Tailwind plugin",
+        "tsconfig.json": "TypeScript config",
+        "postcss.config.js": "PostCSS with Tailwind + Autoprefixer",
+        "package.json": "Dependencies: react, framer-motion, @phosphor-icons/react, tailwindcss, vite"
+      },
+      "src": {
+        "App.tsx": {
+          "purpose": "Root router — page state machine, header, bottom nav",
+          "pages": ["home", "tournaments", "leaderboard", "notifications", "profile", "login", "register", "tournamentDetail", "tournamentJoin", "challenges", "wagerCreate", "wagerRoom", "admin"],
+          "state": "page (PageName), user (from localStorage), params (Record<string, string>)",
+          "layout": "max-width 430px centered, sticky header with transparent bg, fixed bottom nav with FAB"
+        },
+        "components": {
+          "Icons.tsx": {
+            "pattern": "Custom SVG icon components (not Phosphor yet — 30+ hand-drawn SVG paths)",
+            "icons": ["Home", "Trophy", "ChartBar", "Bell", "User", "Search", "ChevronRight", "Play", "Plus", "Fire", "GameController", "Sword", "Medal", "Shield", "Crown", "Money", "Lightning", "Broadcast", "Target", "ArrowUpRight", "CheckCircle", "Trash", "Clock", "Envelope", "Lock", "Phone", "Users", "ChatCircle", "Warning", "Share", "ArrowLeft", "X"]
+          }
+        },
+        "pages": {
+          "HomePage.tsx": {
+            "lines": 470,
+            "sections": ["Hero carousel (auto-advance 6s, Ken Burns zoom, staggered text animation)", "Trending tournaments (horizontal scroll)", "Platform stats (2x2 grid)", "Recent results", "My active tournaments (progress bars)", "Upcoming tournaments", "M-Pesa top-up strip", "Featured challenge banner"],
+            "data": "Fetches real tournaments from API, derives heroes/trending/results/upcoming from list"
+          },
+          "TournamentsPage.tsx": {
+            "lines": 182,
+            "features": ["Search bar with working filter", "Filter chips (All/Open/Live/Ended)", "Tournament cards with status dots, player count bars", "Empty state with icon"]
+          },
+          "TournamentDetailPage.tsx": {
+            "lines": 251,
+            "sections": ["Header with status + join button", "Bracket tab (matches with scores)", "Players tab (ranked list)", "Overview tab (tournament info + entry fee)"],
+            "data": "getTournament(id), getMatches(tournamentId), getParticipants(tournamentId)"
+          },
+          "TournamentJoinPage.tsx": {
+            "lines": 100,
+            "features": ["Phone input for M-Pesa STK push", "Success state with checkmark", "Mock tournament data fallback"]
+          },
+          "ChallengesPage.tsx": {
+            "lines": 216,
+            "features": ["Wager grid (2-col) with stake/pot display", "Min-Max KES filters (working)", "Accept modal with M-Pesa phone input", "Real API: getWagers(), acceptWager(id)"]
+          },
+          "WagerCreatePage.tsx": {
+            "lines": 133,
+            "features": ["Stake presets (50/100/200/500/1000 KES)", "Custom amount input", "Pot breakdown (stake + opponent - 10% fee)", "How-it-works steps"]
+          },
+          "WagerMatchRoom.tsx": {
+            "lines": 144,
+            "features": ["VS display with player avatars", "Confirm winner buttons (creator/challenger)", "Dispute flow with textarea", "Status config (open/active/pending/completed/disputed)"]
+          },
+          "LeaderboardPage.tsx": {
+            "lines": 99,
+            "features": ["Rank badges (orange for top 3)", "Player initials avatars (gradient)", "Points display", "Real API: getStandings()"]
+          },
+          "ProfilePage.tsx": {
+            "lines": 268,
+            "sections": ["Profile card (gradient bg, initials, level badge, verified)", "Stats row (tournaments/wins/win rate)", "Season progress bar", "Active tournaments", "Quick actions (Deposit/Withdraw/Wager via M-Pesa)", "Account menu (6 items, 2 working, 4 stubs)", "Sign out"]
+          },
+          "LoginPage.tsx": {
+            "lines": 102,
+            "features": ["Email/password form", "Error display", "Login button with Play icon", "Links to register"]
+          },
+          "RegisterPage.tsx": {
+            "lines": 147,
+            "features": ["First/Last name row", "Username, email, password fields", "Password strength meter (5-bar)", "Terms checkbox", "Create account button"]
+          },
+          "NotificationsPage.tsx": {
+            "lines": 132,
+            "features": ["Type-based icons (wager/tournament/payout/season/match)", "Tap to mark read with visual dot indicator", "Mark all read button", "Time-ago formatting", "Data from localStorage (seeded with welcome notifs)"]
+          },
+          "AdminDashboard.tsx": {
+            "lines": 91,
+            "features": ["Stats grid (users/tournaments/wagers/revenue)", "Tab bar (Overview placeholder tabs)", "Recent activity feed", "Hardcoded mock data"]
+          }
+        }
+      },
+      "api": {
+        "compat.ts": {
+          "description": "API client for pages — direct fetch to /api/*",
+          "endpoints": [
+            "GET /tournaments?limit=50",
+            "GET /tournaments/:id",
+            "POST /auth/login",
+            "POST /auth/register",
+            "GET /wagers?limit=50",
+            "POST /wagers (create)",
+            "POST /wagers/:id/accept",
+            "GET /admin/stats",
+            "localStorage toss_notifications (getNotifications/addNotification)"
+          ]
+        }
+      },
+      "static": {
+        "public/": "Static assets (tournament-images/, avatars/)",
+        "dist/": "Built output — served by nginx or server.cjs"
+      }
+    },
+    "server": {
+      "description": "Express.js REST API + Socket.io + Telegram bot",
+      "entry": "server/src/index.ts",
+      "port": 3001,
+      "config": {
+        "package.json": "Dependencies: express, better-sqlite3, jsonwebtoken, bcryptjs, multer, socket.io, node-telegram-bot-api, axios, cors, express-rate-limit",
+        "tsconfig.json": "TypeScript config",
+        "vercel.json": "Vercel deployment config"
+      },
+      "src": {
+        "index.ts": {
+          "description": "Express server entry — routes, middleware, SPA fallback, error handler",
+          "middleware": ["cors (xtournament.duckdns.org)", "cookie-parser", "express.json (10mb)", "rate limiting (global 100/15min, auth 10/15min)", "request logging"],
+          "routes": ["/api/auth", "/api/tournaments", "/api/matches", "/api/admin", "/api/images", "/api/wagers", "/t (deep links)"],
+          "spa_fallback": "Serves client/dist/index.html for non-API routes"
+        },
+        "db.ts": {
+          "description": "SQLite database via better-sqlite3",
+          "location": "/root/eFootball.db",
+          "tables": [
+            "users (id, username, email, password, firstName, lastName, phone, isAdmin, isSuperAdmin, telegramId, telegramUsername, telegramPhotoUrl, avatarUrl, createdAt)",
+            "tournaments (id, name, description, platform, format, maxPlayers, bestOf, status, ownerId, winnerId, prizePool, registrationDeadline, rules, groupCount, bracketType, imageUrl, isPrivate, entryFee, accessToken, createdAt)",
+            "participants (id, tournamentId, userId, seed, joinedAt)",
+            "matches (id, tournamentId, round, matchNumber, player1Id, player2Id, player1Score, player2Score, winnerId, status, submittedAt, createdAt)",
+            "wagers (id, creatorId, challengerId, stakeAmount, commission, totalPot, status, winnerId, matchCode, expiresAt, createdAt)",
+            "notifications (id, userId, title, message, type, read, createdAt)",
+            "admin_codes (id, code, createdBy, usedBy, createdAt)"
+          ]
+        },
+        "routes": {
+          "authRoutes.ts": "POST /login, POST /register, GET /me, PUT /profile, POST /telegram-login",
+          "tournamentRoutes.ts": "GET /, GET /by-token/:token, POST /, PUT /:id, DELETE /:id, POST /:id/join, GET /:id/standings, GET /:id/participants",
+          "matchRoutes.ts": "GET /tournament/:tournamentId, POST /:id/submit, GET /user/:userId",
+          "adminRoutes.ts": "GET /stats, GET /users, GET /tournaments, PUT /users/:id/ban, DELETE /tournaments/:id",
+          "imageRoutes.ts": "POST /upload (multer, image/png+jpg, 5MB max), GET /tournament-images/:filename, GET /avatars/:filename",
+          "wagerRoutes.ts": "GET /, GET /my, POST /, POST /:id/accept, POST /:id/confirm, POST /:id/dispute",
+          "deepLinkRoutes.ts": "GET /:token — serves SPA with og:tags for Telegram preview"
+        },
+        "controllers": {
+          "authController.ts": "Login (JWT), register, getMe, updateProfile, telegramLogin (validate initData, issue JWT)",
+          "tournamentController.ts": "CRUD, join (M-Pesa STK push for entry fee), standings, participants",
+          "matchController.ts": "Submit result, confirm, get by tournament/user",
+          "wagerController.ts": "Create, accept (M-Pesa charge), confirm winner (M-Pesa payout), dispute",
+          "adminController.ts": "Stats (users count, tournaments, revenue, active wagers), user management, tournament management",
+          "adminCodeController.ts": "Generate/consume admin invite codes",
+          "telegramAuthController.ts": "Validate Telegram initData HMAC, create/login user, issue JWT",
+          "deepLinkController.ts": "getTournamentByToken (SEO meta tags), quickJoinByToken (phone + STK push)"
+        },
+        "services": {
+          "mpesaService.ts": "M-Pesa Daraja API — auth token, STK Push (C2B), query status, process result callback",
+          "bracketService.ts": "Generate knockout/group brackets, advance winners, calculate standings",
+          "ocrService.ts": "OCR proof validation for match screenshots (Tesseract or external API)",
+          "socketService.ts": "Socket.io — real-time notifications, match updates, online status"
+        },
+        "middleware": {
+          "auth.ts": "JWT verification middleware, isAdmin check"
+        },
+        "bot": {
+          "index.ts": "Telegram bot via node-telegram-bot-api — /start with deep link, tournament browse, wager notifications"
+        },
+        "utils": {
+          "token.ts": "JWT sign/verify (HS256, JWT_SECRET from env)",
+          "sanitize.ts": "Input sanitization helpers"
+        }
+      }
+    },
+    "deployment": {
+      "server.cjs": "Node HTTP static server — serves client/dist, proxies /api/* + /tournament-images/ + /avatars/ to :3001",
+      "nginx": {
+        "config": "Reverse proxy at xtournament.duckdns.org — HTTPS termination, proxy_pass to :3001 for /api and /t, alias for static assets",
+        "ssl": "Let's Encrypt or self-signed"
+      },
+      "environment": {
+        "JWT_SECRET": "JWT signing key (from .env or default)",
+        "PORT": "3001 (backend), 5174 (frontend preview)",
+        "CLIENT_URL": "https://xtournament.duckdns.org",
+        "MPESA_*": "Daraja API credentials (consumer key, secret, shortcode, passkey, callback URL)",
+        "BOT_TOKEN": "Telegram bot token"
+      }
+    },
+    "shared_conventions": {
+      "colors": {
+        "bg": "#0A0A0A",
+        "card": "#141414",
+        "primary": "#F97316",
+        "success": "#22C55E",
+        "danger": "#EF4444",
+        "text": "#FAFAFA",
+        "textMuted": "#A1A1A1",
+        "textDim": "#737373",
+        "border": "rgba(255,255,255,0.08)"
+      },
+      "design_language": "Dark gaming aesthetic, near-black + orange accent, Orbitron font for display, system-ui for body, 20px border-radius on cards, orange gradient FAB button",
+      "layout": "Mobile-first, max-width 430px centered, collapsible sidenav pattern, bottom tab bar with FAB",
+      "api_pattern": "All /api/* goes to server port 3001, JWT in Authorization header, JSON request/response",
+      "state_pattern": "Client-side useState routing (no React Router), localStorage for auth token + user, 1s polling for auth changes"
+    }
+  }
+}

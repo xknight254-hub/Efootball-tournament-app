@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://xtournament.duckdns.org/sitemap.xml
