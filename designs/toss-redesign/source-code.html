@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOSS Source Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A0A0B;color:#A1A1AA;font-family:'Geist Mono',monospace;font-size:13px;line-height:1.7;padding:20px}
+h1{color:#F97316;font-size:20px;margin-bottom:8px}
+h2{color:#FB923C;font-size:16px;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)}
+a{color:#F97316;text-decoration:none}
+a:hover{text-decoration:underline}
+.code-block{background:#121214;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;margin:12px 0;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.6;color:#E5E5E5}
+.tag{color:#F97316}
+.attr{color:#FB923C}
+.val{color:#22C55E}
+.comment{color:#52525B}
+.url{color:#3B82F6}
+.section{margin-bottom:32px}
+.nav{margin-bottom:24px;padding:12px 16px;background:#121214;border-radius:8px;border:1px solid rgba(255,255,255,0.06)}
+.nav a{margin-right:16px;font-size:13px}
+.copy-btn{background:#F97316;color:#000;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px}
+.copy-btn:hover{background:#FB923C}
+</style>
+</head>
+<body>
+
+<h1>TOSS Design System — Source Code</h1>
+<p>All files are self-contained HTML. Open any URL to see the live design, or copy the source code below.</p>
+
+<div class="nav">
+<a href="#live-urls">Live URLs</a>
+<a href="#design-tokens">Design Tokens</a>
+<a href="#card-classes">Card Classes</a>
+<a href="#layout">Layout</a>
+<a href="#responsive">Responsive</a>
+</div>
+
+<h2 id="live-urls">Live URLs</h2>
+<div class="code-block url">
+http://178.105.198.217:8080/home           — Home page
+http://178.105.198.217:8080/tournaments    — Tournaments page
+http://178.105.198.217:8080/tournament-detail — Tournament detail
+http://178.105.198.217:8080/profile         — User profile
+http://178.105.198.217:8080/admin           — Admin dashboard
+http://178.105.198.217:8080/login           — Login page
+http://178.105.198.217:8080/register        — Register page</div>
+
+<h2 id="design-tokens">Design Tokens (CSS Custom Properties)</h2>
+<div class="code-block">
+:root {
+  /* Palette */
+  --bg: #0A0A0B;
+  --bg-2: #0E0E10;
+  --bg-3: #121214;
+  --bg-card: #161618;
+  --bg-card-2: #1A1A1E;
+  --bg-elevated: #222228;
+  --bg-hover: #2A2A30;
+
+  --accent: #F97316;           /* Primary orange */
+  --accent-2: #FB923C;         /* Light orange */
+  --accent-3: #FDBA74;         /* Pale orange */
+  --accent-glow: rgba(249,115,22,0.15);
+  --accent-glow-2: rgba(249,115,22,0.25);
+  --accent-glow-strong: rgba(249,115,22,0.4);
+  --accent-border: rgba(249,115,22,0.3);
+
+  --success: #22C55E;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --info: #3B82F6;
+
+  --text-1: #FAFAFA;           /* Primary text */
+  --text-2: #A1A1AA;           /* Secondary text */
+  --text-3: #71717A;           /* Tertiary text */
+  --text-4: #52525B;           /* Muted text */
+  --text-5: #3F3F46;           /* Dim text */
+
+  --border: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.1);
+  --border-3: rgba(255,255,255,0.15);
+
+  /* Typography */
+  --font-display: 'Orbitron', 'Geist', system-ui, sans-serif;
+  --font-body: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px;
+
+  /* Radius */
+  --radius-md: 12px;  --radius-lg: 16px;
+  --radius-xl: 20px;  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-glow: 0 0 20px rgba(249,115,22,0.15);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}</div>
+
+<h2 id="card-classes">Tournament Card Classes</h2>
+<div class="code-block">
+<span class="comment">/* Portrait card structure */</span>
+<span class="tag">.tcard</span>              <span class="comment">/* Outer shell: bg, border, radius, flex column */</span>
+<span class="tag">.tcard-banner</span>        <span class="comment">/* 130px banner with gradient bg + overlay */</span>
+<span class="tag">.tcard-banner-bg</span>     <span class="comment">/* Background image/gradient, zooms on hover */</span>
+<span class="tag">.tcard-banner-overlay</span> <span class="comment">/* Bottom-fade gradient overlay */</span>
+<span class="tag">.tcard-banner-top</span>    <span class="comment">/* Absolute positioned chip + badge row */</span>
+<span class="tag">.chip</span>                 <span class="comment">/* Pill-shaped type indicator */</span>
+<span class="tag">.chip-knockout</span>        <span class="comment">/* Orange chip */</span>
+<span class="tag">.chip-league</span>          <span class="comment">/* Blue chip */</span>
+<span class="tag">.chip-multi</span>           <span class="comment">/* Purple chip */</span>
+<span class="tag">.chip-swiss</span>           <span class="comment">/* Teal chip */</span>
+<span class="tag">.chip-completed</span>       <span class="comment">/* Gray chip */</span>
+
+<span class="comment">/* Live indicator */</span>
+<span class="tag">.live-badge</span>           <span class="comment">/* Red pulsing badge with backdrop blur */</span>
+<span class="tag">.live-dot</span>             <span class="comment">/* 7px animated red dot */</span>
+<span class="tag">.live-text</span>            <span class="comment">/* "LIVE" label */</span>
+
+<span class="comment">/* Card body */</span>
+<span class="tag">.tcard-body</span>           <span class="comment">/* Padding container, flex:1, flex-direction:column */</span>
+<span class="tag">.tcard-title</span>          <span class="comment">/* 18px bold title */</span>
+<span class="tag">.tcard-meta</span>           <span class="comment">/* Column of meta rows */</span>
+<span class="tag">.tcard-meta-row</span>       <span class="comment">/* Flex row: icon + text */</span>
+<span class="tag">.tcard-progress</span>       <span class="comment">/* Progress bar with label */</span>
+
+<span class="comment">/* Footer */</span>
+<span class="tag">.tcard-footer</span>         <span class="comment">/* Flex row: prize + avatars, margin-top:auto */</span>
+<span class="tag">.tcard-prize-label</span>    <span class="comment">/* "Prize Pool" label */</span>
+<span class="tag">.tcard-prize-value</span>    <span class="comment">/* 20px bold green value */</span>
+<span class="tag">.tcard-avatars</span>        <span class="comment">/* Flex row with negative margin overlap */</span>
+<span class="tag">.tcard-avatar</span>         <span class="comment">/* 28px circle with gradient bg + border + shadow */</span>
+<span class="tag">.tcard-avatar-more</span>    <span class="comment">/* "+N" overflow indicator */</span>
+
+<span class="comment">/* CTA bar */</span>
+<span class="tag">.tcard-cta</span>            <span class="comment">/* Bottom bar: social proof + button */</span>
+<span class="tag">.tcard-cta-social</span>     <span class="comment">/* Small gray text */</span>
+
+<span class="comment">/* Layout */</span>
+<span class="tag">.tournament-list</span>      <span class="comment">/* Flex column, 16px gap, full-width cards */</span></div>
+
+<h2 id="layout">Layout Shell Classes</h2>
+<div class="code-block">
+<span class="tag">.shell-with-sidenav</span>  <span class="comment">/* Flex container for sidenav + main */</span>
+<span class="tag">.sidenav</span>             <span class="comment">/* Fixed 220px left sidebar */</span>
+<span class="tag">.main-area</span>           <span class="comment">/* Flex:1, margin-left:220px */</span>
+<span class="tag">.topbar</span>              <span class="comment">/* Sticky 60px header with blur */</span>
+<span class="tag">.content</span>             <span class="comment">/* Max-width:1280px, centered, padding */</span>
+
+<span class="comment">/* Mobile nav (visible ≤1023px) */</span>
+<span class="tag">.sidenav-overlay</span>     <span class="comment">/* Dark overlay for drawer close */</span>
+<span class="tag">.topbar-hamburger</span>    <span class="comment">/* Hamburger button, toggles drawer */</span>
+<span class="tag">.mobile-bottom-nav</span>   <span class="comment">/* Fixed 5-tab bottom bar */</span>
+<span class="tag">.mobile-nav-item</span>     <span class="comment">/* Tab with icon + label */</span>
+<span class="tag">.mobile-nav-fab</span>      <span class="comment">/* Raised orange FAB button */</span></div>
+
+<h2 id="responsive">Responsive Breakpoints</h2>
+<div class="code-block">
+<span class="comment">/* Tablet: ≤1023px */</span>
+- Sidenav becomes slide-in drawer (translateX(-100%) → 0)
+- Hamburger button visible
+- Bottom nav visible
+- Search bar hidden
+- Content padding-bottom: 80px (for bottom nav)
+
+<span class="comment">/* Mobile: ≤640px */</span>
+- All grids collapse to single column
+- Page headers stack vertically
+- Filter pills scroll horizontally
+- Card CTA buttons stretch full-width
+- Avatar sizes reduced
+- Font sizes scaled down
+- Input font-size: 16px (prevents iOS zoom)
+
+<span class="comment">/* Safe area (notched phones) */</span>
+- padding-bottom: max(6px, env(safe-area-inset-bottom))
+- Applied to bottom nav and content</div>
+
+<h2>File Structure</h2>
+<div class="code-block">
+<span class="tag">designs/toss-redesign/</span>
+  design-system.css          <span class="comment">/* Shared design tokens + base styles (1530 lines) */</span>
+  mobile-nav.css             <span class="comment">/* Mobile nav component + responsive (188 lines) */</span>
+  mobile-responsive.css      <span class="comment">/* Shared responsive breakpoints */</span>
+  home.html                  <span class="comment">/* Landing page */</span>
+  tournaments.html           <span class="comment">/* Tournament listing with portrait cards */</span>
+  tournament-detail.html     <span class="comment">/* Single tournament view */</span>
+  profile.html               <span class="comment">/* User profile */</span>
+  admin.html                 <span class="comment">/* Admin dashboard */</span>
+  login.html                 <span class="comment">/* Login page */</span>
+  register.html              <span class="comment">/* Registration page */</span>
+  tournaments-standalone.html <span class="comment">/* Self-contained tournaments (29KB) */</span></div>
+
+<div style="margin-top:32px;padding:16px;background:#121214;border-radius:8px;border:1px solid rgba(255,255,255,0.06)">
+<strong style="color:#F97316">Live URL:</strong> <a href="http://178.105.198.217:8080/tournaments">http://178.105.198.217:8080/tournaments</a>
+<br><br>
+<strong style="color:#F97316">To copy source code:</strong> Open the live URL → Right-click → "View Page Source" (desktop) or use a browser app that shows source (mobile).
+<br><br>
+<strong style="color:#F97316">Self-contained file:</strong> <a href="http://178.105.198.217:8080/tournaments-standalone.html">http://178.105.198.217:8080/tournaments-standalone.html</a> (all CSS embedded, works offline)
+</div>
+
+</body>
+</html>

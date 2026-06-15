@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOSS — Admin Dashboard</title>
+<link rel="stylesheet" href="design-system.css">
+<link rel="stylesheet" href="mobile-nav.css">
+<link rel="stylesheet" href="mobile-responsive.css">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<!-- Mobile Sidenav Overlay -->
+<div class="sidenav-overlay" onclick="toggleSidenav()"></div>
+
+
+<div class="shell-with-sidenav">
+  <aside class="sidenav">
+    <div class="sidenav-logo"><div class="sidenav-logo-icon">E</div><div class="sidenav-logo-text">eFootball <span>Arena</span></div></div>
+    <nav class="sidenav-nav">
+      <a href="home.html" class="sidenav-link"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>Home</a>
+      <a href="tournaments.html" class="sidenav-link"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>Tournaments</a>
+      <a href="#" class="sidenav-link"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Leaderboard</a>
+      <a href="profile.html" class="sidenav-link"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>Profile</a>
+      <div class="sidenav-section">Administration</div>
+      <a href="#" class="sidenav-link active" style="position:relative"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Dashboard</a>
+    </nav>
+    <div class="sidenav-footer"><a href="#" class="sidenav-link" style="font-size:12px">About</a><a href="#" class="sidenav-link" style="font-size:12px">Privacy</a></div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-hamburger" onclick="toggleSidenav()" aria-label="Open menu">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-icon-btn"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg><span class="badge-dot"></span></button>
+        <div class="topbar-avatar">X</div>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- Header -->
+      <div style="margin-bottom:var(--space-6);">
+        <div style="display:flex;align-items:center;gap:var(--space-3);">
+          <h1 style="font-size:22px;font-weight:700;color:var(--text-1);">Super Admin Dashboard</h1>
+          <span class="badge badge-super">SA</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-4);margin-top:2px;">Full platform control</p>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:2px;padding:var(--space-1);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:var(--space-6);overflow-x:auto;">
+        <button style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:var(--accent-glow);color:var(--accent);">Overview</button>
+        <button style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);">Users</button>
+        <button style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);">Tournaments</button>
+        <button style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);">Logs</button>
+        <button style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);">Admin Codes</button>
+      </div>
+
+      <!-- Stats Grid -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-bottom:var(--space-6);">
+        <div class="stat-card">
+          <div class="stat-value">1,247</div>
+          <div class="stat-label">Total Users</div>
+          <div class="stat-bar" style="background:var(--accent);"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">142</div>
+          <div class="stat-label">Tournaments</div>
+          <div class="stat-bar" style="background:var(--success);"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">3,891</div>
+          <div class="stat-label">Matches</div>
+          <div class="stat-bar" style="background:var(--warning);"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5,088</div>
+          <div class="stat-label">Participants</div>
+          <div class="stat-bar" style="background:var(--info);"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);margin-bottom:var(--space-6);">
+
+        <!-- Tournaments by Status -->
+        <div class="card" style="padding:var(--space-5);">
+          <h3 style="font-size:14px;font-weight:700;color:var(--text-1);margin-bottom:var(--space-4);">Tournaments by Status</h3>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+            <div style="display:flex;align-items:center;gap:var(--space-3);">
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--success);"></span>
+              <span style="font-size:13px;color:var(--text-2);flex:1;">Open</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text-1);">48</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-3);">
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--info);"></span>
+              <span style="font-size:13px;color:var(--text-2);flex:1;">Live</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text-1);">23</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-3);">
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--text-3);"></span>
+              <span style="font-size:13px;color:var(--text-2);flex:1;">Completed</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text-1);">71</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Users -->
+        <div class="card" style="padding:var(--space-5);">
+          <h3 style="font-size:14px;font-weight:700;color:var(--text-1);margin-bottom:var(--space-4);">Recent Users</h3>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+            <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:var(--bg-3);">
+              <div class="avatar avatar-sm">J</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-1);">john_fc</div>
+                <div style="font-size:10px;color:var(--text-4);">john@example.com</div>
+              </div>
+              <span style="font-size:10px;color:var(--text-4);">2h ago</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:var(--bg-3);">
+              <div class="avatar avatar-sm">S</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-1);">sarah_efoot</div>
+                <div style="font-size:10px;color:var(--text-4);">sarah@example.com</div>
+              </div>
+              <span style="font-size:10px;color:var(--text-4);">5h ago</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:var(--bg-3);">
+              <div class="avatar avatar-sm">M</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-1);">mike_gaming</div>
+                <div style="font-size:10px;color:var(--text-4);">mike@example.com</div>
+              </div>
+              <span class="badge badge-admin" style="font-size:9px;">Admin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Codes Section (Super Admin Only) -->
+      <div class="card" style="padding:var(--space-5);margin-bottom:var(--space-5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text-1);">Generate Admin Codes</h3>
+            <p style="font-size:11px;color:var(--text-4);margin-top:2px;">Create codes that users can redeem to become admins</p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 120px 1fr auto;gap:var(--space-3);align-items:end;">
+          <div>
+            <label class="form-label">Count</label>
+            <input type="number" class="form-input" value="1" min="1" max="20" style="text-align:center;">
+          </div>
+          <div>
+            <label class="form-label">Length</label>
+            <select class="form-select" style="text-align:center;">
+              <option>4 chars</option>
+              <option selected>6 chars</option>
+              <option>8 chars</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Note (optional)</label>
+            <input type="text" class="form-input" placeholder="e.g. for John">
+          </div>
+          <button class="btn btn-success btn-md">Generate</button>
+        </div>
+
+        <!-- Generated codes display -->
+        <div style="margin-top:var(--space-4);padding:var(--space-4);border-radius:var(--radius-md);background:rgba(249,115,22,0.04);border:1px solid rgba(249,115,22,0.12);">
+          <p style="font-size:11px;font-weight:600;color:var(--text-3);margin-bottom:var(--space-2);">Recently generated codes:</p>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
+            <code style="padding:4px 10px;border-radius:var(--radius-sm);background:var(--accent-glow);color:var(--accent);font-size:13px;font-weight:700;font-family:var(--font-mono);">A7X9K2</code>
+            <code style="padding:4px 10px;border-radius:var(--radius-sm);background:var(--accent-glow);color:var(--accent);font-size:13px;font-weight:700;font-family:var(--font-mono);">B3M8P1</code>
+            <code style="padding:4px 10px;border-radius:var(--radius-sm);background:var(--accent-glow);color:var(--accent);font-size:13px;font-weight:700;font-family:var(--font-mono);">Z4N7Q9</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Codes Table -->
+      <div class="card" style="padding:var(--space-5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+          <h3 style="font-size:14px;font-weight:700;color:var(--text-1);">All Codes</h3>
+          <div style="display:flex;gap:var(--space-2);">
+            <span style="padding:2px 8px;border-radius:var(--radius-full);font-size:10px;font-weight:700;background:var(--success-bg);color:var(--success);">12 active</span>
+            <span style="padding:2px 8px;border-radius:var(--radius-full);font-size:10px;font-weight:700;background:var(--accent-glow);color:var(--accent);">8 used</span>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Status</th>
+              <th>Note</th>
+              <th>Created</th>
+              <th>Used By</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code style="font-family:var(--font-mono);font-weight:700;color:var(--success);">A7X9K2</code></td>
+              <td><span class="badge badge-open" style="font-size:9px;">Active</span></td>
+              <td style="color:var(--text-3);">For John</td>
+              <td style="color:var(--text-3);">Jun 12, 2026</td>
+              <td style="color:var(--text-4);">—</td>
+              <td><button class="btn btn-ghost btn-sm" style="color:var(--error);">Revoke</button></td>
+            </tr>
+            <tr>
+              <td><code style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">B3M8P1</code></td>
+              <td><span class="badge badge-completed" style="font-size:9px;">Used</span></td>
+              <td style="color:var(--text-3);">—</td>
+              <td style="color:var(--text-3);">Jun 10, 2026</td>
+              <td style="color:var(--text-2);">mike_gaming</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code style="font-family:var(--font-mono);font-weight:700;color:var(--success);">Z4N7Q9</code></td>
+              <td><span class="badge badge-open" style="font-size:9px;">Active</span></td>
+              <td style="color:var(--text-3);">Batch #3</td>
+              <td style="color:var(--text-3);">Jun 15, 2026</td>
+              <td style="color:var(--text-4);">—</td>
+              <td><button class="btn btn-ghost btn-sm" style="color:var(--error);">Revoke</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+
+
+<script>
+// Mobile nav toggle
+function toggleSidenav() {
+  const sidenav = document.querySelector('.sidenav');
+  const overlay = document.querySelector('.sidenav-overlay');
+  if (sidenav && overlay) {
+    const isOpen = sidenav.classList.contains('open');
+    sidenav.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('open', !isOpen);
+  }
+}
+
+// Close sidenav when clicking overlay
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('sidenav-overlay')) {
+    const sidenav = document.querySelector('.sidenav');
+    const overlay = document.querySelector('.sidenav-overlay');
+    if (sidenav && overlay) {
+      sidenav.classList.remove('open');
+      overlay.classList.remove('open');
+    }
+  }
+});
+</script>
+
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-bottom-nav">
+  <div class="mobile-bottom-nav-inner">
+    <a href="home.html" class="mobile-nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Home
+    </a>
+    <a href="tournaments.html" class="mobile-nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      Tournaments
+    </a>
+    <a href="tournaments.html" class="mobile-nav-fab" aria-label="Create Tournament">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    </a>
+    <a href="#" class="mobile-nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Rankings
+    </a>
+    <a href="profile.html" class="mobile-nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Me
+    </a>
+  </div>
+</nav>
+
+<script>
+function toggleSidenav() {
+  const sidenav = document.querySelector('.sidenav');
+  const overlay = document.querySelector('.sidenav-overlay');
+  if (sidenav && overlay) {
+    const isOpen = sidenav.classList.contains('open');
+    sidenav.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('open', !isOpen);
+  }
+}
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('sidenav-overlay')) {
+    document.querySelectorAll('.sidenav').forEach(s => s.classList.remove('open'));
+    document.querySelectorAll('.sidenav-overlay').forEach(o => o.classList.remove('open'));
+  }
+});
+</script>
+</body>
+</html>

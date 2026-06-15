@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOSS — eFootball Tournament Platform</title>
+<link rel="stylesheet" href="design-system.css">
+<link rel="stylesheet" href="mobile-nav.css">
+<link rel="stylesheet" href="mobile-responsive.css">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Home page specific */
+  .proto-nav { display: flex; gap: 4px; padding: 12px 20px; background: var(--bg-2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .proto-nav-btn { padding: 6px 14px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; color: var(--text-3); white-space: nowrap; transition: all var(--duration-fast); }
+  .proto-nav-btn:hover { color: var(--text-1); background: var(--bg-3); }
+  .proto-nav-btn.active { color: var(--accent); background: var(--accent-glow); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Hero */
+  .hero-wrap { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 48px; }
+  .hero-main { background: linear-gradient(135deg, #0E0E10 0%, #161618 50%, #1A1A1E 100%); border: 1px solid var(--border); border-radius: 20px; padding: 40px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; min-height: 380px; }
+  .hero-main::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: linear-gradient(180deg, #F97316, #F59E0B, transparent); }
+  .hero-glow { position: absolute; top: 30px; right: 40px; width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%); animation: pulse-glow 4s ease-in-out infinite; pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 9999px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); width: fit-content; margin-bottom: 20px; }
+  .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; animation: pulse-glow 2s ease-in-out infinite; }
+  .hero-badge-text { font-size: 10px; font-weight: 700; color: #22C55E; letter-spacing: 0.1em; text-transform: uppercase; }
+  .hero-title { font-size: 32px; font-weight: 900; color: #FAFAFA; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+  .hero-desc { font-size: 14px; color: #A1A1AA; max-width: 400px; margin-bottom: 28px; line-height: 1.7; }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero-stats { display: flex; gap: 32px; margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .hero-stat-val { font-size: 18px; font-weight: 800; color: #FAFAFA; }
+  .hero-stat-lbl { font-size: 10px; font-weight: 700; color: #52525B; text-transform: uppercase; letter-spacing: 0.1em; }
+  .hero-side { display: flex; flex-direction: column; gap: 16px; }
+  .hero-side-card { flex: 1; border-radius: 20px; padding: 24px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid var(--border); }
+  .hero-side-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,11,0.15) 0%, rgba(10,10,11,0.88) 100%); }
+  .hero-side-content { position: relative; }
+  .hero-side-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .hero-side-title { font-size: 14px; font-weight: 700; color: #FAFAFA; margin-bottom: 4px; }
+  .hero-side-desc { font-size: 11px; color: #71717A; }
+
+  /* Tournament cards */
+  .tcard { display: flex; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer; height: 100%; }
+  .tcard:hover { transform: translateY(-4px); border-color: rgba(249,115,22,0.3); box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249,115,22,0.12); }
+  .tcard-accent { width: 4px; flex-shrink: 0; }
+  .tcard-accent.orange { background: linear-gradient(180deg, #F97316, #FB923C); }
+  .tcard-accent.red { background: linear-gradient(180deg, #EF4444, #F87171); }
+  .tcard-accent.green { background: linear-gradient(180deg, #22C55E, #4ADE80); }
+  .tcard-accent.blue { background: linear-gradient(180deg, #3B82F6, #60A5FA); }
+  .tcard-accent.purple { background: linear-gradient(180deg, #A855F7, #C084FC); }
+  .tcard-accent.pink { background: linear-gradient(180deg, #EC4899, #F472B6); }
+  .tcard-body { flex: 1; padding: 16px; display: flex; flex-direction: column; min-width: 0; }
+  .tcard-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .tcard-title { font-size: 14px; font-weight: 700; color: #FAFAFA; margin-bottom: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tcard-stats { display: flex; gap: 16px; margin-bottom: 12px; }
+  .tcard-stat { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #71717A; }
+  .tcard-stat strong { color: #FAFAFA; font-weight: 600; }
+  .tcard-stat svg { width: 13px; height: 13px; opacity: 0.5; }
+  .tcard-progress { margin-bottom: 12px; }
+  .tcard-progress-label { display: flex; justify-content: space-between; font-size: 10px; color: #52525B; margin-bottom: 6px; font-weight: 600; }
+  .tcard-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.04); }
+  .tcard-prize-label { font-size: 9px; font-weight: 700; color: #52525B; text-transform: uppercase; letter-spacing: 0.08em; }
+  .tcard-prize { font-size: 13px; font-weight: 700; color: #22C55E; }
+  .tcard-avatars { display: flex; }
+  .tcard-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #000; border: 2px solid var(--bg-card); margin-left: -8px; }
+  .tcard-avatar:first-child { margin-left: 0; }
+  .tcard-avatar.more { background: var(--bg-elevated); color: var(--text-3); font-size: 8px; }
+  .tcard-live { display: flex; align-items: center; gap: 6px; }
+  .tcard-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #EF4444; animation: pulse-glow 1.5s ease-in-out infinite; }
+
+  /* Feature cards */
+  .fcard { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer; height: 100%; }
+  .fcard:hover { transform: translateY(-4px); border-color: rgba(249,115,22,0.3); box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249,115,22,0.12); }
+  .fcard-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
+  .fcard-title { font-size: 13px; font-weight: 700; color: #FAFAFA; margin-bottom: 6px; }
+  .fcard-desc { font-size: 12px; color: #A1A1AA; line-height: 1.6; flex: 1; }
+  .fcard-link { font-size: 10px; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.04); }
+
+  /* Steps */
+  .step-card { text-align: center; padding: 24px; }
+  .step-num { font-size: 10px; font-weight: 800; color: #F97316; margin-bottom: 12px; letter-spacing: 0.15em; }
+  .step-title { font-size: 14px; font-weight: 700; color: #FAFAFA; margin-bottom: 8px; }
+  .step-desc { font-size: 12px; color: #71717A; line-height: 1.7; }
+
+  /* CTA */
+  .cta-wrap { text-align: center; padding: 56px 32px; border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .cta-wrap::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(249,115,22,0.05) 0%, transparent 40%, rgba(245,158,11,0.03) 100%); pointer-events: none; }
+  .cta-content { position: relative; }
+  .cta-title { font-size: 24px; font-weight: 800; color: #FAFAFA; margin-bottom: 8px; }
+  .cta-desc { font-size: 13px; color: #A1A1AA; margin-bottom: 28px; max-width: 400px; margin-left: auto; margin-right: auto; }
+
+  @media (max-width: 1023px) {
+    .hero-wrap { grid-template-columns: 1fr; }
+    .hero-side { flex-direction: row; }
+    .hero-side-card { min-height: 160px; }
+  }
+  @media (max-width: 640px) {
+    .hero-main { padding: 24px; min-height: 300px; }
+    .hero-title { font-size: 24px; }
+    .hero-stats { gap: 20px; }
+    .hero-side { flex-direction: column; }
+    .hero-side-card { min-height: 140px; }
+    .tcard { flex-direction: column; }
+    .tcard-accent { width: 100%; height: 3px; }
+  }
+</style>
+</head>
+<body>
+<!-- Mobile Sidenav Overlay -->
+<div class="sidenav-overlay" onclick="toggleSidenav()"></div>
+
+<!-- Prototype Navigation -->
+<nav class="proto-nav">
+  <button class="proto-nav-btn active" onclick="showPage('home')">Home</button>
+  <button class="proto-nav-btn" onclick="showPage('tournaments')">Tournaments</button>
+  <button class="proto-nav-btn" onclick="showPage('tournament-detail')">Tournament Detail</button>
+  <button class="proto-nav-btn" onclick="showPage('profile')">Profile</button>
+  <button class="proto-nav-btn" onclick="showPage('login')">Login</button>
+  <button class="proto-nav-btn" onclick="showPage('register')">Register</button>
+  <button class="proto-nav-btn" onclick="showPage('admin')">Admin</button>
+</nav>
+
+<!-- ==================== HOME PAGE ==================== -->
+<div id="page-home" class="page active">
+<div class="shell-with-sidenav">
+  <aside class="sidenav">
+    <div class="sidenav-logo"><div class="sidenav-logo-icon">E</div><div class="sidenav-logo-text">eFootball <span>Arena</span></div></div>
+    <nav class="sidenav-nav">
+      <a href="#" class="sidenav-link active" style="position:relative"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>Home</a>
+      <a href="#" class="sidenav-link" onclick="showPage('tournaments');return false"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>Tournaments</a>
+      <a href="#" class="sidenav-link"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Leaderboard</a>
+      <a href="#" class="sidenav-link" onclick="showPage('profile');return false"><svg class="sidenav-link-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>Profile</a>
+    </nav>
+    <div class="sidenav-footer"><a href="#" class="sidenav-link" style="font-size:12px">About</a><a href="#" class="sidenav-link" style="font-size:12px">Privacy</a></div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-hamburger" onclick="toggleSidenav()" aria-label="Open menu"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="topbar-search"><svg class="topbar-search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input type="search" placeholder="Search tournaments, players..."></div>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-icon-btn"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg><span class="badge-dot"></span></button>
+        <div class="topbar-avatar">X</div>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- Hero -->
+      <section class="hero-wrap">
+        <div class="hero-main">
+          <div class="hero-glow"></div>
+          <div class="hero-badge"><span class="hero-badge-dot"></span><span class="hero-badge-text">Live Tournaments</span></div>
+          <h1 class="hero-title">Chase the <span class="gradient-text">Championship</span></h1>
+          <p class="hero-desc">Create or join eFootball tournaments. Compete in knockout brackets, climb leaderboards, and lift the trophy.</p>
+          <div class="hero-actions">
+            <button class="btn btn-success btn-lg">Start Competing</button>
+            <button class="btn btn-outline btn-lg" onclick="showPage('tournaments')">Browse Tournaments</button>
+          </div>
+          <div class="hero-stats">
+            <div><div class="hero-stat-val">142</div><div class="hero-stat-lbl">Tournaments</div></div>
+            <div><div class="hero-stat-val">896</div><div class="hero-stat-lbl">Players</div></div>
+            <div><div class="hero-stat-val">2,088</div><div class="hero-stat-lbl">Matches</div></div>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-side-card" style="background:linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);">
+            <div class="hero-side-content"><div class="hero-side-tag" style="color:#F97316;">Real Matches</div><div class="hero-side-title">Play Under the Lights</div><div class="hero-side-desc">Schedule matches, submit scores with proof, and confirm results.</div></div>
+          </div>
+          <div class="hero-side-card" style="background:linear-gradient(135deg, #0a1a0a, #1a2e1a, #2d4a2d);">
+            <div class="hero-side-content"><div class="hero-side-tag" style="color:#22C55E;">All Formats</div><div class="hero-side-title">Knockout or League</div><div class="hero-side-desc">Single elimination, double elimination, or round-robin.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:48px;">
+        <div class="stat-card"><div class="stat-value">896</div><div class="stat-label">Active Players</div><div class="stat-bar" style="background:var(--accent);"></div></div>
+        <div class="stat-card"><div class="stat-value">142</div><div class="stat-label">Tournaments</div><div class="stat-bar" style="background:var(--warning);"></div></div>
+        <div class="stat-card"><div class="stat-value">2,088</div><div class="stat-label">Matches Played</div><div class="stat-bar" style="background:var(--success);"></div></div>
+        <div class="stat-card"><div class="stat-value">99.8%</div><div class="stat-label">Uptime</div><div class="stat-bar" style="background:var(--info);"></div></div>
+      </section>
+
+      <!-- Features -->
+      <section style="margin-bottom:48px;">
+        <div class="section-header"><div class="section-title">Everything you need to <span class="gradient-text">compete</span></div></div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+          <div class="fcard"><div class="fcard-icon" style="background:rgba(249,115,22,0.1);">🏆</div><div class="fcard-title">Tournament Brackets</div><div class="fcard-desc">Knockout, double elimination, or round-robin. Auto-generated brackets with seed-based matchups.</div><div class="fcard-link">Learn more →</div></div>
+          <div class="fcard"><div class="fcard-icon" style="background:rgba(59,130,246,0.1);">📸</div><div class="fcard-title">Screenshot Verification</div><div class="fcard-desc">Submit match scores with screenshot proof. OCR auto-reads eFootball results. Dual confirmation.</div><div class="fcard-link">Learn more →</div></div>
+          <div class="fcard"><div class="fcard-icon" style="background:rgba(34,197,94,0.1);">📱</div><div class="fcard-title">Telegram Integration</div><div class="fcard-desc">Real-time match notifications via Telegram bot. Challenge opponents directly from chat.</div><div class="fcard-link">Learn more →</div></div>
+          <div class="fcard"><div class="fcard-icon" style="background:rgba(245,158,11,0.1);">📊</div><div class="fcard-title">Live Leaderboards</div><div class="fcard-desc">Real-time standings with points, goals, goal difference, and form tracking.</div><div class="fcard-link">Learn more →</div></div>
+        </div>
+      </section>
+
+      <!-- Featured Tournaments -->
+      <section style="margin-bottom:48px;">
+        <div class="section-header"><div class="section-title">Featured Tournaments</div><button class="btn btn-ghost btn-sm" onclick="showPage('tournaments')">View All →</button></div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px;">
+          <div class="tcard">
+            <div class="tcard-accent orange"></div>
+            <div class="tcard-body">
+              <div class="tcard-top"><span class="badge badge-open">OPEN</span><span style="font-size:10px;color:var(--text-4);text-transform:uppercase;font-weight:600;">Knockout</span></div>
+              <div class="tcard-title">Friday Night Championship</div>
+              <div class="tcard-stats"><div class="tcard-stat"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg><strong>6/8</strong> players</div><div class="tcard-stat"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><strong>2d</strong> left</div></div>
+              <div class="tcard-progress"><div class="tcard-progress-label"><span>Slots filled</span><span>6/8</span></div><div class="progress"><div class="progress-fill" style="width:75%;"></div></div></div>
+              <div class="tcard-footer"><div><div class="tcard-prize-label">Prize Pool</div><div class="tcard-prize">KES 500</div></div><div class="tcard-avatars"><div class="tcard-avatar" style="background:linear-gradient(135deg,#F97316,#FB923C);">X</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#3B82F6,#60A5FA);">J</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#22C55E,#4ADE80);">S</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#A855F7,#C084FC);">M</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#EC4899,#F472B6);">A</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#F59E0B,#FBBF24);">K</div><div class="tcard-avatar more">+2</div></div></div>
+            </div>
+          </div>
+          <div class="tcard">
+            <div class="tcard-accent red"></div>
+            <div class="tcard-body">
+              <div class="tcard-top"><div class="tcard-live"><div class="tcard-live-dot"></div><span class="badge badge-live">● LIVE</span></div><span style="font-size:10px;color:var(--text-4);text-transform:uppercase;font-weight:600;">League</span></div>
+              <div class="tcard-title">Weekly Pro League</div>
+              <div class="tcard-stats"><div class="tcard-stat"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg><strong>8/8</strong> players</div><div class="tcard-stat"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg><strong>23</strong> matches</div></div>
+              <div class="tcard-progress"><div class="tcard-progress-label"><span>Round 3 of 7</span><span>43%</span></div><div class="progress"><div class="progress-fill" style="width:43%;"></div></div></div>
+              <div class="tcard-footer"><div><div class="tcard-prize-label">Prize Pool</div><div class="tcard-prize">KES 1,000</div></div><div class="tcard-avatars"><div class="tcard-avatar" style="background:linear-gradient(135deg,#F97316,#FB923C);">X</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#3B82F6,#60A5FA);">J</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#22C55E,#4ADE80);">S</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#A855F7,#C084FC);">M</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#EC4899,#F472B6);">A</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#F59E0B,#FBBF24);">K</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#14B8A6,#2DD4BF);">L</div><div class="tcard-avatar" style="background:linear-gradient(135deg,#EF4444,#F87171);">P</div></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="card" style="margin-bottom:48px; position:relative; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:linear-gradient(135deg, rgba(249,115,22,0.03) 0%, transparent 50%, rgba(245,158,11,0.02) 100%); pointer-events:none;"></div>
+        <div style="position:relative;">
+          <h2 class="section-title" style="text-align:center; margin-bottom:40px;">How it <span class="gradient-text">works</span></h2>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px;">
+            <div class="step-card"><div class="step-num">STEP 01</div><div class="step-title">Create or Join</div><div class="step-desc">Set up a tournament in seconds or browse open competitions. Share invite links with players.</div></div>
+            <div class="step-card"><div class="step-num">STEP 02</div><div class="step-title">Compete</div><div class="step-desc">Play matches in eFootball. Submit scores with screenshot proof. Opponent confirms results.</div></div>
+            <div class="step-card"><div class="step-num">STEP 03</div><div class="step-title">Win</div><div class="step-desc">Climb the bracket. Top the leaderboard. Lift the trophy and claim your rank.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta-wrap" style="margin-bottom:48px;">
+        <div class="cta-content">
+          <h2 class="cta-title">Ready to compete?</h2>
+          <p class="cta-desc">Join the arena. Create your free account and start competing today.</p>
+          <button class="btn btn-success btn-xl">Create Free Account</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+</div>
+
+<script>
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.proto-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+// Mobile nav toggle
+function toggleSidenav() {
+  const sidenav = document.querySelector('.sidenav');
+  const overlay = document.querySelector('.sidenav-overlay');
+  if (sidenav && overlay) {
+    const isOpen = sidenav.classList.contains('open');
+    sidenav.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('open', !isOpen);
+  }
+}
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('sidenav-overlay')) {
+    document.querySelectorAll('.sidenav').forEach(s => s.classList.remove('open'));
+    document.querySelectorAll('.sidenav-overlay').forEach(o => o.classList.remove('open'));
+  }
+});
+</script>
+
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-bottom-nav">
+  <div class="mobile-bottom-nav-inner">
+    <a href="home.html" class="mobile-nav-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>Home</a>
+    <a href="tournaments.html" class="mobile-nav-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>Tournaments</a>
+    <a href="tournaments.html" class="mobile-nav-fab" aria-label="Create Tournament"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></a>
+    <a href="#" class="mobile-nav-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Rankings</a>
+    <a href="profile.html" class="mobile-nav-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>Me</a>
+  </div>
+</nav>
+</body>
+</html>
