@@ -203,6 +203,20 @@ export const api = {
       if (!res.ok) throw await res.json();
       return res.json();
     },
+    getByToken: async (token: string) => {
+      const res = await fetch(`${API_URL}/tournaments/by-token/${encodeURIComponent(token)}`, { headers: getHeaders() });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
+    joinByToken: async (token: string, phoneNumber: string) => {
+      const res = await fetch(`${API_URL}/tournaments/by-token/${encodeURIComponent(token)}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      if (!res.ok) throw await res.json();
+      return res.json();
+    },
   },
 
   matches: {

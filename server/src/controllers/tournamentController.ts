@@ -2,6 +2,7 @@ import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { sanitizeString, sanitizeHtml } from '../utils/sanitize.js';
+import { getIO } from '../socket/index.js';
 
 export function logAdminAction(adminId: number, action: string, details: string) {
   db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(
@@ -29,6 +30,7 @@ interface Tournament {
   group_count: number;
   bracket_type: string;
   image_url: string | null;
+  entry_fee: number;
   created_at: string;
 }
 
@@ -42,7 +44,7 @@ export async function createTournament(req: AuthRequest, res: Response) {
     return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
   }
 
-  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl } = req.body;
+  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl, entryFee } = req.body;
 
   if (!name || !format) {
     return res.status(400).json({ error: 'Name and format are required' });
@@ -63,8 +65,8 @@ export async function createTournament(req: AuthRequest, res: Response) {
   const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
 
   const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url, entry_fee)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)
   `).run(
     name,
     description ? sanitizeHtml(description, 2000) : null,
@@ -79,10 +81,22 @@ export async function createTournament(req: AuthRequest, res: Response) {
     req.user.id,
     groupCountValue,
     bracketTypeValue,
-    imageUrl || null
+    imageUrl || null,
+    entryFee || 0
   );
 
   const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid) as Tournament;
+
+  // Real-time: notify all connected clients
+  try { getIO().emit('tournament:created', {
+    id: tournament.id,
+    name: tournament.name,
+    format: tournament.format,
+    maxPlayers: tournament.max_players,
+    status: tournament.status,
+    imageUrl: tournament.image_url,
+    createdAt: tournament.created_at,
+  }); } catch { /* socket not initialized */ }
 
   res.status(201).json({
     id: tournament.id,
@@ -96,6 +110,7 @@ export async function createTournament(req: AuthRequest, res: Response) {
     prizePool: tournament.prize_pool,
     registrationDeadline: tournament.registration_deadline,
     imageUrl: tournament.image_url,
+    entryFee: tournament.entry_fee,
     createdAt: tournament.created_at
   });
 }
@@ -145,6 +160,7 @@ export async function getTournaments(req: AuthRequest, res: Response) {
       prizePool: t.prize_pool,
       registrationDeadline: t.registration_deadline,
       imageUrl: t.image_url,
+      entryFee: t.entry_fee,
       createdAt: t.created_at
     })),
     total: total.count,
@@ -190,6 +206,7 @@ export async function getTournamentById(req: AuthRequest, res: Response) {
     groupCount: tournament.group_count || 0,
     bracketType: tournament.bracket_type || 'single',
     imageUrl: tournament.image_url,
+    entryFee: tournament.entry_fee,
     createdAt: tournament.created_at
   });
 }
@@ -339,6 +356,17 @@ export async function updateTournament(req: AuthRequest, res: Response) {
 
   const updated = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament;
 
+  // Real-time: notify tournament room
+  try { getIO().to(`tournament:${tournamentId}`).emit('tournament:update', {
+    id: updated.id,
+    name: updated.name,
+    description: updated.description,
+    status: updated.status,
+    prizePool: updated.prize_pool,
+    registrationDeadline: updated.registration_deadline,
+    imageUrl: updated.image_url,
+  }); } catch { /* socket not initialized */ }
+
   res.json({
     id: updated.id,
     name: updated.name,
@@ -379,6 +407,9 @@ export async function deleteTournament(req: AuthRequest, res: Response) {
   );
 
   db.prepare('DELETE FROM tournaments WHERE id = ?').run(tournamentId);
+
+  // Real-time: notify all connected clients
+  try { getIO().emit('tournament:deleted', { id: tournamentId }); } catch { /* socket not initialized */ }
 
   res.json({ message: 'Tournament deleted successfully' });
 }
@@ -445,4 +476,15 @@ export async function joinTournament(req: AuthRequest, res: Response) {
       joinedAt: new Date().toISOString()
     }
   });
+
+  // Real-time: notify tournament room
+  try { getIO().to(`tournament:${tournamentId}`).emit('participant:joined', {
+    tournamentId,
+    participant: {
+      userId: req.user.id,
+      username: user.username,
+      seed,
+      status: 'registered',
+    }
+  }); } catch { /* socket not initialized */ }
 }

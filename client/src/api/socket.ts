@@ -16,7 +16,7 @@ export function initSocket(): Socket {
     console.log('[Socket] Connected:', socket?.id);
 
     // Authenticate if token exists
-    const token = localStorage.getItem('toss_api_token');
+    const token = localStorage.getItem('token');
     if (token) {
       socket?.emit('authenticate', token);
     }

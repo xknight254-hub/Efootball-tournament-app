@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
+import { getIO } from '../socket/index.js';
 
 interface Match {
   id: number;
@@ -215,6 +216,26 @@ export async function submitResult(req: AuthRequest, res: Response) {
     WHERE m.id = ?
   `).get(matchId) as any;
 
+  // Real-time: notify match and tournament rooms
+  try {
+    const matchRoom = `match:${matchId}`;
+    const tournamentRoom = `tournament:${result.tournament_id}`;
+    const payload = {
+      id: result.id,
+      tournamentId: result.tournament_id,
+      round: result.round,
+      matchNumber: result.match_number,
+      player1: { id: result.player1_id, username: result.player1_username },
+      player2: { id: result.player2_id, username: result.player2_username },
+      player1Score: result.player1_score,
+      player2Score: result.player2_score,
+      winner: result.winner_id ? { id: result.winner_id, username: result.winner_username } : null,
+      status: result.status,
+      confirmationStatus: result.confirmation_status,
+    };
+    getIO().to(matchRoom).to(tournamentRoom).emit('match:update', payload);
+  } catch { /* socket not initialized */ }
+
   res.json({
     id: result.id,
     round: result.round,
@@ -289,6 +310,18 @@ export async function confirmResult(req: AuthRequest, res: Response) {
 
   const updated = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId) as Match;
 
+  // Real-time: notify match and tournament rooms
+  try {
+    const tournamentId = match.tournament_id;
+    getIO().to(`match:${matchId}`).to(`tournament:${tournamentId}`).emit('match:update', {
+      id: matchId,
+      tournamentId,
+      status: updated.status,
+      confirmationStatus: updated.confirmation_status,
+      winnerId: updated.winner_id,
+    });
+  } catch { /* socket not initialized */ }
+
   res.json({
     id: updated.id,
     status: updated.status,
@@ -329,6 +362,16 @@ export async function disputeResult(req: AuthRequest, res: Response) {
       status = 'disputed'
     WHERE id = ?
   `).run(matchId);
+
+  // Real-time: notify match and tournament rooms
+  try {
+    getIO().to(`match:${matchId}`).to(`tournament:${match.tournament_id}`).emit('match:update', {
+      id: matchId,
+      tournamentId: match.tournament_id,
+      status: 'disputed',
+      confirmationStatus: 'disputed',
+    });
+  } catch { /* socket not initialized */ }
 
   res.json({ message: 'Match disputed. Organizer will review.' });
 }
