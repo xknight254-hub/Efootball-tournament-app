@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTelegram } from '../hooks/useTelegram';
+import { useTelegram } from '../context/TelegramContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 
@@ -15,7 +15,7 @@ import { api } from '../api';
  * 5. Handle start_param for deep links (tournament invites, match links)
  */
 export function TelegramAutoLogin() {
-  const { isAvailable, isReady, user: tgUser, initData, startParam } = useTelegram();
+  const { isInTelegram: isAvailable, isReady, telegramUser: tgUser, telegramInitData: initData, startParam } = useTelegram();
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');

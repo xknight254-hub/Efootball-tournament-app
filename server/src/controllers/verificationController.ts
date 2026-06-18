@@ -6,13 +6,13 @@ import crypto from 'crypto';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/auth.js';
-import { getWorker, parseEFOTBScreenshot } from './ocrService.js';
+import { getWorker, parseEFOTBScreenshot } from '../services/ocrService.js';
 import {
   processVerification,
   handleOpponentResponse,
   adminResolveDispute,
   validateTeams,
-} from './verificationService.js';
+} from '../services/verificationService.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),

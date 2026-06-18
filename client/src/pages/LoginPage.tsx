@@ -2,19 +2,44 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { TelegramAutoLogin } from '../components/TelegramAutoLogin';
-import { isTelegramEnvironment } from '../hooks/useTelegram';
+import { useTelegram } from '../context/TelegramContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
 type LoginMode = 'password' | 'phone';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<LoginMode>(isTelegramEnvironment() ? 'password' : 'password');
+  const { isInTelegram: isTelegramEnv } = useTelegram();
+  const [mode, setMode] = useState<LoginMode>('password');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // If in Telegram and already authenticated, redirect to home
+  // (TelegramContext auto-logged them in)
+  useEffect(() => {
+    if (isTelegramEnv && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isTelegramEnv, isAuthenticated, navigate]);
+
+  // Don't render login form for Telegram Mini App users
+  // They should be auto-logged in by TelegramProvider
+  if (isTelegramEnv) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
+        <div className="w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F97316, #F59E0B)' }}>
+            <span className="text-white font-bold text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>E</span>
+          </div>
+          <h1 className="text-xl font-bold text-white mb-2">Signing you in...</h1>
+          <p className="text-sm text-[var(--color-text-muted)] mb-6">Connecting to Telegram</p>
+          <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }} />
+        </div>
+      </div>
+    );
+  }
 
   // Password login
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -94,9 +119,6 @@ export function LoginPage() {
 
         {/* Card */}
         <div className="rounded-2xl p-6" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-          {/* Telegram Auto Login (silent — only shows on error or loading) */}
-          <TelegramAutoLogin />
-
           {/* Mode Toggle */}
           <div className="flex rounded-lg p-1 mb-5" style={{ background: 'var(--color-bg-surface)' }}>
             <button
