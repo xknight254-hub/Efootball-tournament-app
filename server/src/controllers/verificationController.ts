@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import multer from 'multer';
-import path from 'path';
 import { join } from 'path';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import crypto from 'crypto';
@@ -361,7 +360,7 @@ export async function getVerificationQueue(req: AuthRequest, res: Response) {
   const totalQuery = statusFilter !== 'all'
     ? 'SELECT COUNT(*) as count FROM result_submissions WHERE verification_status = ?'
     : 'SELECT COUNT(*) as count FROM result_submissions';
-  const totalParams = statusFilter !== 'all'] ? [statusFilter] : [];
+  const totalParams = statusFilter !== 'all' ? [statusFilter] : [];
   const total = db.prepare(totalQuery).get(...totalParams) as any;
 
   res.json({
