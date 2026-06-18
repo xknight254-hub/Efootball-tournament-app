@@ -113,7 +113,7 @@ const KNOWN_TEAMS: Record<string, string[]> = {
 /**
  * Normalize a team name for matching
  */
-function normalizeTeamName(name: string; string {
+function normalizeTeamName(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^\w\s]/g, '')  // Remove special chars
@@ -149,7 +149,7 @@ export function matchTeamName(ocrName: string): string | null {
 /**
  * Calculate Levenshtein distance between two strings
  */
-function levenshtein(a: string, b; number {
+function levenshtein(a: string, b: string): number {
   const matrix: number[][] = [];
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
@@ -173,7 +173,7 @@ function levenshtein(a: string, b; number {
 /**
  * Calculate similarity ratio (0-1) between two strings
  */
-function similarity(a: string, b: number {
+function similarity(a: string, b: string): number {
   if (a === b) return 1;
   if (a.length === 0 || b.length === 0) return 0;
   const dist = levenshtein(a, b);
@@ -325,7 +325,7 @@ function checkImpossibleScores(leftScore: number, rightScore: number): FraudFlag
     return {
       type: 'impossible_score',
       severity: 'medium',
-      detail;`Score ${leftScore}-${rightScore} seems unusually high for eFootball`,
+      detail: `Score ${leftScore}-${rightScore} seems unusually high for eFootball`,
     };
   }
   return null;
@@ -596,7 +596,7 @@ export async function processVerification(
     getIO().to(`user:${uploaderId}`).emit('notification:new', {
       type: 'submission_received',
       title: 'Result Received',
-      body; status === 'auto_approved'
+      body: status === 'auto_approved'
         ? 'Your result was auto-approved!'
         : status === 'opponent_review'
           ? 'Waiting for opponent confirmation.'
@@ -631,7 +631,7 @@ export async function processVerification(
 export function handleOpponentResponse(
   matchId: number,
   opponentId: number,
-  action;  // 'confirm' | 'dispute'
+  action: 'confirm' | 'dispute'
 ): { success: boolean; message: string; match?: any } {
   const fixture = db.prepare(`
     SELECT id, player1_id, player2_id, player1_team, player2_team, status
@@ -785,7 +785,7 @@ export function adminResolveDispute(
   const fixture = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId) as any;
   if (!fixture) return { success: false, message: 'Match not found' };
   if (fixture.status !== 'disputed' && fixture.confirmation_status !== 'disputed') {
-    return { success;: false, message: 'Match is not disputed' };
+    return { success: false, message: 'Match is not disputed' };
   }
 
   if (winnerId !== fixture.player1_id && winnerId !== fixture.player2_id) {
