@@ -1,9 +1,9 @@
 import { Server as HttpServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
 
-interface AuthenticatedSocket extends SocketIOServer {
+interface AuthenticatedSocket extends Socket {
   userId?: number;
   username?: string;
 }
@@ -11,11 +11,15 @@ interface AuthenticatedSocket extends SocketIOServer {
 let io: SocketIOServer;
 
 export interface ServerToClientEvents {
+  'tournament:created': (data: any) => void;
   'tournament:update': (data: any) => void;
+  'tournament:deleted': (data: any) => void;
   'match:update': (data: any) => void;
+  'participant:joined': (data: any) => void;
   'notification:new': (notification: any) => void;
   'chat:message': (message: any) => void;
   'chat:history': (messages: any[]) => void;
+  'auth:success': (data: { userId: number; username: string }) => void;
   'auth:error': (error: string) => void;
 }
 
@@ -24,6 +28,7 @@ export interface ClientToServerEvents {
   'leave:tournament': (tournamentId: string) => void;
   'join:match': (matchId: string) => void;
   'leave:match': (matchId: string) => void;
+  'join:user': (userId: string) => void;
   'chat:send': (data: { tournamentId: string; message: string }) => void;
   'chat:history': (tournamentId: string) => void;
   'authenticate': (token: string) => void;
@@ -73,6 +78,7 @@ export function initializeSocket(server: HttpServer): SocketIOServer {
         authenticatedUser = user;
         (socket as any).userId = user.userId;
         (socket as any).username = user.username;
+        socket.join(`user:${user.userId}`);
         socket.emit('auth:success', { userId: user.userId, username: user.username });
         console.log(`[Socket] User authenticated: ${user.username} (${socket.id})`);
       } else {
@@ -121,7 +127,7 @@ export function initializeSocket(server: HttpServer): SocketIOServer {
 
       const sanitizedMessage = message.slice(0, 500).replace(/[<>]/g, '');
       const timestamp = new Date().toISOString();
-      
+
       const chatMessage = {
         id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         tournamentId,
@@ -130,7 +136,7 @@ export function initializeSocket(server: HttpServer): SocketIOServer {
         senderId: authenticatedUser.userId,
         senderUsername: authenticatedUser.username,
       };
-      
+
       io.to(`tournament:${tournamentId}`).emit('chat:message', chatMessage);
     });
 

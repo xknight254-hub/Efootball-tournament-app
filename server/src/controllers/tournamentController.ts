@@ -237,6 +237,8 @@ export async function getParticipants(req: AuthRequest, res: Response) {
       id: p.id,
       userId: p.user_id,
       username: p.username,
+      teamName: p.team_name,
+      teamLogoUrl: p.team_logo_url,
       seed: p.seed,
       status: p.participant_status,
       joinedAt: p.joined_at
@@ -461,10 +463,12 @@ export async function joinTournament(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'Tournament is full' });
   }
 
+  const { teamName, teamLogoUrl } = req.body;
+
   const seed = participantCount.count + 1;
   db.prepare(
-    'INSERT INTO participants (tournament_id, user_id, seed, status) VALUES (?, ?, ?, ?)'
-  ).run(tournamentId, req.user.id, seed, 'registered');
+    'INSERT INTO participants (tournament_id, user_id, seed, status, team_name, team_logo_url) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(tournamentId, req.user.id, seed, 'registered', teamName || null, teamLogoUrl || null);
 
   const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id) as { username: string };
 

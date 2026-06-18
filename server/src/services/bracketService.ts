@@ -260,11 +260,18 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
       throw new Error(`Unknown tournament format: ${tournament.format}`);
   }
 
-  // Persist matches to database
+  // Persist matches to database — include team names from participant registration
   const insertMatch = db.prepare(`
-    INSERT INTO matches (tournament_id, round, match_number, player1_id, player2_id, status)
-    VALUES (?, ?, ?, ?, ?, 'pending')
+    INSERT INTO matches (tournament_id, round, match_number, player1_id, player2_id, player1_team, player2_team, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
   `);
+
+  // Pre-fetch all participant team data
+  const participantTeams = db.prepare(`
+    SELECT user_id, team_name FROM participants WHERE tournament_id = ?
+  `).all(tournamentId) as { user_id: number; team_name: string | null }[];
+
+  const teamMap = new Map(participantTeams.map(p => [p.user_id, p.team_name]));
 
   for (const match of matches) {
     insertMatch.run(
@@ -272,7 +279,9 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
       match.round,
       match.matchNumber,
       match.player1_id,
-      match.player2_id
+      match.player2_id,
+      match.player1_id ? teamMap.get(match.player1_id) || null : null,
+      match.player2_id ? teamMap.get(match.player2_id) || null : null
     );
   }
 

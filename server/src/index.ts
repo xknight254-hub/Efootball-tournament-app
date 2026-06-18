@@ -96,6 +96,9 @@ app.use('/t', deepLinkRoutes);
 // Serve static files from client/public (for uploaded images)
 app.use(express.static(join(__dirname, '..', 'client', 'public')));
 
+// Serve uploaded verification screenshots
+app.use('/screenshots', express.static(join(process.cwd(), 'server', 'client', 'public', 'screenshots')));
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

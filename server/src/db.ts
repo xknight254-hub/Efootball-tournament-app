@@ -187,6 +187,50 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
     );
   `);
   
+  // ─── Verification tables ───────────────────────────────────────
+  sqlDb.run(`
+    CREATE TABLE IF NOT EXISTS result_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL,
+      uploader_id INTEGER NOT NULL,
+      screenshot_url TEXT,
+      screenshot_hash TEXT,
+      ocr_team_left TEXT,
+      ocr_team_right TEXT,
+      ocr_score_left INTEGER,
+      ocr_score_right INTEGER,
+      ocr_match_time TEXT,
+      ocr_raw_text TEXT,
+      ocr_confidence REAL DEFAULT 0,
+      verification_confidence REAL DEFAULT 0,
+      team_match_result TEXT DEFAULT 'pending',
+      fraud_score REAL DEFAULT 0,
+      fraud_flags TEXT,
+      verification_status TEXT DEFAULT 'pending',
+      admin_review_reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at DATETIME,
+      reviewed_by INTEGER,
+      FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (uploader_id) REFERENCES users(id),
+      FOREIGN KEY (reviewed_by) REFERENCES users(id)
+    );
+  `);
+
+  sqlDb.run(`
+    CREATE TABLE IF NOT EXISTS fraud_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      submission_id INTEGER,
+      user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      detection_type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      details TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (submission_id) REFERENCES result_submissions(id)
+    );
+  `);
+
   // Migrate existing tables with new columns
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN group_count INTEGER DEFAULT 0'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN bracket_type TEXT DEFAULT \'single\''); } catch { /* column exists */ }
@@ -195,6 +239,16 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_username TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN telegram_photo_url TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN image_url TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN entry_fee INTEGER DEFAULT 0'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN access_token TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE tournaments ADD COLUMN is_private INTEGER DEFAULT 0'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE participants ADD COLUMN team_name TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE participants ADD COLUMN team_logo_url TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE matches ADD COLUMN player1_team TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE matches ADD COLUMN player2_team TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE matches ADD COLUMN opponent_screenshot_url TEXT'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE matches ADD COLUMN verification_status TEXT DEFAULT \'none\''); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN phone TEXT'); } catch { /* column exists */ }
 
   // Auto-save every 30 seconds and on exit
   setInterval(saveDb, 30000);
