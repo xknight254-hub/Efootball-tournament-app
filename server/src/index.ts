@@ -17,6 +17,7 @@ import { initializeSocket } from './socket/index.js';
 import wagerRoutes from './routes/wagerRoutes.js';
 import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 import deepLinkRoutes from './routes/deepLinkRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,6 +62,7 @@ app.use(cors({
     'http://xtournament.duckdns.org',
     'http://178.105.198.217',
     'http://178.105.198.217:3001',
+    'http://178.105.198.217:3002',
     'http://178.105.198.217:5173',
   ],
   credentials: true,
@@ -83,6 +85,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/wagers', wagerRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);

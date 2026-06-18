@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { 
-  createTournament, 
-  getTournaments, 
-  getTournamentById, 
-  updateTournament, 
+import {
+  createTournament,
+  getTournaments,
+  getTournamentById,
+  updateTournament,
+  updateTournamentStatus,
   deleteTournament,
   joinTournament,
   getParticipants,
@@ -19,6 +20,7 @@ router.get('/', getTournaments);
 router.get('/:id', getTournamentById);
 router.get('/:id/participants', getParticipants);
 router.get('/:id/standings', getStandings);
+router.put('/:id/status', authenticateToken, updateTournamentStatus);
 router.put('/:id', authenticateToken, updateTournament);
 router.delete('/:id', authenticateToken, deleteTournament);
 router.post('/:id/join', authenticateToken, joinTournament);

@@ -220,6 +220,47 @@ export function logout(req: AuthRequest, res: Response) {
   res.json({ message: 'Logged out successfully' });
 }
 
+// ─── USER STATS ───
+
+export function getUserStats(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  const userId = parseInt(id);
+
+  if (isNaN(userId)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+
+  // Count completed matches where user participated
+  const matchesPlayed = (db.prepare(`
+    SELECT COUNT(*) as count FROM matches
+    WHERE (player1_id = ? OR player2_id = ?)
+    AND status = 'completed'
+  `).get(userId, userId) as any)?.count || 0;
+
+  // Count wins
+  const wins = (db.prepare(`
+    SELECT COUNT(*) as count FROM matches
+    WHERE winner_id = ? AND status = 'completed'
+  `).get(userId) as any)?.count || 0;
+
+  const losses = matchesPlayed - wins;
+  const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
+
+  // Count tournaments won (tournaments where winner_id = userId)
+  const tournamentsWon = (db.prepare(`
+    SELECT COUNT(*) as count FROM tournaments
+    WHERE winner_id = ?
+  `).get(userId) as any)?.count || 0;
+
+  res.json({
+    matchesPlayed,
+    wins,
+    losses,
+    winRate,
+    tournamentsWon,
+  });
+}
+
 // ─── PASSWORD RESET (no email — Telegram-based) ───
 
 export async function forgotPassword(req: AuthRequest, res: Response) {

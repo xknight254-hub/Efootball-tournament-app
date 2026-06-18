@@ -309,6 +309,15 @@ export async function getStandings(req: AuthRequest, res: Response) {
   res.json({ standings, matches: completedMatches.length, tournament: { name: tournament.name, format: tournament.format } });
 }
 
+export async function updateTournamentStatus(req: AuthRequest, res: Response) {
+  const { id } = req.params;
+  const { status } = req.body;
+  const validStatuses = ['open', 'check_in', 'registration_open', 'in_progress', 'live', 'completed', 'cancelled'];
+  if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run(status, id);
+  res.json({ message: 'Status updated', status });
+}
+
 export async function updateTournament(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });

@@ -7,7 +7,9 @@ import {
   deleteUser,
   listAllTournaments,
   deleteTournament,
-  getLogs
+  getLogs,
+  getDisputes,
+  getAnalytics,
 } from '../controllers/adminController.js';
 import {
   generateAdminCodes,
@@ -34,6 +36,12 @@ router.delete('/tournaments/:id', deleteTournament);
 
 // Admin logs
 router.get('/logs', getLogs);
+
+// Disputes
+router.get('/disputes', getDisputes);
+
+// Analytics
+router.get('/analytics', getAnalytics);
 
 // ─── SUPER ADMIN ONLY: Admin Code Management ───
 router.get('/codes', requireSuperAdmin, listAdminCodes);

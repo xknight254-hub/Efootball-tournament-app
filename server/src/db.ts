@@ -174,6 +174,17 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       FOREIGN KEY (challenge_id) REFERENCES wager_challenges(id),
       FOREIGN KEY (payer_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      type TEXT DEFAULT 'info',
+      read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
   
   // Migrate existing tables with new columns

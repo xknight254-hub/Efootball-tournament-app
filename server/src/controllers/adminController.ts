@@ -181,3 +181,82 @@ export function getLogs(req: AuthRequest, res: Response) {
 
   res.json({ logs, total, limit, offset });
 }
+
+// GET /api/admin/disputes - List disputed matches and wagers
+export function getDisputes(req: AuthRequest, res: Response) {
+  // Get disputed matches
+  const disputedMatches = db.prepare(`
+    SELECT m.*, t.name as tournament_name,
+      p1.username as player1_name, p2.username as player2_name
+    FROM matches m
+    JOIN tournaments t ON m.tournament_id = t.id
+    LEFT JOIN users p1 ON m.player1_id = p1.id
+    LEFT JOIN users p2 ON m.player2_id = p2.id
+    WHERE m.status = 'disputed'
+    ORDER BY m.created_at DESC
+    LIMIT 50
+  `).all();
+
+  // Get disputed wagers
+  const disputedWagers = db.prepare(`
+    SELECT wc.*, c.username as creator_name, ch.username as challenger_name
+    FROM wager_challenges wc
+    JOIN users c ON wc.creator_id = c.id
+    LEFT JOIN users ch ON wc.challenger_id = ch.id
+    WHERE wc.status = 'disputed'
+    ORDER BY wc.created_at DESC
+    LIMIT 50
+  `).all();
+
+  res.json({ disputedMatches, disputedWagers });
+}
+
+// GET /api/admin/analytics - Real analytics from DB
+export function getAnalytics(req: AuthRequest, res: Response) {
+  const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
+  const tournamentCount = (db.prepare('SELECT COUNT(*) as count FROM tournaments').get() as any).count;
+  const matchCount = (db.prepare('SELECT COUNT(*) as count FROM matches').get() as any).count;
+  const completedMatches = (db.prepare("SELECT COUNT(*) as count FROM matches WHERE status = 'completed'").get() as any).count;
+  const disputedMatches = (db.prepare("SELECT COUNT(*) as count FROM matches WHERE status = 'disputed'").get() as any).count;
+
+  const wagerCount = (db.prepare('SELECT COUNT(*) as count FROM wager_challenges').get() as any).count;
+  const completedWagers = (db.prepare("SELECT COUNT(*) as count FROM wager_challenges WHERE status = 'completed'").get() as any).count;
+  const totalWagerPot = (db.prepare("SELECT COALESCE(SUM(stake_amount * 2), 0) as total FROM wager_challenges WHERE status = 'completed'").get() as any).total;
+  const totalCommission = (db.prepare("SELECT COALESCE(SUM(commission), 0) as total FROM wager_challenges WHERE status = 'completed'").get() as any).total;
+
+  // Top tournaments by participant count
+  const topTournaments = db.prepare(`
+    SELECT t.id, t.name, t.format, t.status, t.prize_pool,
+      COUNT(p.id) as participant_count
+    FROM tournaments t
+    LEFT JOIN participants p ON t.id = p.tournament_id
+    GROUP BY t.id
+    ORDER BY participant_count DESC
+    LIMIT 5
+  `).all();
+
+  // Recent registrations per day (last 7 days)
+  const registrationsByDay = db.prepare(`
+    SELECT DATE(created_at) as date, COUNT(*) as count
+    FROM users
+    WHERE created_at >= DATE('now', '-7 days')
+    GROUP BY DATE(created_at)
+    ORDER BY date
+  `).all();
+
+  res.json({
+    kpis: {
+      userCount,
+      tournamentCount,
+      matchCount,
+      completedMatches,
+      disputedMatches,
+      wagerCount,
+      completedWagers,
+      totalWagerPot,
+      totalCommission,
+    },
+    topTournaments,
+    registrationsByDay,
+  });
+}
