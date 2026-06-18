@@ -23,13 +23,13 @@ export interface TeamValidationResult {
 }
 
 export interface FraudCheckResult {
-  score; // 0 = clean, 100 = certain fraud
+  score: number; // 0 = clean, 100 = certain fraud
   flags: FraudFlag[];
 }
 
 export interface FraudFlag {
-  type;  // 'duplicate_screenshot' | 'cropped_image' | 'edited_metadata' | 'wrong_teams' | 'impossible_score' | 'reused_screenshot' | 'low_quality' | 'mismatch_fixture'
-  severity; // 'low' | 'medium' | 'high' | 'critical'
+  type: string;  // 'duplicate_screenshot' | 'cropped_image' | 'edited_metadata' | 'wrong_teams' | 'impossible_score' | 'reused_screenshot' | 'low_quality' | 'mismatch_fixture'
+  severity: string; // 'low' | 'medium' | 'high' | 'critical'
   detail: string;
 }
 
@@ -45,7 +45,7 @@ export interface VerificationSubmission {
   overallConfidence: number;
   status: 'auto_approved' | 'opponent_review' | 'admin_review' | 'rejected';
   player1Score: number | null;
-  player2Score: null;
+  player2Score: number | null;
   mappedWinner: 'player1' | 'player2' | null;
 }
 

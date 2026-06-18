@@ -1,4 +1,5 @@
 import db from '../db.js';
+import { getIO } from '../socket/index.js';
 export async function getTournamentMatches(req, res) {
     const { tournamentId } = req.params;
     const tid = parseInt(tournamentId);
@@ -22,17 +23,21 @@ export async function getTournamentMatches(req, res) {
             id: m.id,
             round: m.round,
             matchNumber: m.match_number,
-            player1: m.player1_id ? { id: m.player1_id, username: m.player1_username } : null,
-            player2: m.player2_id ? { id: m.player2_id, username: m.player2_username } : null,
+            player1: m.player1_id ? { id: m.player1_id, username: m.player1_username, team: m.player1_team } : null,
+            player2: m.player2_id ? { id: m.player2_id, username: m.player2_username, team: m.player2_team } : null,
+            player1Team: m.player1_team,
+            player2Team: m.player2_team,
             player1Score: m.player1_score,
             player2Score: m.player2_score,
             winner: m.winner_id ? { id: m.winner_id, username: m.winner_username } : null,
             status: m.status,
             confirmationStatus: m.confirmation_status,
+            verificationStatus: m.verification_status || 'none',
             submittedBy: m.submitted_by,
             submittedAt: m.submitted_at,
             confirmedAt: m.confirmed_at,
             screenshotUrl: m.screenshot_url,
+            opponentScreenshotUrl: m.opponent_screenshot_url,
             createdAt: m.created_at
         }))
     });
@@ -64,13 +69,16 @@ export async function getMatchById(req, res) {
         tournamentId: match.tournament_id,
         round: match.round,
         matchNumber: match.match_number,
-        player1: match.player1_id ? { id: match.player1_id, username: match.player1_username } : null,
-        player2: match.player2_id ? { id: match.player2_id, username: match.player2_username } : null,
+        player1: match.player1_id ? { id: match.player1_id, username: match.player1_username, team: match.player1_team } : null,
+        player2: match.player2_id ? { id: match.player2_id, username: match.player2_username, team: match.player2_team } : null,
+        player1Team: match.player1_team,
+        player2Team: match.player2_team,
         player1Score: match.player1_score,
         player2Score: match.player2_score,
         winner: match.winner_id ? { id: match.winner_id, username: match.winner_username } : null,
         status: match.status,
         confirmationStatus: match.confirmation_status,
+        verificationStatus: match.verification_status || 'none',
         submittedBy: match.submitted_by ? { id: match.submitted_by, username: match.submitted_by_username } : null,
         submittedAt: match.submitted_at,
         confirmedAt: match.confirmed_at,
@@ -161,6 +169,26 @@ export async function submitResult(req, res) {
     LEFT JOIN users w ON m.winner_id = w.id
     WHERE m.id = ?
   `).get(matchId);
+    // Real-time: notify match and tournament rooms
+    try {
+        const matchRoom = `match:${matchId}`;
+        const tournamentRoom = `tournament:${result.tournament_id}`;
+        const payload = {
+            id: result.id,
+            tournamentId: result.tournament_id,
+            round: result.round,
+            matchNumber: result.match_number,
+            player1: { id: result.player1_id, username: result.player1_username },
+            player2: { id: result.player2_id, username: result.player2_username },
+            player1Score: result.player1_score,
+            player2Score: result.player2_score,
+            winner: result.winner_id ? { id: result.winner_id, username: result.winner_username } : null,
+            status: result.status,
+            confirmationStatus: result.confirmation_status,
+        };
+        getIO().to(matchRoom).to(tournamentRoom).emit('match:update', payload);
+    }
+    catch { /* socket not initialized */ }
     res.json({
         id: result.id,
         round: result.round,
@@ -223,6 +251,18 @@ export async function confirmResult(req, res) {
     `).run(matchId);
     }
     const updated = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
+    // Real-time: notify match and tournament rooms
+    try {
+        const tournamentId = match.tournament_id;
+        getIO().to(`match:${matchId}`).to(`tournament:${tournamentId}`).emit('match:update', {
+            id: matchId,
+            tournamentId,
+            status: updated.status,
+            confirmationStatus: updated.confirmation_status,
+            winnerId: updated.winner_id,
+        });
+    }
+    catch { /* socket not initialized */ }
     res.json({
         id: updated.id,
         status: updated.status,
@@ -255,6 +295,16 @@ export async function disputeResult(req, res) {
       status = 'disputed'
     WHERE id = ?
   `).run(matchId);
+    // Real-time: notify match and tournament rooms
+    try {
+        getIO().to(`match:${matchId}`).to(`tournament:${match.tournament_id}`).emit('match:update', {
+            id: matchId,
+            tournamentId: match.tournament_id,
+            status: 'disputed',
+            confirmationStatus: 'disputed',
+        });
+    }
+    catch { /* socket not initialized */ }
     res.json({ message: 'Match disputed. Organizer will review.' });
 }
 export async function resolveDispute(req, res) {

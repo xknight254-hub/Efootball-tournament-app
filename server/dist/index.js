@@ -15,6 +15,8 @@ import imageRoutes from './routes/imageRoutes.js';
 import { initializeSocket } from './socket/index.js';
 import wagerRoutes from './routes/wagerRoutes.js';
 import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
+import deepLinkRoutes from './routes/deepLinkRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ─── Environment Validation ───
@@ -51,6 +53,9 @@ app.use(cors({
         'https://xtournament.duckdns.org',
         'http://xtournament.duckdns.org',
         'http://178.105.198.217',
+        'http://178.105.198.217:3001',
+        'http://178.105.198.217:3002',
+        'http://178.105.198.217:5173',
     ],
     credentials: true,
 }));
@@ -69,10 +74,15 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/wagers', wagerRoutes);
+app.use('/api/notifications', notificationRoutes);
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);
+// ─── Deep links (must be BEFORE SPA fallback) ───
+app.use('/t', deepLinkRoutes);
 // Serve static files from client/public (for uploaded images)
 app.use(express.static(join(__dirname, '..', 'client', 'public')));
+// Serve uploaded verification screenshots
+app.use('/screenshots', express.static(join(process.cwd(), 'server', 'client', 'public', 'screenshots')));
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

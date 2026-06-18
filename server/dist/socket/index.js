@@ -36,6 +36,7 @@ export function initializeSocket(server) {
                 authenticatedUser = user;
                 socket.userId = user.userId;
                 socket.username = user.username;
+                socket.join(`user:${user.userId}`);
                 socket.emit('auth:success', { userId: user.userId, username: user.username });
                 console.log(`[Socket] User authenticated: ${user.username} (${socket.id})`);
             }

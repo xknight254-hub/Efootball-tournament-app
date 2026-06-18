@@ -6,6 +6,10 @@ export declare function getMe(req: AuthRequest, res: Response): Response<any, Re
 export declare function getUserById(req: AuthRequest, res: Response): Response<any, Record<string, any>> | undefined;
 export declare function updateProfile(req: AuthRequest, res: Response): Response<any, Record<string, any>> | undefined;
 export declare function logout(req: AuthRequest, res: Response): Response<any, Record<string, any>> | undefined;
+export declare function getUserStats(req: AuthRequest, res: Response): Response<any, Record<string, any>> | undefined;
+export declare function refreshToken(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 export declare function forgotPassword(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 export declare function resetPassword(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function sendOTP(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function verifyOTP(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 //# sourceMappingURL=authController.d.ts.map

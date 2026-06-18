@@ -1,5 +1,6 @@
 import db from '../db.js';
 import { sanitizeString, sanitizeHtml } from '../utils/sanitize.js';
+import { getIO } from '../socket/index.js';
 export function logAdminAction(adminId, action, details) {
     db.prepare('INSERT INTO admin_logs (admin_id, action, details) VALUES (?, ?, ?)').run(String(adminId), action, details.slice(0, 1000));
 }
@@ -11,7 +12,7 @@ export async function createTournament(req, res) {
     if (req.user.is_admin !== 1 && req.user.is_super_admin !== 1) {
         return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
     }
-    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl } = req.body;
+    const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl, entryFee } = req.body;
     if (!name || !format) {
         return res.status(400).json({ error: 'Name and format are required' });
     }
@@ -27,10 +28,23 @@ export async function createTournament(req, res) {
     const groupCountValue = format === 'multi_bracket' ? (groupCount || 2) : 0;
     const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
     const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
-  `).run(name, description ? sanitizeHtml(description, 2000) : null, sanitizeString(platform || 'efootball', 50), format, maxPlayersValue, bestOf || 1, prizePool ? sanitizeString(prizePool, 200) : null, registrationDeadline || null, resultDeadlineHours || 24, rules ? sanitizeHtml(rules, 5000) : null, req.user.id, groupCountValue, bracketTypeValue, imageUrl || null);
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url, entry_fee)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)
+  `).run(name, description ? sanitizeHtml(description, 2000) : null, sanitizeString(platform || 'efootball', 50), format, maxPlayersValue, bestOf || 1, prizePool ? sanitizeString(prizePool, 200) : null, registrationDeadline || null, resultDeadlineHours || 24, rules ? sanitizeHtml(rules, 5000) : null, req.user.id, groupCountValue, bracketTypeValue, imageUrl || null, entryFee || 0);
     const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid);
+    // Real-time: notify all connected clients
+    try {
+        getIO().emit('tournament:created', {
+            id: tournament.id,
+            name: tournament.name,
+            format: tournament.format,
+            maxPlayers: tournament.max_players,
+            status: tournament.status,
+            imageUrl: tournament.image_url,
+            createdAt: tournament.created_at,
+        });
+    }
+    catch { /* socket not initialized */ }
     res.status(201).json({
         id: tournament.id,
         name: tournament.name,
@@ -43,6 +57,7 @@ export async function createTournament(req, res) {
         prizePool: tournament.prize_pool,
         registrationDeadline: tournament.registration_deadline,
         imageUrl: tournament.image_url,
+        entryFee: tournament.entry_fee,
         createdAt: tournament.created_at
     });
 }
@@ -83,6 +98,7 @@ export async function getTournaments(req, res) {
             prizePool: t.prize_pool,
             registrationDeadline: t.registration_deadline,
             imageUrl: t.image_url,
+            entryFee: t.entry_fee,
             createdAt: t.created_at
         })),
         total: total.count,
@@ -120,6 +136,7 @@ export async function getTournamentById(req, res) {
         groupCount: tournament.group_count || 0,
         bracketType: tournament.bracket_type || 'single',
         imageUrl: tournament.image_url,
+        entryFee: tournament.entry_fee,
         createdAt: tournament.created_at
     });
 }
@@ -145,6 +162,8 @@ export async function getParticipants(req, res) {
             id: p.id,
             userId: p.user_id,
             username: p.username,
+            teamName: p.team_name,
+            teamLogoUrl: p.team_logo_url,
             seed: p.seed,
             status: p.participant_status,
             joinedAt: p.joined_at
@@ -221,6 +240,15 @@ export async function getStandings(req, res) {
     const standings = Object.values(stats).sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || a.seed - b.seed);
     res.json({ standings, matches: completedMatches.length, tournament: { name: tournament.name, format: tournament.format } });
 }
+export async function updateTournamentStatus(req, res) {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['open', 'check_in', 'registration_open', 'in_progress', 'live', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status))
+        return res.status(400).json({ error: 'Invalid status' });
+    db.prepare('UPDATE tournaments SET status = ? WHERE id = ?').run(status, id);
+    res.json({ message: 'Status updated', status });
+}
 export async function updateTournament(req, res) {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -250,6 +278,19 @@ export async function updateTournament(req, res) {
     WHERE id = ?
   `).run(name || null, description || null, status || null, prizePool || null, registrationDeadline || null, rules || null, imageUrl !== undefined ? imageUrl : null, tournamentId);
     const updated = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId);
+    // Real-time: notify tournament room
+    try {
+        getIO().to(`tournament:${tournamentId}`).emit('tournament:update', {
+            id: updated.id,
+            name: updated.name,
+            description: updated.description,
+            status: updated.status,
+            prizePool: updated.prize_pool,
+            registrationDeadline: updated.registration_deadline,
+            imageUrl: updated.image_url,
+        });
+    }
+    catch { /* socket not initialized */ }
     res.json({
         id: updated.id,
         name: updated.name,
@@ -278,6 +319,11 @@ export async function deleteTournament(req, res) {
     }
     logAdminAction(req.user.id, 'tournament_delete', `Deleted tournament: ${tournament.name} (ID: ${tournamentId})`);
     db.prepare('DELETE FROM tournaments WHERE id = ?').run(tournamentId);
+    // Real-time: notify all connected clients
+    try {
+        getIO().emit('tournament:deleted', { id: tournamentId });
+    }
+    catch { /* socket not initialized */ }
     res.json({ message: 'Tournament deleted successfully' });
 }
 export async function joinTournament(req, res) {
@@ -304,8 +350,9 @@ export async function joinTournament(req, res) {
     if (participantCount.count >= tournament.max_players) {
         return res.status(400).json({ error: 'Tournament is full' });
     }
+    const { teamName, teamLogoUrl } = req.body;
     const seed = participantCount.count + 1;
-    db.prepare('INSERT INTO participants (tournament_id, user_id, seed, status) VALUES (?, ?, ?, ?)').run(tournamentId, req.user.id, seed, 'registered');
+    db.prepare('INSERT INTO participants (tournament_id, user_id, seed, status, team_name, team_logo_url) VALUES (?, ?, ?, ?, ?, ?)').run(tournamentId, req.user.id, seed, 'registered', teamName || null, teamLogoUrl || null);
     const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id);
     logAdminAction(req.user.id, 'tournament_join', `Joined tournament: ${tournament.name} (ID: ${tournamentId})`);
     res.json({
@@ -319,5 +366,18 @@ export async function joinTournament(req, res) {
             joinedAt: new Date().toISOString()
         }
     });
+    // Real-time: notify tournament room
+    try {
+        getIO().to(`tournament:${tournamentId}`).emit('participant:joined', {
+            tournamentId,
+            participant: {
+                userId: req.user.id,
+                username: user.username,
+                seed,
+                status: 'registered',
+            }
+        });
+    }
+    catch { /* socket not initialized */ }
 }
 //# sourceMappingURL=tournamentController.js.map

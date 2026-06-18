@@ -167,7 +167,50 @@ export function logout(req, res) {
     }
     res.json({ message: 'Logged out successfully' });
 }
-// ─── PASSWORD RESET (no email — Telegram-based) ───
+// ─── USER STATS ───
+export function getUserStats(req, res) {
+    const { id } = req.params;
+    const userId = parseInt(id);
+    if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    // Count completed matches where user participated
+    const matchesPlayed = db.prepare(`
+    SELECT COUNT(*) as count FROM matches
+    WHERE (player1_id = ? OR player2_id = ?)
+    AND status = 'completed'
+  `).get(userId, userId)?.count || 0;
+    // Count wins
+    const wins = db.prepare(`
+    SELECT COUNT(*) as count FROM matches
+    WHERE winner_id = ? AND status = 'completed'
+  `).get(userId)?.count || 0;
+    const losses = matchesPlayed - wins;
+    const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
+    // Count tournaments won (tournaments where winner_id = userId)
+    const tournamentsWon = db.prepare(`
+    SELECT COUNT(*) as count FROM tournaments
+    WHERE winner_id = ?
+  `).get(userId)?.count || 0;
+    res.json({
+        matchesPlayed,
+        wins,
+        losses,
+        winRate,
+        tournamentsWon,
+    });
+}
+// ─── Token Refresh ─────────────────────────────────────────────
+// For Telegram sessions where the JWT might expire but the Telegram session is still valid.
+// Accepts current valid token, issues a new one.
+export async function refreshToken(req, res) {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const token = generateToken(req.user.id);
+    res.json({ token });
+}
+// ─── Password Reset (no email — Telegram-based) ───
 export async function forgotPassword(req, res) {
     const { username } = req.body;
     if (!username)
@@ -230,5 +273,109 @@ export async function resetPassword(req, res) {
     // Mark token as used
     db.prepare("UPDATE password_resets SET used = 1 WHERE id = ?").run(reset.id);
     res.json({ message: "Password reset successful" });
+}
+// ─── Phone OTP Auth ────────────────────────────────────────────
+// Simple phone-based auth for users without Telegram or password.
+// OTP is generated server-side and "sent" (in production via SMS gateway).
+// For now, we generate it and return it in the response (dev mode).
+const otpStore = new Map();
+function generateOTP() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+}
+function normalizePhone(phone) {
+    let p = phone.replace(/\D/g, '');
+    if (p.startsWith('0'))
+        p = '254' + p.slice(1);
+    if (p.startsWith('2540'))
+        p = '254' + p.slice(4);
+    return p;
+}
+export async function sendOTP(req, res) {
+    const { phone } = req.body;
+    if (!phone)
+        return res.status(400).json({ error: 'Phone number required' });
+    const normalized = normalizePhone(phone);
+    if (!normalized.match(/^2547\d{8}$/)) {
+        return res.status(400).json({ error: 'Valid Kenyan number required (e.g., 0712345678)' });
+    }
+    // Rate limit: max 3 OTPs per phone per 5 minutes
+    const recent = db.prepare(`
+    SELECT COUNT(*) as count FROM admin_logs
+    WHERE action = 'otp_send' AND details LIKE ? AND created_at > datetime('now', '-5 minutes')
+  `).get(`%${normalized}%`);
+    if (recent.count >= 3) {
+        return res.status(429).json({ error: 'Too many requests. Wait 5 minutes.' });
+    }
+    const code = generateOTP();
+    otpStore.set(normalized, { code, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
+    // Log for audit
+    db.prepare("INSERT INTO admin_logs (admin_id, action, details) VALUES (?, 'otp_send', ?)")
+        .run('system', `OTP sent to ${normalized}`);
+    // In production: send via SMS gateway (Africa's Talking, Twilio, etc.)
+    // For dev: return the code in response
+    const isDev = process.env.NODE_ENV !== 'production';
+    res.json({
+        message: 'OTP sent',
+        ...(isDev ? { code } : {}), // Only in dev!
+        expiresIn: '5 minutes',
+    });
+}
+export async function verifyOTP(req, res) {
+    const { phone, code } = req.body;
+    if (!phone || !code)
+        return res.status(400).json({ error: 'Phone and code required' });
+    const normalized = normalizePhone(phone);
+    const stored = otpStore.get(normalized);
+    if (!stored) {
+        return res.status(400).json({ error: 'No OTP found. Request a new one.' });
+    }
+    if (Date.now() > stored.expires) {
+        otpStore.delete(normalized);
+        return res.status(400).json({ error: 'OTP expired. Request a new one.' });
+    }
+    if (stored.attempts >= 5) {
+        otpStore.delete(normalized);
+        return res.status(400).json({ error: 'Too many attempts. Request a new one.' });
+    }
+    if (stored.code !== code.trim()) {
+        stored.attempts++;
+        return res.status(400).json({ error: 'Invalid code' });
+    }
+    // OTP valid — find or create user
+    otpStore.delete(normalized);
+    let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(normalized);
+    if (!user) {
+        // Auto-create account
+        const username = `p_${normalized.slice(-8)}`;
+        const email = `${normalized}@phone.efootball`;
+        let finalUsername = username;
+        let counter = 1;
+        while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+            finalUsername = `${username}_${counter}`;
+            counter++;
+        }
+        const existingCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+        const isFirstUser = existingCount.cnt === 0;
+        const result = db.prepare(`
+      INSERT INTO users (username, email, password_hash, phone, is_admin, is_super_admin)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(finalUsername, email, 'phone_auth', normalized, isFirstUser ? 1 : 0, isFirstUser ? 1 : 0);
+        user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+    const token = generateToken(user.id);
+    res.json({
+        user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            avatarUrl: user.avatar_url,
+            isAdmin: user.is_admin === 1,
+            isSuperAdmin: user.is_super_admin === 1,
+            phone: user.phone,
+        },
+        token,
+    });
 }
 //# sourceMappingURL=authController.js.map
