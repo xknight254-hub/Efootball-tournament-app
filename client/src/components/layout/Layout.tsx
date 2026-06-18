@@ -8,6 +8,7 @@ import { Skeleton } from '../ui/Skeleton';
 const navItems = [
   { path: '/', label: 'Home' },
   { path: '/tournaments', label: 'Tournaments' },
+  { path: '/wagers', label: 'Wagers' },
   { path: '/leaderboard', label: 'Leaderboard' },
 ];
 
@@ -227,8 +228,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleSidenav }) => {
               <DropdownItem onClick={() => navigate('/profile')}>
                 Profile
               </DropdownItem>
-              <DropdownItem onClick={() => navigate('/profile')}>
-                Settings
+              <DropdownItem onClick={() => navigate('/my-wagers')}>
+                My Wagers
               </DropdownItem>
               <DropdownDivider />
               <DropdownItem onClick={logout} danger>

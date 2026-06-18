@@ -12,6 +12,9 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { JoinTournamentPage } from './pages/JoinTournamentPage';
+import { WagersPage } from './pages/WagersPage';
+import { WagerDetailPage } from './pages/WagerDetailPage';
+import { MyWagersPage } from './pages/MyWagersPage';
 
 function PlaceholderPage({ title, desc }: { title: string; desc: string }) {
   return (
@@ -42,6 +45,9 @@ function AppContent() {
         <Route path="/profile" element={<Layout showSidenav><ProfilePage /></Layout>} />
         <Route path="/admin" element={<Layout showSidenav><AdminDashboard /></Layout>} />
         <Route path="/join/:token" element={<JoinTournamentPage />} />
+        <Route path="/wagers" element={<Layout showSidenav><WagersPage /></Layout>} />
+        <Route path="/wagers/:id" element={<Layout showSidenav><WagerDetailPage /></Layout>} />
+        <Route path="/my-wagers" element={<Layout showSidenav><MyWagersPage /></Layout>} />
         <Route path="/leaderboard" element={<Layout showSidenav><PlaceholderPage title="Leaderboard" desc="Global player rankings coming soon" /></Layout>} />
         <Route path="/about" element={<Layout showSidenav={false}><PlaceholderPage title="About" desc="eFootball Arena — The ultimate competitive tournament platform" /></Layout>} />
         <Route path="/privacy" element={<Layout showSidenav={false}><PlaceholderPage title="Privacy Policy" desc="Your privacy is important to us." /></Layout>} />
