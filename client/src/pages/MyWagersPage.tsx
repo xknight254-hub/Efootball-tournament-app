@@ -60,6 +60,10 @@ export function MyWagersPage() {
     totalWon: wagers.filter(w => w.isWinner).reduce((sum, w) => sum + w.totalPot, 0),
   };
 
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -88,7 +92,7 @@ export function MyWagersPage() {
 
       {/* Filter */}
       <div className="flex gap-1 overflow-x-auto pb-1">
-        {['all', 'active', 'pending_confirmation', 'completed', 'disputed', 'cancelled'].map(f => (
+        {['all', 'open', 'active', 'pending_confirmation', 'completed', 'disputed', 'cancelled'].map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -125,7 +129,7 @@ export function MyWagersPage() {
           <p className="text-sm text-[var(--color-text-muted)] mb-4">
             {filter === 'all' ? 'Create your first challenge to get started!' : 'Try a different filter.'}
           </p>
-          <Button variant="neon" onClick={() => navigate('/wagers')}>Browse Challenges</Button>
+          <Button variant="neon" onClick={() => navigate('/wagers')}>Create Challenge</Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -140,9 +144,9 @@ export function MyWagersPage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <Badge variant={meta.variant} pulse={meta.variant === 'live'}>{meta.label}</Badge>
-                      {wager.isWinner && <Badge variant="completed">🏆 Won</Badge>}
+                      {wager.isWinner && <Badge variant="completed">🏆 Won KES {wager.totalPot}</Badge>}
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-white font-medium">{wager.creatorName}</span>
@@ -159,6 +163,12 @@ export function MyWagersPage() {
                   <code className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-surface)', color: '#fb923c' }}>
                     {wager.matchCode}
                   </code>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); copyCode(wager.matchCode); }}
+                    className="text-[10px] text-[var(--color-text-dim)] hover:text-white transition-colors"
+                  >
+                    Copy
+                  </button>
                   <span className="text-[10px] text-[var(--color-text-dim)] ml-auto">
                     {new Date(wager.createdAt).toLocaleDateString()}
                   </span>

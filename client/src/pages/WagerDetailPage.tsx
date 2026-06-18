@@ -125,6 +125,16 @@ export function WagerDetailPage() {
     if (wager) navigator.clipboard.writeText(wager.matchCode);
   };
 
+  const shareCode = () => {
+    if (!wager) return;
+    const text = `🎮 eFootball Wager Challenge!\n\nStake: KES ${wager.stakeAmount}\nCode: ${wager.matchCode}\n\nAccept at: ${window.location.origin}/wagers?code=${wager.matchCode}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Wager Challenge', text });
+    } else {
+      navigator.clipboard.writeText(text);
+    }
+  };
+
   if (loading) return (
     <div className="space-y-4">
       <Skeleton className="h-8 w-64" />
@@ -136,7 +146,7 @@ export function WagerDetailPage() {
     <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
       <h2 className="text-xl font-bold text-white mb-4">Not Found</h2>
       <p className="text-[var(--color-text-muted)] mb-6">{error || 'Wager does not exist.'}</p>
-      <Link to="/wagers"><Button variant="primary">Browse Wagers</Button></Link>
+      <Link to="/wagers"><Button variant="primary">Go to Wagers</Button></Link>
     </div>
   );
 
@@ -155,22 +165,38 @@ export function WagerDetailPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-white">Wager #{wager.id}</h1>
-              <Badge variant={meta.variant}>{meta.label}</Badge>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <code className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'var(--color-bg-surface)', color: '#fb923c' }}>
-                {wager.matchCode}
-              </code>
-              <button onClick={copyCode} className="text-[10px] text-[var(--color-text-dim)] hover:text-white transition-colors">
-                Copy
-              </button>
+              <Badge variant={meta.variant} pulse={meta.variant === 'live'}>{meta.label}</Badge>
             </div>
           </div>
         </div>
-        {isCreator && ['open', 'awaiting_payment'].includes(wager.status) && (
-          <Button variant="danger" size="sm" onClick={handleCancel}>Cancel</Button>
-        )}
+        <div className="flex items-center gap-2">
+          {wager.status === 'open' && (
+            <Button variant="outline" size="sm" onClick={shareCode}>📤 Share Code</Button>
+          )}
+          {isCreator && ['open', 'awaiting_payment'].includes(wager.status) && (
+            <Button variant="danger" size="sm" onClick={handleCancel}>Cancel</Button>
+          )}
+        </div>
       </div>
+
+      {/* Code card (prominent when open) */}
+      {wager.status === 'open' && (
+        <div className="rounded-2xl p-5" style={{ background: 'var(--color-bg-card)', border: '2px dashed var(--color-border)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[var(--color-text-dim)] uppercase tracking-wider mb-1">Match Code</p>
+              <p className="text-2xl font-mono font-bold text-white tracking-wider">{wager.matchCode}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={copyCode}>📋 Copy</Button>
+              <Button variant="neon" size="sm" onClick={shareCode}>📤 Share</Button>
+            </div>
+          </div>
+          <p className="text-xs text-[var(--color-text-dim)] mt-3">
+            Share this code with your challenger. They enter it at <span className="text-[var(--color-text-secondary)]">{window.location.origin}/wagers</span>
+          </p>
+        </div>
+      )}
 
       {/* Players Card */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
