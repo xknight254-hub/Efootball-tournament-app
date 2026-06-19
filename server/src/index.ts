@@ -18,6 +18,7 @@ import wagerRoutes from './routes/wagerRoutes.js';
 import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 import deepLinkRoutes from './routes/deepLinkRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import rankingsRoutes from './routes/rankingsRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,8 +70,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
-const clientDist = join(__dirname, '..', 'client', 'dist');
-app.use(express.static(clientDist));
+// Note: client/dist SPA is served by vite preview on port 3001, not here
 
 // Request logging
 app.use((req, res, next) => {
@@ -86,6 +86,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/wagers', wagerRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rankings', rankingsRoutes);
 
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);
@@ -118,15 +119,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// ─── SPA Fallback ───
+// ─── SPA Fallback (disabled — frontend served by vite preview) ───
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     res.status(404).json({ error: 'Not found' });
   } else if (req.path.startsWith('/tournament-images/') || req.path.startsWith('/avatars/')) {
-    // Let static middleware handle these — serve from client/public
     res.status(404).json({ error: 'File not found' });
   } else {
-    res.sendFile(join(clientDist, 'index.html'));
+    // Frontend is served by vite preview on port 3001
+    res.status(404).json({ error: 'Not found' });
   }
 });
 
