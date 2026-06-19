@@ -132,6 +132,7 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
   const tgUser = validated.user;
   const telegramId = String(tgUser.id);
 
+  let isNewUser = false;
   try {
     // Check if user already exists by telegram_id
     let user = db.prepare(
@@ -163,6 +164,7 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
       ).get(user.id) as any;
     } else {
       // New user — auto-create account from Telegram profile
+      isNewUser = true;
       const username = tgUser.username
         ? `tg_${tgUser.username}`
         : `player_${telegramId}`;
@@ -221,7 +223,7 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
         isPremium: tgUser.is_premium || false,
       },
       token,
-      isNewUser: !db.prepare('SELECT created_at FROM users WHERE id = ?').get(user.id),
+      isNewUser,
     });
   } catch (error: any) {
     console.error('[TelegramAuth] Login error:', error);
