@@ -1,10 +1,38 @@
+# Dependencies
 node_modules/
+client/node_modules/
+
+# Build outputs
 dist/
+client/dist/
+*.tsbuildinfo
+
+# Environment
 .env
 .env.local
+.env.*.local
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vite
 .vite/
+
+# Database
 *.db
 *.db-shm
 *.db-wal
+
+# Large static assets
+client/reference.html
