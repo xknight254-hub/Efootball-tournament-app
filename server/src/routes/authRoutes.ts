@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { register, login, getMe, getUserById, updateProfile, logout, forgotPassword, resetPassword, sendOTP, verifyOTP, refreshToken } from '../controllers/authController.js';
-import { telegramLogin, linkTelegram, unlinkTelegram } from '../controllers/telegramAuthController.js';
+import { telegramLogin, telegramWidgetLogin, linkTelegram, unlinkTelegram } from '../controllers/telegramAuthController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { redeemAdminCode } from '../controllers/adminCodeController.js';
 
@@ -26,6 +26,7 @@ router.post('/verify-otp', verifyOTP);
 
 // Telegram Mini App auth
 router.post('/telegram-login', telegramLogin);
+router.post('/telegram-widget-login', telegramWidgetLogin);
 router.post('/link-telegram', authenticateToken, linkTelegram);
 router.delete('/unlink-telegram', authenticateToken, unlinkTelegram);
 

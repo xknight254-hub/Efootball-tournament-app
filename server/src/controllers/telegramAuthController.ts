@@ -293,6 +293,203 @@ export async function linkTelegram(req: AuthRequest, res: Response) {
   });
 }
 
+// ─── Telegram Login Widget Validation ─────────────────────────
+// Validates data from the Telegram Login Widget (OAuth redirect).
+// See: https://core.telegram.org/widgets/login#checking-authorization
+//
+// Algorithm:
+// 1. Receive query params: id, first_name, last_name?, username?, photo_url?, auth_date, hash
+// 2. Remove hash from the data
+// 3. Sort remaining keys alphabetically
+// 4. Build check_string: key=value\nkey=value...
+// 5. Compute SHA256(bot_token) as the secret key
+// 6. Compute HMAC-SHA256(check_string, secret_key)
+// 7. Compare computed hash with received hash
+
+interface TelegramWidgetUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number;
+  hash: string;
+}
+
+export function validateTelegramWidgetData(data: TelegramWidgetUser, botToken: string): boolean {
+  try {
+    const { hash, ...rest } = data;
+
+    if (!hash) {
+      console.error('[TelegramWidget] No hash provided');
+      return false;
+    }
+
+    // Check auth_date is not too old (24 hours)
+    const now = Math.floor(Date.now() / 1000);
+    if (now - rest.auth_date > 86400) {
+      console.error('[TelegramWidget] Data expired (older than 24h)');
+      return false;
+    }
+
+    // Build check_string: sorted key=value pairs separated by \n
+    const checkString = Object.entries(rest)
+      .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+
+    // Secret key = SHA256(bot_token)
+    const secretKey = crypto.createHash('sha256').update(botToken).digest();
+
+    // Compute HMAC-SHA256(check_string, secret_key)
+    const computedHash = crypto
+      .createHmac('sha256', secretKey)
+      .update(checkString)
+      .digest('hex');
+
+    if (computedHash !== hash) {
+      console.error('[TelegramWidget] Hash mismatch');
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[TelegramWidget] Validation error:', error);
+    return false;
+  }
+}
+
+// ─── Telegram Login Widget Handler ──────────────────────────
+// POST /api/auth/telegram-widget-login
+// Validates widget data, finds or creates user, returns JWT
+
+export async function telegramWidgetLogin(req: AuthRequest, res: Response) {
+  const { id, first_name, last_name, username, photo_url, auth_date, hash } = req.body;
+
+  if (!id || !auth_date || !hash) {
+    return res.status(400).json({ error: 'Missing required Telegram data (id, auth_date, hash)' });
+  }
+
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.error('[TelegramWidget] TELEGRAM_BOT_TOKEN not configured');
+    return res.status(500).json({ error: 'Telegram integration not configured' });
+  }
+
+  const widgetData: TelegramWidgetUser = {
+    id: Number(id),
+    first_name: first_name || '',
+    last_name: last_name || undefined,
+    username: username || undefined,
+    photo_url: photo_url || undefined,
+    auth_date: Number(auth_date),
+    hash,
+  };
+
+  // Validate the data came from Telegram
+  if (!validateTelegramWidgetData(widgetData, botToken)) {
+    return res.status(401).json({ error: 'Invalid Telegram data' });
+  }
+
+  const telegramId = String(widgetData.id);
+
+  try {
+    // Check if user already exists by telegram_id
+    let user = db.prepare(
+      'SELECT * FROM users WHERE telegram_id = ?'
+    ).get(telegramId) as any;
+
+    if (user) {
+      // Existing user — update Telegram profile data
+      db.prepare(`
+        UPDATE users SET
+          telegram_username = ?,
+          telegram_photo_url = ?,
+          first_name = COALESCE(?, first_name),
+          last_name = COALESCE(?, last_name),
+          avatar_url = COALESCE(?, avatar_url)
+        WHERE id = ?
+      `).run(
+        widgetData.username || null,
+        widgetData.photo_url || null,
+        widgetData.first_name || null,
+        widgetData.last_name || null,
+        widgetData.photo_url || null,
+        user.id
+      );
+
+      // Re-fetch updated user
+      user = db.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).get(user.id) as any;
+    } else {
+      // New user — auto-create account from Telegram profile
+      const tgUsername = widgetData.username
+        ? `tg_${widgetData.username}`
+        : `player_${telegramId}`;
+
+      // Ensure username is unique
+      let finalUsername = tgUsername;
+      let counter = 1;
+      while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+        finalUsername = `${tgUsername}_${counter}`;
+        counter++;
+      }
+
+      const email = `${telegramId}@telegram.efootball`;
+
+      // First user becomes super admin automatically
+      const existingCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get() as any;
+      const isFirstUser = existingCount.cnt === 0;
+
+      const result = db.prepare(`
+        INSERT INTO users (username, email, password_hash, first_name, last_name, avatar_url, telegram_id, telegram_username, telegram_photo_url, is_admin, is_super_admin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        finalUsername,
+        email,
+        'telegram_oauth',
+        widgetData.first_name || null,
+        widgetData.last_name || null,
+        widgetData.photo_url || null,
+        telegramId,
+        widgetData.username || null,
+        widgetData.photo_url || null,
+        isFirstUser ? 1 : 0,
+        isFirstUser ? 1 : 0
+      );
+
+      user = db.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).get(result.lastInsertRowid) as any;
+    }
+
+    // Generate JWT
+    const token = generateToken(user.id);
+
+    return res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        avatarUrl: user.avatar_url,
+        isAdmin: user.is_admin === 1,
+        isSuperAdmin: user.is_super_admin === 1,
+        telegramId: user.telegram_id,
+        telegramUsername: user.telegram_username,
+      },
+      token,
+      isNewUser: !user, // will be false since user is always defined here
+    });
+  } catch (error: any) {
+    console.error('[TelegramWidget] Login error:', error);
+    return res.status(500).json({ error: 'Telegram login failed', details: error.message });
+  }
+}
+
 // ─── Unlink Telegram ───────────────────────────────────────────
 // DELETE /api/auth/unlink-telegram
 
