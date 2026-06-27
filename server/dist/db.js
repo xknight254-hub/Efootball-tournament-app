@@ -72,6 +72,23 @@ async function initDBInternal() {
       FOREIGN KEY (used_by) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS redeem_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      created_by INTEGER NOT NULL,
+      used_by INTEGER,
+      used_at DATETIME,
+      is_active INTEGER DEFAULT 1,
+      expires_at DATETIME,
+      is_permanent INTEGER DEFAULT 0,
+      max_uses INTEGER DEFAULT 1,
+      use_count INTEGER DEFAULT 0,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (used_by) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS tournaments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -292,6 +309,10 @@ async function initDBInternal() {
     catch { /* column exists */ }
     try {
         sqlDb.run('ALTER TABLE users ADD COLUMN phone TEXT');
+    }
+    catch { /* column exists */ }
+    try {
+        sqlDb.run('ALTER TABLE users ADD COLUMN registration_paid INTEGER DEFAULT 0');
     }
     catch { /* column exists */ }
     // Auto-save every 30 seconds and on exit

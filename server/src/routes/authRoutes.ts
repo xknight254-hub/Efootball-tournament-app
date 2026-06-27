@@ -3,6 +3,7 @@ import { register, login, getMe, getUserById, updateProfile, logout, forgotPassw
 import { telegramLogin, telegramWidgetLogin, linkTelegram, unlinkTelegram } from '../controllers/telegramAuthController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { redeemAdminCode } from '../controllers/adminCodeController.js';
+import { redeemCode, registrationStatus, initiateRegistrationPayment, checkRegistrationPaymentStatus } from '../controllers/redeemCodeController.js';
 
 const router = Router();
 
@@ -15,6 +16,10 @@ router.post('/refresh-token', authenticateToken, refreshToken);
 router.get('/users/:id', authenticateToken, getUserById);
 router.put('/profile', authenticateToken, updateProfile);
 router.post('/redeem-code', authenticateToken, redeemAdminCode);
+router.post('/redeem-access-code', authenticateToken, redeemCode);
+router.get('/registration-status', authenticateToken, registrationStatus);
+router.post('/initiate-registration-payment', authenticateToken, initiateRegistrationPayment);
+router.get('/registration-payment-status', authenticateToken, checkRegistrationPaymentStatus);
 
 // Password reset
 router.post('/forgot-password', forgotPassword);

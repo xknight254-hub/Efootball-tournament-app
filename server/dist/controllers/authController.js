@@ -95,7 +95,9 @@ export function getMe(req, res) {
         username: req.user.username,
         email: req.user.email,
         isAdmin: req.user.is_admin === 1,
-        isSuperAdmin: req.user.is_super_admin === 1
+        isSuperAdmin: req.user.is_super_admin === 1,
+        registrationPaid: req.user.registration_paid === 1,
+        telegramId: req.user.telegram_id || null,
     });
 }
 export function getUserById(req, res) {

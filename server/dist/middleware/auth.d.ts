@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
         is_admin: number;
         is_super_admin: number;
         telegram_id: string | null;
+        registration_paid: number;
     };
 }
 export declare function authenticateToken(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;

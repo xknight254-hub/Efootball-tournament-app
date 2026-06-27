@@ -124,7 +124,9 @@ export function getMe(req: AuthRequest, res: Response) {
     username: req.user.username,
     email: req.user.email,
     isAdmin: req.user.is_admin === 1,
-    isSuperAdmin: req.user.is_super_admin === 1
+    isSuperAdmin: req.user.is_super_admin === 1,
+    registrationPaid: (req.user as any).registration_paid === 1,
+    telegramId: req.user.telegram_id || null,
   });
 }
 

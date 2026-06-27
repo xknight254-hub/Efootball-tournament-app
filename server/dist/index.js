@@ -11,6 +11,7 @@ import authRoutes from './routes/authRoutes.js';
 import tournamentRoutes from './routes/tournamentRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import redeemCodeRoutes from './routes/redeemCodeRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
 import { initializeSocket } from './socket/index.js';
 import wagerRoutes from './routes/wagerRoutes.js';
@@ -76,6 +77,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api/wagers', wagerRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rankings', rankingsRoutes);
+app.use('/api/redeem-codes', redeemCodeRoutes);
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);
 // ─── Deep links (must be BEFORE SPA fallback) ───
