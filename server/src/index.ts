@@ -20,6 +20,7 @@ import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 import deepLinkRoutes from './routes/deepLinkRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import rankingsRoutes from './routes/rankingsRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -89,6 +90,8 @@ app.use('/api/wagers', wagerRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rankings', rankingsRoutes);
 app.use('/api/redeem-codes', redeemCodeRoutes);
+
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);

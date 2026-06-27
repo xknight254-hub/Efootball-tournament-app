@@ -92,6 +92,57 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       FOREIGN KEY (used_by) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS subscription_tiers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      price_kes INTEGER NOT NULL,
+      tournament_limit INTEGER NOT NULL,
+      has_sub_admin INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL,
+      tier_id INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      amount_paid INTEGER DEFAULT 0,
+      payment_reference TEXT,
+      payment_method TEXT DEFAULT 'paynecta',
+      billing_cycle TEXT DEFAULT 'monthly',
+      started_at DATETIME,
+      expires_at DATETIME,
+      grace_period_end DATETIME,
+      tournaments_created INTEGER DEFAULT 0,
+      sub_admin_user_id INTEGER,
+      sub_admin_assigned_at DATETIME,
+      approved_by INTEGER,
+      approved_at DATETIME,
+      rejected_reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (admin_id) REFERENCES users(id),
+      FOREIGN KEY (tier_id) REFERENCES subscription_tiers(id),
+      FOREIGN KEY (sub_admin_user_id) REFERENCES users(id),
+      FOREIGN KEY (approved_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS paynecta_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      subscription_id INTEGER,
+      amount INTEGER NOT NULL,
+      reference TEXT UNIQUE NOT NULL,
+      status TEXT DEFAULT 'pending',
+      paynecta_transaction_ref TEXT,
+      callback_data TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (subscription_id) REFERENCES admin_subscriptions(id)
+    );
+
     CREATE TABLE IF NOT EXISTS tournaments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -267,6 +318,15 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE matches ADD COLUMN verification_status TEXT DEFAULT \'none\''); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN phone TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN registration_paid INTEGER DEFAULT 0'); } catch { /* column exists */ }
+
+  // Seed default subscription tiers
+  const tierCount = sqlDb.exec("SELECT COUNT(*) as c FROM subscription_tiers")[0]?.values[0]?.[0] || 0;
+  if (Number(tierCount) === 0) {
+    sqlDb.run("INSERT INTO subscription_tiers (name, price_kes, tournament_limit, has_sub_admin, sort_order) VALUES ('Rookie', 250, 5, 0, 1)");
+    sqlDb.run("INSERT INTO subscription_tiers (name, price_kes, tournament_limit, has_sub_admin, sort_order) VALUES ('Growth', 500, 15, 0, 2)");
+    sqlDb.run("INSERT INTO subscription_tiers (name, price_kes, tournament_limit, has_sub_admin, sort_order) VALUES ('Scale', 1000, 50, 1, 3)");
+    sqlDb.run("INSERT INTO subscription_tiers (name, price_kes, tournament_limit, has_sub_admin, sort_order) VALUES ('Enterprise', 5000, -1, 1, 4)");
+  }
 
   // Auto-save every 30 seconds and on exit
   setInterval(saveDb, 30000);
