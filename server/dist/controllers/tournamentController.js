@@ -116,7 +116,7 @@ export async function getTournamentById(req, res) {
     if (!tournament) {
         return res.status(404).json({ error: 'Tournament not found' });
     }
-    const participantCount = db.prepare('SELECT COUNT(*) as count FROM tournament_participants WHERE tournament_id = ?').get(tournamentId);
+    const participantCount = db.prepare('SELECT COUNT(*) as count FROM participants WHERE tournament_id = ?').get(tournamentId);
     res.json({
         id: tournament.id,
         name: tournament.name,
