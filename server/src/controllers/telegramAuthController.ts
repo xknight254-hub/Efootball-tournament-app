@@ -147,7 +147,7 @@ export async function telegramLogin(req: AuthRequest, res: Response) {
           telegram_photo_url = ?,
           first_name = COALESCE(?, first_name),
           last_name = COALESCE(?, last_name),
-          avatar_url = COALESCE(?, avatar_url)
+          avatar_url = COALESCE(NULLIF(avatar_url, ''), ?, avatar_url)
         WHERE id = ?
       `).run(
         tgUser.username || null,
@@ -408,7 +408,7 @@ export async function telegramWidgetLogin(req: AuthRequest, res: Response) {
           telegram_photo_url = ?,
           first_name = COALESCE(?, first_name),
           last_name = COALESCE(?, last_name),
-          avatar_url = COALESCE(?, avatar_url)
+          avatar_url = COALESCE(NULLIF(avatar_url, ''), ?, avatar_url)
         WHERE id = ?
       `).run(
         widgetData.username || null,
