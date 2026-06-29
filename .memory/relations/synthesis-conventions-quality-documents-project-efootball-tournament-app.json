@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:75f6979d18736a5b9364e1af7f556c3f2bcd6a8cb12fd17bcb7cc99379fb5032",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "synthesis.conventions-quality",
+      "kind": "memory"
+    },
+    {
+      "id": "project.efootball-tournament-app",
+      "kind": "memory"
+    }
+  ],
+  "from": "synthesis.conventions-quality",
+  "id": "rel.synthesis-conventions-quality-documents-project-efootball-tournament-app",
+  "predicate": "documents",
+  "status": "active",
+  "to": "project.efootball-tournament-app",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

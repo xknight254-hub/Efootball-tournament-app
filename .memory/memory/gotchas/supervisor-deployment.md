@@ -1,0 +1,1 @@
+/etc/supervisor/conf.d/efootball.conf: 'efootball' (port 3002), 'toss-frontend' (port 3001). Nginx: /api/ -> 3002, / -> 3001. Restart: supervisorctl restart all. If port conflict: kill -9 $(lsof -ti:PORT) first.

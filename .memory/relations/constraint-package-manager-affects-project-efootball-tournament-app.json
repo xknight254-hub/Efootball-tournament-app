@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:d899651b975752d0eb177e708a1139255ebc149ea45d8e0c40def9677eb487fa",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "constraint.package-manager",
+      "kind": "memory"
+    },
+    {
+      "id": "project.efootball-tournament-app",
+      "kind": "memory"
+    }
+  ],
+  "from": "constraint.package-manager",
+  "id": "rel.constraint-package-manager-affects-project-efootball-tournament-app",
+  "predicate": "affects",
+  "status": "active",
+  "to": "project.efootball-tournament-app",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

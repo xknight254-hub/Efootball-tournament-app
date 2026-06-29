@@ -1,0 +1,1 @@
+No ORM. All queries via db.prepare().get/.run/.all. Auto-saves to data/efootball.db every 30s. Migration via ALTER TABLE try/catch. Key tables: users, tournaments, participants, matches, wager_challenges, result_submissions, fraud_logs, subscriptions.

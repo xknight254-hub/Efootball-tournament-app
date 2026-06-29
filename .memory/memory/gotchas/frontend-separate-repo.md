@@ -1,0 +1,1 @@
+ACTIVE frontend: /root/turf-war-pro (TanStack Router). DEPRECATED: /root/Efootball-tournament-app/client. Supervisor serves turf-war-pro on port 3001. Backend (this repo's server/) on port 3002.

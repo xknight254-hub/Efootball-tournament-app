@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:a849796e8ad09fab4e59080c58bfa0c48dd71a9434517c508499b88daf55fa95",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "source.package-lock-json",
+      "kind": "source"
+    }
+  ],
+  "from": "constraint.package-manager",
+  "id": "rel.constraint-package-manager-derived-from-source-package-lock-json",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.package-lock-json",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

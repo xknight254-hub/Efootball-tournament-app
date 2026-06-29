@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:d395d4cedf2e740966c7ed6b9b6f19545e56a19439b314f81786f4c8d327f430",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "workflow.package-scripts",
+      "kind": "memory"
+    },
+    {
+      "id": "project.efootball-tournament-app",
+      "kind": "memory"
+    }
+  ],
+  "from": "workflow.package-scripts",
+  "id": "rel.workflow-package-scripts-supports-project-efootball-tournament-app",
+  "predicate": "supports",
+  "status": "active",
+  "to": "project.efootball-tournament-app",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

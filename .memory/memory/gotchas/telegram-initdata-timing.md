@@ -1,0 +1,1 @@
+From core.telegram.org/bots/webapps: 1) telegram-web-app.js in <head> without defer. 2) WebApp.ready() called immediately (before initData check). 3) WebApp.expand(). getTelegramAuth(300,40) polls 12s. Common fails: token truncated in .env, SDK loaded with defer, rate limit 10/15min.

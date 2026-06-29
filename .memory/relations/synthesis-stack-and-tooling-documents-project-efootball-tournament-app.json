@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:2cefaddb862b74316406d288cdddb9a903809fbe397903e92cdf35bf3abe09c6",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "synthesis.stack-and-tooling",
+      "kind": "memory"
+    },
+    {
+      "id": "project.efootball-tournament-app",
+      "kind": "memory"
+    }
+  ],
+  "from": "synthesis.stack-and-tooling",
+  "id": "rel.synthesis-stack-and-tooling-documents-project-efootball-tournament-app",
+  "predicate": "documents",
+  "status": "active",
+  "to": "project.efootball-tournament-app",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

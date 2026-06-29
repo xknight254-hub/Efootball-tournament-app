@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:1856c05f583eed673ea42d3ce5c443a0ccb4ba07029854a7e1290c98f5af7498",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "source.package-json",
+      "kind": "source"
+    }
+  ],
+  "from": "workflow.package-scripts",
+  "id": "rel.workflow-package-scripts-derived-from-source-package-json",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.package-json",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}

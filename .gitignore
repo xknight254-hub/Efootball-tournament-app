@@ -36,3 +36,10 @@ Thumbs.db
 
 # Large static assets
 client/reference.html
+
+.memory/index/
+.memory/context/
+.memory/exports/
+.memory/recovery/
+.memory/.backup/
+.memory/.lock

@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:6c240533d6e725a9acd784d257975841dd00bc72feb98c095075b065ad315067",
+  "created_at": "2026-06-29T13:37:31+00:00",
+  "evidence": [
+    {
+      "id": "source.readme",
+      "kind": "source"
+    }
+  ],
+  "from": "synthesis.repository-map",
+  "id": "rel.synthesis-repository-map-derived-from-source-readme",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.readme",
+  "updated_at": "2026-06-29T13:37:31+00:00"
+}
