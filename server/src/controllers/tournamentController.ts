@@ -184,7 +184,7 @@ export async function getTournamentById(req: AuthRequest, res: Response) {
   }
 
   const participantCount = db.prepare(
-    'SELECT COUNT(*) as count FROM tournament_participants WHERE tournament_id = ?'
+    'SELECT COUNT(*) as count FROM participants WHERE tournament_id = ?'
   ).get(tournamentId) as { count: number };
 
   res.json({
