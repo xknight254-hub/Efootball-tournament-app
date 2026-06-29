@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -276,7 +276,7 @@ function TelegramLoginButton() {
       // Telegram Login Widget approach
       const authUrl = `https://oauth.telegram.org/auth?bot_id=${botUsername}&origin=${encodeURIComponent(window.location.origin)}&return_to=${redirectUrl}&request_access=write`;
 
-      const popup = window.open(authUrl, 'telegram-login', 'width=500,height=600');
+      window.open(authUrl, 'telegram-login', 'width=500,height=600');
 
       // Listen for callback
       const handleMessage = async (event: MessageEvent) => {

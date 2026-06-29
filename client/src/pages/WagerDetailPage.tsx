@@ -41,7 +41,7 @@ const STATUS_META: Record<string, { label: string; variant: 'open' | 'live' | 'c
 export function WagerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [wager, setWager] = useState<WagerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

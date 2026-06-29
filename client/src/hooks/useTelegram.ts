@@ -13,7 +13,7 @@ export interface TelegramUser {
   allows_write_to_pm?: boolean;
 }
 
-export interface TelegramWebApp {
+export interface TelegramWebAppMono {
   initData: string;
   initDataUnsafe: {
     query_id?: string;
@@ -74,14 +74,6 @@ export interface TelegramWebApp {
   offEvent: (eventType: string, callback: () => void) => void;
 }
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: TelegramWebApp;
-    };
-  }
-}
-
 export interface TelegramAuthState {
   isAvailable: boolean;
   isReady: boolean;
@@ -105,14 +97,15 @@ export function useTelegram() {
     colorScheme: 'dark',
   });
 
-  const webAppRef = useRef<TelegramWebApp | null>(null);
+  const webAppRef = useRef<TelegramWebAppMono | null>(null);
 
   useEffect(() => {
     // Try to load Telegram WebApp SDK
     const loadTelegramSDK = () => {
+      const tgWin = (window as any).Telegram;
       // Already loaded
-      if (window.Telegram?.WebApp) {
-        const webApp = window.Telegram.WebApp;
+      if (tgWin?.WebApp) {
+        const webApp = tgWin.WebApp;
         webAppRef.current = webApp;
 
         // Apply Telegram theme colors to CSS variables
@@ -271,7 +264,7 @@ export function useTelegram() {
 export function isTelegramEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
   return !!(
-    window.Telegram?.WebApp?.initData ||
+    (window as any).Telegram?.WebApp?.initData ||
     /Telegram/i.test(navigator.userAgent) ||
     window.location.search.includes('tgWebAppStartParam') ||
     window.location.hash.includes('tgWebAppData')

@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { api, isAuthenticated } from '../api';
+import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Skeleton } from '../components/ui/Skeleton';
 
 interface Wager {
   id: number;

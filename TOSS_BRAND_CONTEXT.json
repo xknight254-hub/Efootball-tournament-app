@@ -1,0 +1,557 @@
+{
+  "__comment": "TOSS (Tournament Organizer & Scoring System) — eFootball Arena — Complete Brand & Engineering Context for AI Generation",
+
+  "meta": {
+    "project_name": "TOSS",
+    "product_name": "eFootball Arena",
+    "tagline": "Compete. Verify. Win.",
+    "description": "Competitive eFootball tournament platform — create tournaments, submit match results with screenshot OCR verification, wager head-to-head battles with M-Pesa payouts.",
+    "live_url": "https://xtournament.duckdns.org",
+    "domain": "xtournament.duckdns.org",
+    "version": "1.0.0",
+    "repo_path": "/root/Efootball-tournament-app",
+    "updated": "2026-06-28"
+  },
+
+  "project_type": {
+    "category": "SaaS / Gaming Platform",
+    "monetization": {
+      "tournament_entry_fees": "KES 50-500 per tournament (entry_fee column)",
+      "wager_commission": "10% platform fee on wagers",
+      "subscription_tiers": [
+        { "name": "Rookie", "price_kes": 250, "tournament_limit": 5, "sub_admin": false },
+        { "name": "Growth", "price_kes": 500, "tournament_limit": 15, "sub_admin": false },
+        { "name": "Scale", "price_kes": 1000, "tournament_limit": 50, "sub_admin": true },
+        { "name": "Enterprise", "price_kes": 5000, "tournament_limit": -1, "sub_admin": true }
+      ],
+      "currency": "KES (Kenyan Shilling)",
+      "payment_provider": "Paynecta (M-Pesa STK Push)"
+    },
+    "target_audience": "Kenyan eFootball gamers who want to compete in organized tournaments and wager real money on head-to-head matches."
+  },
+
+  "tech_stack": {
+    "frontend": {
+      "framework": "React 18 + TypeScript",
+      "bundler": "Vite 5",
+      "styling": "Tailwind CSS v4 (CSS variables + @theme block in index.css)",
+      "routing": "React Router v6 (BrowserRouter)",
+      "state": "React Context (Auth, Telegram) — no Redux/Zustand",
+      "animations": "Framer Motion",
+      "real_time": "Socket.IO client",
+      "icons": "Custom SVG icons (Icons.tsx) — NOT Phosphor/Tabler",
+      "fonts": {
+        "display": "Orbitron (headings, scores, logo text)",
+        "body": "Inter (default sans-serif)",
+        "legacy": "Rajdhani (referenced in tailwind config but NOT actually used in current CSS)"
+      }
+    },
+    "backend": {
+      "runtime": "Node.js",
+      "framework": "Express + TypeScript",
+      "database": "sql.js (SQLite in-memory, persisted to file efootball.db)",
+      "auth": "JWT (Bearer tokens) + Telegram OAuth",
+      "real_time": "Socket.IO server",
+      "ocr": "Tesseract.js (server-side, run on Node.js)",
+      "payments": "Paynecta API (STK Push, hosted LINK)",
+      "webhooks": "Paynecta webhook handler",
+      "file_upload": "Multer (memory storage)",
+      "rate_limiting": "express-rate-limit"
+    },
+    "deployment": {
+      "self_hosted": true,
+      "os": "Linux (7.0.0-15-generic)",
+      "dns": "DuckDNS dynamic DNS (xtournament.duckdns.org)",
+      "ssl": "Let's Encrypt",
+      "reverse_proxy": "Nginx",
+      "ports": {
+        "client": "3001 (vite preview — production)",
+        "server_api": "3002 (Node.js Express)",
+        "api_routing": "Nginx proxies /api/ → port 3002, / → port 3001"
+      },
+      "builds": {
+        "client": "cd client && npm run build → dist/",
+        "server": "cd server && npm run build → dist/",
+        "database_backup": "scripts/backup_db.py + scripts/backup-db.sh"
+      }
+    }
+  },
+
+  "design_system": {
+    "theme": "Dark gaming aesthetic — near-black backgrounds with neon orange accent",
+    "color_palette": {
+      "primary_bg": "#0A0A0A",
+      "card_bg": "#141414",
+      "surface_bg": "#141414",
+      "elevated_bg": "#161616",
+      "hover_bg": "#1A1A1A",
+      "accent": "#F97316",
+      "accent_hover": "#FB923C",
+      "accent_glow_light": "rgba(249,115,22,0.15)",
+      "accent_glow_strong": "rgba(249,115,22,0.3)",
+      "success_green": "#22C55E",
+      "error_red": "#EF4444",
+      "warning_amber": "#F59E0B",
+      "info_blue": "#3B82F6",
+      "text_primary": "#FAFAFA",
+      "text_secondary": "#A1A1A1",
+      "text_muted": "#737373",
+      "text_dim": "#525252",
+      "border": "rgba(255,255,255,0.08)",
+      "border_hover": "rgba(249,115,22,0.25)",
+      "border_subtle": "rgba(255,255,255,0.04)"
+    },
+    "typography": {
+      "display_font": "Orbitron — used for hero numbers, scores, logo-style headings",
+      "body_font": "Inter — used for all body text, buttons, inputs, general UI",
+      "mono_font": "Geist Mono — referenced in constants.ts but minimal usage",
+      "size_scale_locked": ["10px", "12px", "14px", "16px", "20px"],
+      "weights_allowed": [400, 700, 800]
+    },
+    "border_radius": {
+      "sm": "8px (badges, chips, small elements)",
+      "md": "12px (buttons, inputs, cards)",
+      "lg": "20px (cards, modals)",
+      "full": "9999px (avatars, pill shapes)"
+    },
+    "spacing_scale": {
+      "xs": "4px",
+      "sm": "8px",
+      "md": "12px",
+      "lg": "16px",
+      "xl": "24px",
+      "xxl": "32px",
+      "xxxl": "48px"
+    },
+    "layout": {
+      "type": "3-panel layout — Sidenav + Topbar + Main content",
+      "navbar_height": "56px",
+      "sidenav_width": "210px",
+      "content_padding": "28px",
+      "mobile_breakpoint": "1024px (lg:) — sidenav collapses to overlay with backdrop",
+      "scrollbar": "6px width, dark track, dark thumb"
+    },
+    "effects": {
+      "card_hover": "0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(249,115,22,0.1)",
+      "neon_glow_pulse": "@keyframes neon-pulse — subtle orange box-shadow oscillation",
+      "float_up": "@keyframes float-up — 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      "skeleton_shimmer": "@keyframes skeleton-shimmer — 1.6s infinite",
+      "glass": "backdrop-blur 20px, rgba(20,20,20,0.85) background"
+    },
+    "css_approach": "CSS custom properties (variables) + inline React styles via the S object in constants.ts. Tailwind is installed but utility classes are used sparingly — most styling is custom CSS with design tokens."
+  },
+
+  "database": {
+    "engine": "sql.js (SQLite in-memory, file persistence to /data/efootball.db)",
+    "tables": [
+      {
+        "name": "users",
+        "columns": ["id", "username", "email", "password_hash", "first_name", "last_name", "avatar_url", "is_admin", "is_super_admin", "telegram_id", "telegram_username", "telegram_photo_url", "phone", "registration_paid", "created_at"]
+      },
+      {
+        "name": "admin_codes",
+        "columns": ["id", "code", "created_by", "used_by", "used_at", "is_active", "note", "created_at"]
+      },
+      {
+        "name": "redeem_codes",
+        "columns": ["id", "code", "created_by", "used_by", "used_at", "is_active", "expires_at", "is_permanent", "max_uses", "use_count", "note", "created_at"]
+      },
+      {
+        "name": "subscription_tiers",
+        "columns": ["id", "name", "price_kes", "tournament_limit", "has_sub_admin", "sort_order", "is_active"]
+      },
+      {
+        "name": "admin_subscriptions",
+        "columns": ["id", "admin_id", "tier_id", "status", "amount_paid", "payment_reference", "payment_method", "billing_cycle", "started_at", "expires_at", "grace_period_end", "tournaments_created", "sub_admin_user_id", "sub_admin_assigned_at", "approved_by", "approved_at", "rejected_reason", "created_at", "updated_at"]
+      },
+      {
+        "name": "paynecta_payments",
+        "columns": ["id", "user_id", "subscription_id", "amount", "reference", "status", "paynecta_transaction_ref", "callback_data", "created_at", "completed_at"]
+      },
+      {
+        "name": "tournaments",
+        "columns": ["id", "name", "description", "platform", "format", "max_players", "best_of", "status", "owner_id", "winner_id", "prize_pool", "registration_deadline", "result_deadline_hours", "rules", "group_count", "bracket_type", "image_url", "focus_x", "focus_y", "entry_fee", "access_token", "is_private", "created_at"]
+      },
+      {
+        "name": "participants",
+        "columns": ["id", "tournament_id", "user_id", "status", "seed", "team_name", "team_logo_url", "checked_in_at", "joined_at"]
+      },
+      {
+        "name": "matches",
+        "columns": ["id", "tournament_id", "round", "match_number", "player1_id", "player2_id", "player1_score", "player2_score", "winner_id", "status", "confirmation_status", "submitted_by", "submitted_at", "confirmed_at", "screenshot_url", "opponent_screenshot_url", "verification_status", "player1_team", "player2_team", "created_at"]
+      },
+      {
+        "name": "result_submissions",
+        "columns": ["id", "match_id", "uploader_id", "screenshot_url", "screenshot_hash", "ocr_team_left", "ocr_team_right", "ocr_score_left", "ocr_score_right", "ocr_match_time", "ocr_raw_text", "ocr_confidence", "verification_confidence", "team_match_result", "fraud_score", "fraud_flags", "verification_status", "admin_review_reason", "created_at", "reviewed_at", "reviewed_by"]
+      },
+      {
+        "name": "fraud_logs",
+        "columns": ["id", "submission_id", "user_id", "match_id", "detection_type", "severity", "details", "created_at"]
+      },
+      {
+        "name": "wager_challenges",
+        "columns": ["id", "creator_id", "challenger_id", "stake_amount", "commission", "total_pot", "match_code", "creator_telegram_id", "challenger_telegram_id", "status", "winner_id", "creator_confirmed", "challenger_confirmed", "creator_winner_choice", "challenger_winner_choice", "dispute_reason", "resolved_by", "expires_at", "created_at", "completed_at"]
+      },
+      {
+        "name": "wager_payments",
+        "columns": ["id", "challenge_id", "payer_id", "amount", "status", "paynecta_transaction_ref", "mpesa_receipt", "paid_at", "created_at"]
+      },
+      {
+        "name": "notifications",
+        "columns": ["id", "user_id", "title", "body", "type", "read", "created_at"]
+      },
+      {
+        "name": "token_blacklist",
+        "columns": ["id", "token", "expires_at", "created_at"]
+      },
+      {
+        "name": "admin_logs",
+        "columns": ["id", "admin_id", "action", "details", "created_at"]
+      }
+    ],
+    "key_enums": {
+      "tournament_format": ["knockout", "league"],
+      "tournament_status": ["registration_open", "in_progress", "completed"],
+      "participant_status": ["registered", "checked_in", "ready", "eliminated", "winner", "runner_up"],
+      "match_status": ["pending", "playing", "completed", "disputed"],
+      "wager_status": ["awaiting_payment", "active", "pending_confirm", "completed", "disputed", "expired", "cancelled"],
+      "subscription_status": ["pending", "active", "expired", "suspended"],
+      "user_roles": ["user (0)", "admin (1)", "super_admin (2)"]
+    }
+  },
+
+  "api_architecture": {
+    "base_url": "/api",
+    "pattern": "RESTful controllers → services → raw SQL (no ORM)",
+    "middleware_chain": ["cors", "express.json", "rate limits (global + auth)", "JWT auth (per-route)", "admin check (role=1)", "super_admin check (role=2)"],
+    "routes": {
+      "auth": "/api/auth — register, login, logout, me, profile CRUD, redeem-code, telegram-login, link/unlink telegram, forgot/reset password",
+      "tournaments": "/api/tournaments — CRUD, list (with filters), join, get participants/standings",
+      "matches": "/api/matches — list by tournament, single match, OCR upload, OCR submit, result submit, confirm, dispute, resolve (admin)",
+      "images": "/api/images — tournament-images list, upload banner, upload avatar",
+      "admin": "/api/admin — stats, users CRUD, tournaments CRUD, logs, admin codes CRUD (super admin only)",
+      "wagers": "/api/wagers — CRUD, accept, confirm, dispute, cancel, admin stats/resolve",
+      "notifications": "/api/notifications — list, mark read, mark all read",
+      "rankings": "/api/rankings — global leaderboard",
+      "redeem_codes": "/api/redeem-codes — list, validate, redeem",
+      "subscriptions": "/api/subscriptions — tiers, create, status, cancel",
+      "paynecta_webhook": "/api/paynecta/webhook — payment callback (unauthenticated, called by Paynecta)",
+      "deep_links": "/t/:slugToken — redirect to tournament/app via shareable link"
+    },
+    "authentication": {
+      "standard": "POST /api/auth/login → JWT (7-day expiry, stored in localStorage as 'token')",
+      "telegram": "POST /api/auth/telegram-login → validates initData with Telegram Bot API → auto-creates user if new → returns JWT",
+      "header_format": "Authorization: Bearer ***)",
+      "token_blacklist": "On logout, token added to token_blacklist table with expiry"
+    },
+    "rate_limits": {
+      "global": "100 requests per 15 minutes",
+      "auth": "10 requests per 15 minutes"
+    }
+  },
+
+  "frontend_architecture": {
+    "entry_point": "client/src/main.tsx → App.tsx",
+    "routing": "React Router v6 BrowserRouter with Layout wrapper",
+    "global_state": {
+      "AuthContext": "user, login, logout, authLoading — token from localStorage",
+      "TelegramContext": "WebApp init, user data from Telegram"
+    },
+    "pages": [
+      {
+        "path": "/",
+        "component": "HomePage",
+        "auth_required": false,
+        "description": "Landing hero, trending tournaments, platform stats, recent results, active tournaments"
+      },
+      {
+        "path": "/tournaments",
+        "component": "TournamentsPage",
+        "auth_required": false,
+        "description": "Tournament listing with search + filter chips (All/Open/Live/Ended), tournament cards"
+      },
+      {
+        "path": "/tournaments/:id",
+        "component": "TournamentDetailPage",
+        "auth_required": false,
+        "description": "Tournament details with tabs (bracket/standings/players/overview), join button"
+      },
+      {
+        "path": "/login",
+        "component": "LoginPage",
+        "auth_required": false,
+        "description": "Login form — no sidenav layout"
+      },
+      {
+        "path": "/register",
+        "component": "RegisterPage",
+        "auth_required": false,
+        "description": "Registration form with password strength meter — no sidenav layout"
+      },
+      {
+        "path": "/profile",
+        "component": "ProfilePage",
+        "auth_required": true,
+        "description": "User profile card, stats, season progress, active tournaments, account menu"
+      },
+      {
+        "path": "/admin",
+        "component": "AdminDashboard",
+        "auth_required": "admin",
+        "description": "Admin panel — stats, users management, tournaments management, logs, codes (super admin)"
+      },
+      {
+        "path": "/join/:token",
+        "component": "JoinTournamentPage",
+        "auth_required": false,
+        "description": "Join tournament via access_token — phone input for M-Pesa payment, success state"
+      },
+      {
+        "path": "/wagers",
+        "component": "WagersPage",
+        "auth_required": false,
+        "description": "Wager lobby — grid of open wagers with stake/pot display, accept modal with phone input"
+      },
+      {
+        "path": "/wagers/:id",
+        "component": "WagerDetailPage",
+        "auth_required": false,
+        "description": "Wager match room — VS display, confirm winner buttons, dispute flow"
+      },
+      {
+        "path": "/my-wagers",
+        "component": "MyWagersPage",
+        "auth_required": true,
+        "description": "List of my created + accepted wagers"
+      },
+      {
+        "path": "/leaderboard",
+        "component": "PlaceholderPage",
+        "auth_required": false,
+        "description": "Stub — global player rankings coming soon"
+      },
+      {
+        "path": "/about",
+        "component": "PlaceholderPage",
+        "auth_required": false,
+        "description": "Stub — about page"
+      },
+      {
+        "path": "/privacy",
+        "component": "PlaceholderPage",
+        "auth_required": false,
+        "description": "Stub — privacy policy"
+      },
+      {
+        "path": "/terms",
+        "component": "PlaceholderPage",
+        "auth_required": false,
+        "description": "Stub — terms of service"
+      }
+    ],
+    "shared_components": {
+      "Layout": "Sidenav (left, collapsible) + Topbar (hamburger, search, user dropdown) + main content area",
+      "Icons": "30+ custom SVG icon components (Home, Trophy, Sword, Shield, Crown, Money, Lightning, etc.)",
+      "UI Kit": ["Badge", "Button", "Card", "Dropdown", "Input", "Modal", "Skeleton", "Toast"],
+      "OCRUpload": "Screenshot upload with Tesseract.js score extraction (server-side)",
+      "TelegramAutoLogin": "Detects Telegram WebApp environment, auto-triggers auth"
+    },
+    "api_client": "client/src/api/index.ts — fetch wrapper with JSON handling, typed methods per resource",
+    "styling_approach": "Design tokens defined in constants.ts as the S object — imported and used as inline style props throughout components. CSS variables defined in index.css for global consistency. Minimal Tailwind utility class usage.",
+    "animations": "Framer Motion for page transitions + custom keyframe animations (float-up, neon-pulse, skeleton-shimmer, spin-slow)"
+  },
+
+  "key_features": {
+    "tournament_management": {
+      "formats": ["Single knockout bracket", "Round-robin league"],
+      "status_flow": "registration_open → in_progress → completed",
+      "creation": "Authenticated users with active subscription can create tournaments",
+      "joining": "Public tournaments (free / paid entry via M-Pesa STK Push) or private (access_token)",
+      "bracket_generation": "server/src/services/bracketService.ts — auto-generates matches based on participant count"
+    },
+    "match_result_submission": {
+      "flow": "players submit scores → opponent confirms → admin resolves disputes",
+      "ocr_verification": "Screenshot upload → Tesseract.js extracts scores → auto-submit if confidence >= 90%, manual review if 55-89%, reject if < 55%",
+      "fraud_detection": "screenshot hash comparison, OCR cross-validation, team name matching in result_submissions and fraud_logs"
+    },
+    "wager_system": {
+      "flow": "Creator sets stake + phone → Paynecta STK Push → Challenger accepts + pays → Both confirm winner → Payout to winner minus 10% commission",
+      "states": "awaiting_payment → active → pending_confirm → completed | disputed | expired | cancelled",
+      "dispute_resolution": "Admin-mediated via PUT /api/wagers/admin/:id/resolve"
+    },
+    "verification_system": {
+      "tables": "result_submissions + fraud_logs",
+      "checks": "OCR team name match, score extraction, confidence scoring, screenshot hash deduplication"
+    },
+    "notifications": {
+      "types": ["wager", "tournament", "payout", "season", "match"],
+      "storage": "Database (notifications table), not just client-side"
+    },
+    "admin_subscription_system": {
+      "tiers": "Rookie → Growth → Scale → Enterprise",
+      "limits": "Tournament creation capped by tier, sub-admin assignment for Scale+",
+      "payment": "M-Pesa STK Push via subscription flow"
+    }
+  },
+
+  "brand_personality": {
+    "tone": "Confident, competitive, minimal",
+    "voice": "Direct but premium — like a high-end sports betting app mixed with a fighting game UI",
+    "design_philosophy": "Dark, focused, every element earns its place. No decoration for decoration's sake. Orange accent used sparingly for CTAs and status highlights only.",
+    "naming_conventions": {
+      "product": "eFootball Arena",
+      "short": "TOSS (Tournament Organizer & Scoring System)",
+      "tournament_types": "challenges, brackets",
+      "wager_terms": "Challenges"
+    },
+    "visual_keywords": ["gaming", "esports", "dark", "neon-orange", "competitive", "Kenyan", "mobile-first"]
+  },
+
+  "file_map": {
+    "client/src/": {
+      "App.tsx": "Router + AuthProvider + TelegramProvider + ToastContainer",
+      "main.tsx": "ReactDOM render entry point",
+      "index.css": "Tailwind import + @theme block + CSS variables + base styles + custom animations",
+      "animations.css": "Additional keyframe animations",
+      "constants.ts": "Design tokens (COLORS, FONT, RADIUS, SPACE, S object) — SINGLE SOURCE OF TRUTH",
+      "vite-env.d.ts": "Vite type declarations",
+      "api/index.ts": "All API client methods (fetch wrapper)",
+      "api/socket.ts": "Socket.IO client connection",
+      "api/telegram.ts": "Telegram WebApp SDK integration",
+      "context/AuthContext.tsx": "Auth state, login/logout, Telegram auto-auth",
+      "context/TelegramContext.tsx": "Telegram WebApp context",
+      "hooks/useMediaQuery.ts": "Responsive breakpoint detection",
+      "hooks/useTelegram.ts": "Telegram WebApp hooks",
+      "hooks/useToast.ts": "Toast notification state",
+      "components/Icons.tsx": "30+ custom SVG icons",
+      "components/layout/Layout.tsx": "App shell — Sidenav + Topbar + content wrapper",
+      "components/ocr/OCRUpload.tsx": "Screenshot upload + OCR preview",
+      "components/TelegramAutoLogin.tsx": "Auto-detect Telegram + trigger auth",
+      "components/ui/Badge.tsx": "Status badges (colored pills)",
+      "components/ui/Button.tsx": "Primary/Secondary/Ghost/Text buttons",
+      "components/ui/Card.tsx": "Card container with dark border",
+      "components/ui/Dropdown.tsx": "Dropdown menu",
+      "components/ui/Input.tsx": "Dark-themed input field",
+      "components/ui/Modal.tsx": "Overlay modal",
+      "components/ui/Skeleton.tsx": "Loading skeleton with shimmer",
+      "components/ui/Toast.tsx": "Toast notification component",
+      "pages/HomePage.tsx": "Landing + featured tournaments + stats",
+      "pages/TournamentsPage.tsx": "Tournament listing with filters",
+      "pages/TournamentDetailPage.tsx": "Bracket tabs + standings + join",
+      "pages/LoginPage.tsx": "Login form",
+      "pages/RegisterPage.tsx": "Registration form with password strength",
+      "pages/ProfilePage.tsx": "User profile + stats + actions + menu",
+      "pages/AdminDashboard.tsx": "Admin CRUD panel (uses direct fetch, not api client)",
+      "pages/JoinTournamentPage.tsx": "Join via access_token + M-Pesa payment",
+      "pages/WagersPage.tsx": "Wager lobby grid",
+      "pages/WagerDetailPage.tsx": "Wager match room with confirm/dispute",
+      "pages/MyWagersPage.tsx": "My wagers list",
+      "services/socket.ts": "Socket.IO event handler subscriptions",
+      "utils/cn.ts": "Classname utility (tailwind-merge + clsx)"
+    },
+    "server/src/": {
+      "index.ts": "Express app — middleware, rate limits, route mounts, Socket.IO init, error handler",
+      "db.ts": "sql.js database init — table creation, migration ALTERs, auto-save, db export wrapper",
+      "types.ts": "All TypeScript interfaces (User, Tournament, Match, Wager, etc.)",
+      "vercel.ts": "Vercel serverless adapter (unused in production)",
+      "api/tgApi.ts": "Telegram Bot API client for initData validation",
+      "bot/index.ts": "Telegram bot webhook handler",
+      "config/database.ts": "Database configuration",
+      "middleware/auth.ts": "JWT verify, requireAdmin, requireSuperAdmin",
+      "controllers/authController.ts": "Login, redeem, forgot/reset password, telegram auth",
+      "controllers/adminController.ts": "Stats, user CRUD, tournament management, logs",
+      "controllers/adminCodeController.ts": "Super admin — generate/revoke admin codes",
+      "controllers/deepLinkController.ts": "Slug token → tournament redirect",
+      "controllers/matchController.ts": "Match CRUD, OCR, result submit, confirm/dispute/resolve",
+      "controllers/notificationController.ts": "Notification list, mark read",
+      "controllers/rankingsController.ts": "Global leaderboard",
+      "controllers/redeemCodeController.ts": "Redeem code management",
+      "controllers/subscriptionController.ts": "Subscription tiers, create, status, cancel",
+      "controllers/telegramAuthController.ts": "Telegram initData validation + user creation",
+      "controllers/tournamentController.ts": "Tournament CRUD, join, participants, standings generation",
+      "controllers/tournamentPaymentController.ts": "M-Pesa payment for tournament entry fees",
+      "controllers/verificationController.ts": "Screenshot verification, fraud detection, admin review",
+      "controllers/wagerController.ts": "Wager CRUD, accept, confirm, dispute, resolve",
+      "routes/authRoutes.ts": "Auth route definitions",
+      "routes/tournamentRoutes.ts": "Tournament route definitions",
+      "routes/matchRoutes.ts": "Match route definitions",
+      "routes/adminRoutes.ts": "Admin route definitions (nested role routes)",
+      "routes/imageRoutes.ts": "Image upload/serve routes",
+      "routes/wagerRoutes.ts": "Wager route definitions",
+      "routes/paynectaWebhookRoutes.ts": "Paynecta payment callback",
+      "routes/deepLinkRoutes.ts": "Deep link redirect route",
+      "routes/notificationRoutes.ts": "Notification routes",
+      "routes/rankingsRoutes.ts": "Rankings routes",
+      "routes/redeemCodeRoutes.ts": "Redeem code routes",
+      "routes/subscriptionRoutes.ts": "Subscription routes",
+      "services/bracketService.ts": "Knockout bracket generation algorithm",
+      "services/mpesaService.ts": "DEAD CODE — old M-Pesa service, not imported anywhere",
+      "services/ocrService.ts": "Tesseract.js OCR processing for match screenshots",
+      "services/paynectaService.ts": "Paynecta API client (STK Push, queryStatus, getLinks, getBanks, getCurrencyRates)",
+      "services/socketService.ts": "Socket.IO event broadcasting",
+      "services/verificationService.ts": "Screenshot verification pipeline",
+      "socket/index.ts": "Socket.IO connection handler, room management",
+      "utils/sanitize.ts": "Input sanitization",
+      "utils/token.ts": "JWT sign/verify utilities"
+    }
+  },
+
+  "brand_generation_prompts": {
+    "logo_direction": "Minimal geometric mark — gaming/esports aesthetic, works on dark backgrounds, orange + black, should feel competitive and premium. Avoid football/soccer clichés. Think esports team logo meets fintech precision.",
+    "page_design_direction": "Dark (#0A0A0A) backgrounds, subtle borders at 8% white opacity, cards at #141414. Orange (#F97316) as primary accent for CTAs and active states only. Headings in Orbitron (display), body in Inter. Generous whitespace — never cramped. Animations are subtle: float-up on mount, gentle neon pulse on active elements.",
+    "component_rules": {
+      "buttons": "Primary buttons use accent color (#F97316) with dark text, full-width, 12px border-radius. Secondary buttons are ghost-style with muted text. Hover state: slight opacity change only — never color shifts.",
+      "cards": "Single border (rgba white 0.08), 20px border-radius, no shadows except subtle bottom shadow (0 4px 24px rgba(0,0,0,0.4)).",
+      "inputs": "Dark surface (#141414), 12px border-radius, 1px border at rgba(255,255,255,0.08), white text, no focus ring — border changes to orange on focus.",
+      "badges": "8px border-radius, small (10px font), colored pill — open=green, live=blue, ended=gray, disputed=amber.",
+      "typography_hierarchy": "H1: 20px/800/white, H2: 16px/700/white, H3: 14px/700/white, Body: 14px/normal/#A1A1A1, Caption: 12px/normal/#737373, Micro: 10px/normal/#525252"
+    },
+    "anti_patterns_to_avoid": [
+      "Bright backgrounds or white-space-heavy layouts",
+      "Generic blue/purple gaming gradients",
+      "Over-decorated or cluttered interfaces",
+      "Stock photography",
+      "Drop shadows on everything",
+      "Rounded corners smaller than 8px or larger than 20px",
+      "Using more than one accent color (orange is it)",
+      "Light theme versions — this is dark-only"
+    ],
+    "copy_voice": "Short, direct, competitive. Imperative mood for CTAs: 'Join Tournament', 'Submit Result', 'Claim Winnings'. Never use exclamation marks in UI copy. Status labels are terse: 'Open', 'Live', 'Ended', 'Disputed'."
+  },
+
+  "engineering_conventions": {
+    "code_style": "Minimal comments, functional components, early returns, no unnecessary abstractions",
+    "file_naming": "PascalCase for components, camelCase for utilities/controllers/services, Routes files = XxxRoutes.ts",
+    "imports": "Relative imports within same module (./), absolute via import.meta.dirname for server",
+    "state_recovery": "Always check — use try/catch around sql.js operations, optional chaining everywhere, graceful fallbacks for missing env vars",
+    "error_handling": "Controller-level try/catch → 400/500 JSON responses. No uncaught exceptions. Frontend shows error.message directly.",
+    "no_dependencies_principle": "Prefer writing utilities over adding npm packages. Current dependency count is intentionally low."
+  },
+
+  "current_status": {
+    "working_features": [
+      "User registration/login (standard + Telegram OAuth)",
+      "Tournament CRUD + joining",
+      "Match bracket generation (knockout)",
+      "Match result submission with opponent confirmation",
+      "Screenshot OCR verification (server-side Tesseract)",
+      "Wager challenges (full backend, basic frontend pages)",
+      "Admin dashboard with role-based access",
+      "Subscription tier system",
+      "Real-time updates via Socket.IO",
+      "Paynecta M-Pesa integration (STK Push for wagers + subscriptions)"
+    ],
+    "known_gaps": [
+      "No automated tests",
+      "AdminDashboard uses direct fetch instead of api client layer",
+      "mpesaService.ts is dead code",
+      "Leaderboard page is a placeholder (API endpoint exists)",
+      "Tournament edit has no frontend form (backend supports it)",
+      "Match dispute resolution has no admin UI panel",
+      "Standings tab exists in TournamentDetailPage but never fetches data",
+      "Forgot password / reset password pages not built",
+      "Rate limiting is lenient (100 req/15min global, 10 req/15min auth)"
+    ],
+    "technical_debt": "Low-to-mbase is clean and well-structured. Main issues are incomplete features rather than messy code."
+  }
+}

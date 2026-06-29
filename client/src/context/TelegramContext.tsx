@@ -189,14 +189,6 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check we have user data
-      if (!tg.initDataUnsafe?.user) {
-        console.warn('[Telegram] No user data in initDataUnsafe');
-        setIsLoading(false);
-        setIsInTelegram(false);
-        return;
-      }
-
       // Expand to full height
       tg.expand();
 
@@ -206,7 +198,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       // Store references
       setWebApp(tg);
       setIsInTelegram(true);
-      setTelegramUser(tg.initDataUnsafe.user);
+      setTelegramUser(tg.initDataUnsafe?.user || null);
       setTelegramInitData(tg.initData);
       setColorScheme(tg.colorScheme);
       setThemeParams(tg.themeParams);
