@@ -27,46 +27,12 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
- * Generate standard single-elimination knockout bracket.
- * Seeds are placed so top seeds can't meet early.
- * Standard seeding: 1v16, 2v15, 3v14, etc. for 16 players.
+ * Compute the next power of 2 >= n.
  */
-function generateKnockoutBracket(participants: Participant[], tournamentId: number): BracketMatch[] {
-  const matches: BracketMatch[] = [];
-  const n = participants.length;
-  const rounds = Math.log2(n);
-  let matchCounter = 1;
-
-  // Generate standard tournament seeding positions
-  // For 16 players: positions are [1,16,8,9,5,12,4,13,6,11,3,14,7,10,2,15]
-  const positions = generateSeedingPositions(n);
-
-  // Round 1: pair positions
-  for (let i = 0; i < n; i += 2) {
-    const p1Idx = positions[i] - 1;  // convert 1-based seed to 0-based index
-    const p2Idx = positions[i + 1] - 1;
-    matches.push({
-      round: 1,
-      matchNumber: matchCounter++,
-      player1_id: participants[p1Idx]?.user_id ?? null,
-      player2_id: participants[p2Idx]?.user_id ?? null,
-    });
-  }
-
-  // Future rounds: placeholders (TBD vs TBD)
-  for (let r = 2; r <= rounds; r++) {
-    const matchesInRound = n / Math.pow(2, r);
-    for (let m = 0; m < matchesInRound; m++) {
-      matches.push({
-        round: r,
-        matchNumber: matchCounter++,
-        player1_id: null,
-        player2_id: null,
-      });
-    }
-  }
-
-  return matches;
+function nextPowerOf2(n: number): number {
+  let p = 1;
+  while (p < n) p *= 2;
+  return p;
 }
 
 /**
@@ -76,8 +42,6 @@ function generateKnockoutBracket(participants: Participant[], tournamentId: numb
 function generateSeedingPositions(n: number): number[] {
   if (n === 2) return [1, 2];
 
-  // Build positions recursively
-  // Start with [1, 2] then interleave: for each pair (a,b), produce (a, n+1-a, b, n+1-b)
   let positions = [1, 2];
 
   while (positions.length < n) {
@@ -94,15 +58,71 @@ function generateSeedingPositions(n: number): number[] {
 }
 
 /**
+ * Generate standard single-elimination knockout bracket with bye handling.
+ *
+ * For non-power-of-2 participant counts, top seeds receive byes in round 1.
+ * Byes are handled by advancing the player automatically to the next round.
+ */
+function generateKnockoutBracket(participants: Participant[], tournamentId: number): BracketMatch[] {
+  const matches: BracketMatch[] = [];
+  const n = participants.length;
+  const bracketSize = nextPowerOf2(n);    // e.g., 10 → 16
+  const rounds = Math.log2(bracketSize);  // e.g., 16 → 4
+  const byeCount = bracketSize - n;       // e.g., 16 - 10 = 6 byes
+  let matchCounter = 1;
+
+  // Generate seeding positions for the full bracket size
+  const positions = generateSeedingPositions(bracketSize);
+
+  // Round 1: pair positions, but top seeds get byes
+  // Standard: first `byeCount * 2` seeds get byes (they sit out round 1)
+  // We handle byes by putting a null opponent — the player auto-advances
+  for (let i = 0; i < bracketSize; i += 2) {
+    const p1Pos = positions[i] - 1;
+    const p2Pos = positions[i + 1] - 1;
+
+    const p1Id = p1Pos < n ? participants[p1Pos].user_id : null;
+    const p2Id = p2Pos < n ? participants[p2Pos].user_id : null;
+
+    // If both are null, this match never happens (shouldn't occur with correct seeding)
+    if (p1Id === null && p2Id === null) continue;
+
+    // If one is null, it's a bye — the real player advances automatically
+    // Store a placeholder match where the non-null player is player1
+    matches.push({
+      round: 1,
+      matchNumber: matchCounter++,
+      player1_id: p1Id,
+      player2_id: p2Id,
+    });
+  }
+
+  // Future rounds: placeholders (TBD vs TBD)
+  // With byes, the number of round-2 matches = bracketSize / 2 - Math.floor(byeCount / 2)
+  // But simpler: just use bracketSize / 2 for round 1, then halve each round
+  for (let r = 2; r <= rounds; r++) {
+    const matchesInRound = bracketSize / Math.pow(2, r);
+    for (let m = 0; m < matchesInRound; m++) {
+      matches.push({
+        round: r,
+        matchNumber: matchCounter++,
+        player1_id: null,
+        player2_id: null,
+      });
+    }
+  }
+
+  return matches;
+}
+
+/**
  * Generate round-robin league bracket.
- * Every player plays every other player once.
  */
 function generateLeagueBracket(participants: Participant[], tournamentId: number): BracketMatch[] {
   const matches: BracketMatch[] = [];
   let matchCounter = 1;
   const n = participants.length;
 
-  // Round-robin: each player plays every other player
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       matches.push({
@@ -119,8 +139,6 @@ function generateLeagueBracket(participants: Participant[], tournamentId: number
 
 /**
  * Generate multi-bracket: group stage then knockout.
- * Players are split into groups, play round-robin within group.
- * Top 2 from each group advance to knockout.
  */
 function generateMultiBracket(participants: Participant[], tournamentId: number, groupCount: number): BracketMatch[] {
   const matches: BracketMatch[] = [];
@@ -128,7 +146,6 @@ function generateMultiBracket(participants: Participant[], tournamentId: number,
   const n = participants.length;
   const playersPerGroup = Math.ceil(n / groupCount);
 
-  // Split into groups
   const groups: Participant[][] = [];
   for (let g = 0; g < groupCount; g++) {
     const start = g * playersPerGroup;
@@ -136,7 +153,6 @@ function generateMultiBracket(participants: Participant[], tournamentId: number,
     groups.push(participants.slice(start, end));
   }
 
-  // Group stage: round-robin within each group
   for (let g = 0; g < groups.length; g++) {
     const group = groups[g];
     for (let i = 0; i < group.length; i++) {
@@ -151,23 +167,20 @@ function generateMultiBracket(participants: Participant[], tournamentId: number,
     }
   }
 
-  // Knockout stage: top 2 from each group = groupCount * 2 players (or less if not enough)
   const koPlayers = Math.min(groupCount * 2, n);
-  const koRounds = Math.log2(koPlayers);
-  const koGroupRound = groupCount + 1; // KO starts after group rounds
+  const koRounds = Math.log2(nextPowerOf2(koPlayers));
+  const koGroupRound = groupCount + 1;
 
   if (koPlayers >= 2) {
-    // Generate KO pairings (seeded: group winners vs runners-up from other groups)
     for (let i = 0; i < koPlayers; i += 2) {
       matches.push({
         round: koGroupRound,
         matchNumber: matchCounter++,
-        player1_id: null, // TBD after group stage
+        player1_id: null,
         player2_id: null,
       });
     }
 
-    // Future KO rounds
     for (let r = 1; r < koRounds; r++) {
       const matchesInRound = koPlayers / Math.pow(2, r + 1);
       for (let m = 0; m < matchesInRound; m++) {
@@ -186,15 +199,13 @@ function generateMultiBracket(participants: Participant[], tournamentId: number,
 
 /**
  * Generate Swiss-system bracket.
- * Players are paired by score in each round. N-1 rounds for N players (even).
  */
 function generateSwissBracket(participants: Participant[], tournamentId: number): BracketMatch[] {
   const matches: BracketMatch[] = [];
   let matchCounter = 1;
   const n = participants.length;
-  const rounds = n % 2 === 0 ? n - 1 : n; // N-1 rounds for even N
+  const rounds = n % 2 === 0 ? n - 1 : n;
 
-  // First round: seeded pairings (1 vs N/2+1, 2 vs N/2+2, etc.)
   const half = Math.floor(n / 2);
   for (let i = 0; i < half; i++) {
     matches.push({
@@ -205,8 +216,7 @@ function generateSwissBracket(participants: Participant[], tournamentId: number)
     });
   }
 
-  // Future rounds: TBD pairings (will be filled by bracket progression logic)
-  for (let r = 2; r <= Math.min(rounds, 5); r++) { // Cap at 5 rounds for practicality
+  for (let r = 2; r <= Math.min(rounds, 5); r++) {
     const matchesInRound = Math.floor(n / 2);
     for (let m = 0; m < matchesInRound; m++) {
       matches.push({
@@ -257,16 +267,14 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
       matches = generateSwissBracket(participants, tournamentId);
       break;
     default:
-      throw new Error(`Unknown tournament format: ${tournament.format}`);
+      throw new Error('Unknown tournament format: ' + tournament.format);
   }
 
-  // Persist matches to database — include team names from participant registration
   const insertMatch = db.prepare(`
     INSERT INTO matches (tournament_id, round, match_number, player1_id, player2_id, player1_team, player2_team, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
   `);
 
-  // Pre-fetch all participant team data
   const participantTeams = db.prepare(`
     SELECT user_id, team_name FROM participants WHERE tournament_id = ?
   `).all(tournamentId) as { user_id: number; team_name: string | null }[];
@@ -296,7 +304,6 @@ export function checkAndStartTournament(tournamentId: number): boolean {
   const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
   if (!tournament) return false;
 
-  // Only auto-start if still open/registration_open
   if (tournament.status !== 'open' && tournament.status !== 'registration_open') return false;
 
   const participantCount = db.prepare(
@@ -305,29 +312,25 @@ export function checkAndStartTournament(tournamentId: number): boolean {
 
   if (participantCount.count < tournament.max_players) return false;
 
-  // All slots filled — generate bracket and update status!
-  console.log(`[Bracket] Tournament ${tournamentId} is full (${participantCount.count}/${tournament.max_players}). Generating bracket...`);
+  console.log('[Bracket] Tournament ' + tournamentId + ' is full (' + participantCount.count + '/' + tournament.max_players + '). Generating bracket...');
 
   const matches = generateBracket(tournamentId);
 
-  // Update tournament status
   db.prepare("UPDATE tournaments SET status = 'check_in' WHERE id = ?").run(tournamentId);
 
   const updated = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
 
-  console.log(`[Bracket] Generated ${matches.length} matches. Status → check_in`);
+  console.log('[Bracket] Generated ' + matches.length + ' matches. Status check_in');
 
-  // Notify all participants via socket
   try {
     emitTournamentUpdate(String(tournamentId), {
       type: 'tournament_starting',
       tournamentId,
       status: updated.status,
-      message: `🔥 Tournament "${tournament.name}" is FULL! Check in for your matches.`,
+      message: 'Tournament "' + tournament.name + '" is FULL! Check in for your matches.',
       matchCount: matches.length,
     });
 
-    // Also emit individual notifications
     const participantUsers = db.prepare(
       'SELECT user_id FROM participants WHERE tournament_id = ?'
     ).all(tournamentId) as { user_id: number }[];
@@ -336,7 +339,7 @@ export function checkAndStartTournament(tournamentId: number): boolean {
       emitNotification(String(p.user_id), {
         type: 'tournament_starting',
         title: 'Tournament Starting!',
-        message: `✅ You're in! "${tournament.name}" is full. Check in now.`,
+        message: 'You\'re in! "' + tournament.name + '" is full. Check in now.',
         tournamentId,
       });
     }
