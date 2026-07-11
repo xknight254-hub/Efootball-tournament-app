@@ -239,6 +239,12 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
   const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as any;
   if (!tournament) throw new Error('Tournament not found');
 
+  // Compute match deadline: created_at + result_deadline_hours
+  const deadlineHours = tournament.result_deadline_hours || 24;
+  const deadlineDate = new Date();
+  deadlineDate.setHours(deadlineDate.getHours() + deadlineHours);
+  const deadlineStr = deadlineDate.toISOString().replace('T', ' ').split('.')[0];
+
   const participants = db.prepare(`
     SELECT p.id, p.user_id, p.seed, u.username
     FROM participants p
@@ -271,8 +277,8 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
   }
 
   const insertMatch = db.prepare(`
-    INSERT INTO matches (tournament_id, round, match_number, player1_id, player2_id, player1_team, player2_team, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+    INSERT INTO matches (tournament_id, round, match_number, player1_id, player2_id, player1_team, player2_team, status, deadline_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
   `);
 
   const participantTeams = db.prepare(`
@@ -289,7 +295,8 @@ export function generateBracket(tournamentId: number): BracketMatch[] {
       match.player1_id,
       match.player2_id,
       match.player1_id ? teamMap.get(match.player1_id) || null : null,
-      match.player2_id ? teamMap.get(match.player2_id) || null : null
+      match.player2_id ? teamMap.get(match.player2_id) || null : null,
+      deadlineStr
     );
   }
 

@@ -35,6 +35,7 @@ interface Match {
   confirmed_at: string | null;
   screenshot_url: string | null;
   opponent_screenshot_url: string | null;
+  deadline_at: string | null;
   created_at: string;
 }
 
@@ -196,6 +197,36 @@ export async function submitResult(req: AuthRequest, res: Response) {
   const updated = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId) as Match;
 
   const bothSubmitted = updated.player1_score !== null && updated.player2_score !== null;
+  
+  // Auto-advance: if deadline passed and only one submitted, they win
+  if (!bothSubmitted && updated.deadline_at && new Date(updated.deadline_at) < new Date()) {
+    const p1Score = updated.player1_score;
+    const p2Score = updated.player2_score;
+    
+    if (p1Score !== null && p2Score === null) {
+      // Player 1 wins by forfeit
+      db.prepare(`
+        UPDATE matches SET 
+          winner_id = player1_id,
+          player2_score = 0,
+          status = 'completed',
+          confirmation_status = 'confirmed',
+          confirmed_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(matchId);
+    } else if (p2Score !== null && p1Score === null) {
+      // Player 2 wins by forfeit
+      db.prepare(`
+        UPDATE matches SET 
+          winner_id = player2_id,
+          player1_score = 0,
+          status = 'completed',
+          confirmation_status = 'confirmed',
+          confirmed_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(matchId);
+    }
+  }
   
   if (bothSubmitted && updated.player1_score !== null && updated.player2_score !== null) {
     const p1Wins = updated.player1_score > updated.player2_score;

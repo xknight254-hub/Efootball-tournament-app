@@ -329,6 +329,7 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE matches ADD COLUMN player2_team TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE matches ADD COLUMN opponent_screenshot_url TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE matches ADD COLUMN verification_status TEXT DEFAULT \'none\''); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE matches ADD COLUMN deadline_at DATETIME'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN phone TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN registration_paid INTEGER DEFAULT 0'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN is_organizer INTEGER DEFAULT 0'); } catch { /* column exists */ }

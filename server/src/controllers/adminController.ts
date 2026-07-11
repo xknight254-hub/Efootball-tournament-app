@@ -46,7 +46,7 @@ export function listUsers(req: AuthRequest, res: Response) {
   if (search) {
     const pattern = `%${search}%`;
     users = db.prepare(
-      `SELECT id, username, email, first_name, last_name, is_admin, created_at 
+      `SELECT id, username, email, first_name, last_name, is_admin, is_organizer, created_at 
        FROM users 
        WHERE username LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ?
        ORDER BY created_at DESC LIMIT ? OFFSET ?`
@@ -57,7 +57,7 @@ export function listUsers(req: AuthRequest, res: Response) {
     ).get(pattern, pattern, pattern, pattern) as any).count;
   } else {
     users = db.prepare(
-      `SELECT id, username, email, first_name, last_name, is_admin, created_at 
+      `SELECT id, username, email, first_name, last_name, is_admin, is_organizer, created_at 
        FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?`
     ).all(limit, offset);
     total = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
