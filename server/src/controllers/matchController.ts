@@ -3,6 +3,20 @@ import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { getIO } from '../socket/index.js';
 import { shouldNotify } from '../services/notificationPreferences.js';
+import { sendTelegramNotification } from '../services/telegramPush.js';
+
+/**
+ * Create an in-app notification and optionally send a Telegram push.
+ */
+function createNotification(userId: number, title: string, body: string, type: string) {
+  db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(userId, title, body, type);
+  // Send Telegram push asynchronously (fire and forget)
+  const user = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId) as any;
+  if (user?.telegram_id) {
+    const emojiMap: Record<string, string> = { result: '🎮', tournament: '🏆', payment: '💰' };
+    sendTelegramNotification(user.telegram_id, (emojiMap[type] || '🔔') + ' <b>' + title + '</b>\n' + body);
+  }
+}
 
 interface Match {
   id: number;
@@ -248,12 +262,7 @@ export async function submitResult(req: AuthRequest, res: Response) {
   try {
     const opponentId = result.player1_id === req.user.id ? result.player2_id : result.player1_id;
     if (opponentId && shouldNotify(opponentId, 'result')) {
-      db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(
-        opponentId,
-        'Result Submitted',
-        result.player1_username + ' submitted a result for your match.',
-        'result'
-      );
+      createNotification(opponentId, 'Result Submitted', result.player1_username + ' submitted a result for your match.', 'result');
     }
   } catch { /* ignore notification errors */ }
 
@@ -352,7 +361,7 @@ export async function confirmResult(req: AuthRequest, res: Response) {
     const body = winnerName + ' won in ' + (tournament?.name || 'tournament');
     [match.player1_id, match.player2_id].filter(Boolean).forEach((uid: number) => {
       if (shouldNotify(uid, 'result')) {
-        db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(uid, 'Match Complete', body, 'result');
+        createNotification(uid, 'Match Complete', body, 'result');
       }
     });
   } catch { /* ignore */ }
@@ -412,9 +421,7 @@ export async function disputeResult(req: AuthRequest, res: Response) {
   try {
     [match.player1_id, match.player2_id].filter(Boolean).forEach((uid: number) => {
       if (uid !== req.user!.id && shouldNotify(uid, 'result')) {
-        db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(
-          uid, 'Match Disputed', 'Your match has been disputed and is under review.', 'result'
-        );
+        createNotification(uid, 'Match Disputed', 'Your match has been disputed and is under review.', 'result');
       }
     });
   } catch { /* ignore */ }
