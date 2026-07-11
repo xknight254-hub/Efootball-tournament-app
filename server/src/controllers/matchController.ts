@@ -2,6 +2,7 @@ import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { getIO } from '../socket/index.js';
+import { shouldNotify } from '../services/notificationPreferences.js';
 
 interface Match {
   id: number;
@@ -246,7 +247,7 @@ export async function submitResult(req: AuthRequest, res: Response) {
   // Notify opponent about result submission
   try {
     const opponentId = result.player1_id === req.user.id ? result.player2_id : result.player1_id;
-    if (opponentId) {
+    if (opponentId && shouldNotify(opponentId, 'result')) {
       db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(
         opponentId,
         'Result Submitted',
@@ -350,7 +351,9 @@ export async function confirmResult(req: AuthRequest, res: Response) {
     const winnerName = updated.winner_id === match.player1_id ? (p1?.username || 'Player 1') : (p2?.username || 'Player 2');
     const body = winnerName + ' won in ' + (tournament?.name || 'tournament');
     [match.player1_id, match.player2_id].filter(Boolean).forEach((uid: number) => {
-      db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(uid, 'Match Complete', body, 'result');
+      if (shouldNotify(uid, 'result')) {
+        db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(uid, 'Match Complete', body, 'result');
+      }
     });
   } catch { /* ignore */ }
 
@@ -408,7 +411,7 @@ export async function disputeResult(req: AuthRequest, res: Response) {
   // Notify both players about dispute
   try {
     [match.player1_id, match.player2_id].filter(Boolean).forEach((uid: number) => {
-      if (uid !== req.user!.id) {
+      if (uid !== req.user!.id && shouldNotify(uid, 'result')) {
         db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(
           uid, 'Match Disputed', 'Your match has been disputed and is under review.', 'result'
         );

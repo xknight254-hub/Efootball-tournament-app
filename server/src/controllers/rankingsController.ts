@@ -9,6 +9,60 @@ import { Response } from 'express';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 
+export function getMyStats(req: AuthRequest, res: Response) {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  const rankings = db.prepare(`
+    SELECT
+      u.id,
+      u.username,
+      COUNT(DISTINCT CASE WHEN m.player1_id = u.id OR m.player2_id = u.id THEN m.id END) as matches_played,
+      COUNT(DISTINCT CASE WHEN m.winner_id = u.id THEN m.id END) as wins,
+      COUNT(DISTINCT CASE WHEN m.winner_id IS NOT NULL AND m.winner_id != u.id AND (m.player1_id = u.id OR m.player2_id = u.id) THEN m.id END) as losses,
+      COALESCE(SUM(CASE WHEN w.winner_id = u.id THEN w.total_pot ELSE 0 END), 0) as wager_earnings
+    FROM users u
+    LEFT JOIN matches m ON (m.player1_id = u.id OR m.player2_id = u.id) AND m.status = 'completed'
+    LEFT JOIN wager_challenges w ON w.status = 'completed'
+    WHERE u.id = ?
+    GROUP BY u.id
+  `).all(userId);
+
+  if (rankings.length === 0) {
+    res.json({ stats: null });
+    return;
+  }
+
+  const r: any = rankings[0];
+
+  // Compute rank: count how many users have more wins or (same wins and more wager earnings)
+  const rankRow = db.prepare(`
+    SELECT COUNT(*) as above FROM (
+      SELECT u.id,
+        COUNT(DISTINCT CASE WHEN m.winner_id = u.id THEN m.id END) as wins,
+        COALESCE(SUM(CASE WHEN w.winner_id = u.id THEN w.total_pot ELSE 0 END), 0) as wager_earnings
+      FROM users u
+      LEFT JOIN matches m ON (m.player1_id = u.id OR m.player2_id = u.id) AND m.status = 'completed'
+      LEFT JOIN wager_challenges w ON w.status = 'completed'
+      GROUP BY u.id
+      HAVING wins > ? OR (wins = ? AND wager_earnings > ?)
+    )
+  `).get(r.wins, r.wins, r.wager_earnings) as any;
+
+  const rank = (rankRow?.above || 0) + 1;
+
+  res.json({
+    stats: {
+      wins: r.wins,
+      rank,
+      wagerEarnings: r.wager_earnings || 0,
+    }
+  });
+}
+
 export function getRankings(req: AuthRequest, res: Response) {
   // Get all users with their match stats
   const rankings = db.prepare(`

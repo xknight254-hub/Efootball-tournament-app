@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import db from '../db.js';
 import type { AuthRequest } from '../middleware/auth.js';
 import { sanitizeString, sanitizeHtml } from '../utils/sanitize.js';
@@ -31,6 +32,8 @@ interface Tournament {
   bracket_type: string;
   image_url: string | null;
   entry_fee: number;
+  is_private: number;
+  access_token: string | null;
   created_at: string;
 }
 
@@ -44,7 +47,7 @@ export async function createTournament(req: AuthRequest, res: Response) {
     return res.status(403).json({ error: 'Only admins can create tournaments. Request an admin code from an existing admin.' });
   }
 
-  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl, entryFee } = req.body;
+  const { name, description, platform, format, maxPlayers, bestOf, prizePool, registrationDeadline, resultDeadlineHours, rules, groupCount, bracketType, imageUrl, entryFee, isPrivate } = req.body;
 
   if (!name || !format) {
     return res.status(400).json({ error: 'Name and format are required' });
@@ -64,9 +67,11 @@ export async function createTournament(req: AuthRequest, res: Response) {
   const groupCountValue = format === 'multi_bracket' ? (groupCount || 2) : 0;
   const bracketTypeValue = format === 'multi_bracket' ? (bracketType || 'group_knockout') : 'single';
 
+  const accessToken = isPrivate ? crypto.randomBytes(16).toString('hex') : null;
+
   const result = db.prepare(`
-    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url, entry_fee)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)
+    INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool, registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url, entry_fee, is_private, access_token)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?)
   `).run(
     name,
     description ? sanitizeHtml(description, 2000) : null,
@@ -82,7 +87,9 @@ export async function createTournament(req: AuthRequest, res: Response) {
     groupCountValue,
     bracketTypeValue,
     imageUrl || null,
-    entryFee || 0
+    entryFee || 0,
+    isPrivate ? 1 : 0,
+    accessToken
   );
 
   const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(result.lastInsertRowid) as Tournament;
@@ -111,6 +118,8 @@ export async function createTournament(req: AuthRequest, res: Response) {
     registrationDeadline: tournament.registration_deadline,
     imageUrl: tournament.image_url,
     entryFee: tournament.entry_fee,
+    isPrivate: tournament.is_private === 1,
+    accessToken: tournament.access_token,
     createdAt: tournament.created_at
   });
 }
@@ -207,6 +216,7 @@ export async function getTournamentById(req: AuthRequest, res: Response) {
     bracketType: tournament.bracket_type || 'single',
     imageUrl: tournament.image_url,
     entryFee: tournament.entry_fee,
+    isPrivate: tournament.is_private === 1,
     createdAt: tournament.created_at
   });
 }
@@ -447,6 +457,19 @@ export async function joinTournament(req: AuthRequest, res: Response) {
     return res.status(400).json({ error: 'Registration is closed for this tournament' });
   }
 
+  // Check registration deadline
+  if (tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()) {
+    return res.status(400).json({ error: 'Registration deadline has passed' });
+  }
+
+  // Private tournament — validate access token
+  if (tournament.is_private) {
+    const { accessToken } = req.body;
+    if (!accessToken || accessToken !== tournament.access_token) {
+      return res.status(403).json({ error: 'Invalid or missing invite link. You need an invite to join this tournament.' });
+    }
+  }
+
   const existingParticipant = db.prepare(
     'SELECT * FROM participants WHERE tournament_id = ? AND user_id = ?'
   ).get(tournamentId, req.user.id);
@@ -500,4 +523,113 @@ export async function joinTournament(req: AuthRequest, res: Response) {
       status: 'registered',
     }
   }); } catch { /* socket not initialized */ }
+}
+export async function withdrawFromTournament(req: AuthRequest, res: Response) {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+
+  const { id } = req.params;
+  const tournamentId = parseInt(id);
+  if (isNaN(tournamentId)) return res.status(400).json({ error: 'Invalid tournament ID' });
+
+  const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament | undefined;
+  if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
+
+  if (tournament.status !== 'registration_open' && tournament.status !== 'open') {
+    return res.status(400).json({ error: 'Cannot withdraw — tournament has already started' });
+  }
+
+  // Check registration deadline
+  if (tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()) {
+    return res.status(400).json({ error: 'Registration deadline has passed' });
+  }
+
+  if (tournament.owner_id === req.user.id) {
+    return res.status(400).json({ error: 'Tournament owner cannot withdraw. Delete the tournament instead.' });
+  }
+
+  const participant = db.prepare(
+    'SELECT id FROM participants WHERE tournament_id = ? AND user_id = ?'
+  ).get(tournamentId, req.user.id);
+
+  if (!participant) {
+    return res.status(400).json({ error: 'You are not registered in this tournament' });
+  }
+
+  db.prepare('DELETE FROM participants WHERE tournament_id = ? AND user_id = ?').run(tournamentId, req.user.id);
+
+  const remainingCount = (db.prepare(
+    'SELECT COUNT(*) as count FROM participants WHERE tournament_id = ?'
+  ).get(tournamentId) as { count: number }).count;
+
+  // Promote next player from waiting list if slot is open
+  if (remainingCount < tournament.max_players) {
+    const nextInLine = db.prepare(
+      'SELECT wl.user_id, u.username FROM waiting_list wl JOIN users u ON wl.user_id = u.id WHERE wl.tournament_id = ? ORDER BY wl.joined_at ASC LIMIT 1'
+    ).get(tournamentId) as { user_id: number; username: string } | undefined;
+
+    if (nextInLine) {
+      db.prepare('DELETE FROM waiting_list WHERE tournament_id = ? AND user_id = ?').run(tournamentId, nextInLine.user_id);
+      db.prepare('INSERT INTO participants (tournament_id, user_id, seed, status) VALUES (?, ?, ?, ?)').run(
+        tournamentId, nextInLine.user_id, remainingCount + 1, 'registered'
+      );
+      // Notify promoted user
+      db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)').run(
+        nextInLine.user_id,
+        'Spot Opened!',
+        'A slot opened in "' + tournament.name + '" — you have been automatically registered!',
+        'tournament'
+      );
+      try {
+        getIO().to('user:' + nextInLine.user_id).emit('notification', {
+          type: 'waiting_list_promoted', tournamentId, message: 'You were promoted from the waiting list!',
+        });
+      } catch { /* */ }
+    }
+  }
+
+  const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id) as { username: string };
+
+  logAdminAction(req.user.id, 'tournament_withdraw', 'Withdrew from tournament: ' + tournament.name + ' (ID: ' + tournamentId + ')');
+
+  try {
+    getIO().to('tournament:' + tournamentId).emit('participant:withdrew', {
+      tournamentId, userId: req.user.id, username: user.username, remainingCount,
+    });
+  } catch { /* socket not initialized */ }
+
+  res.json({ message: 'Successfully withdrew from tournament', remainingCount });
+}
+
+export async function joinWaitingList(req: AuthRequest, res: Response) {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+  const { id } = req.params;
+  const tournamentId = parseInt(id);
+  if (isNaN(tournamentId)) return res.status(400).json({ error: 'Invalid tournament ID' });
+
+  const tournament = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(tournamentId) as Tournament | undefined;
+  if (!tournament) return res.status(404).json({ error: 'Tournament not found' });
+
+  if (tournament.status !== 'registration_open' && tournament.status !== 'open') {
+    return res.status(400).json({ error: 'Registration is closed' });
+  }
+
+  const alreadyJoined = db.prepare('SELECT id FROM participants WHERE tournament_id = ? AND user_id = ?').get(tournamentId, req.user.id);
+  if (alreadyJoined) return res.status(400).json({ error: 'You are already registered' });
+
+  const alreadyWaiting = db.prepare('SELECT id FROM waiting_list WHERE tournament_id = ? AND user_id = ?').get(tournamentId, req.user.id);
+  if (alreadyWaiting) return res.status(400).json({ error: 'You are already on the waiting list' });
+
+  const participantCount = (db.prepare('SELECT COUNT(*) as count FROM participants WHERE tournament_id = ?').get(tournamentId) as { count: number }).count;
+  if (participantCount < tournament.max_players) {
+    return res.status(400).json({ error: 'Tournament still has open slots — join directly instead' });
+  }
+
+  db.prepare('INSERT INTO waiting_list (tournament_id, user_id) VALUES (?, ?)').run(tournamentId, req.user.id);
+
+  const waitingCount = (db.prepare('SELECT COUNT(*) as count FROM waiting_list WHERE tournament_id = ?').get(tournamentId) as { count: number }).count;
+
+  const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.user.id) as { username: string };
+  logAdminAction(req.user.id, 'waiting_list_join', 'Joined waiting list for: ' + tournament.name + ' (ID: ' + tournamentId + ')');
+
+  res.json({ message: 'Added to waiting list', position: waitingCount });
 }

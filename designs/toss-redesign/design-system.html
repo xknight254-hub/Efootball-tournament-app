@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TOSS Design System — eFootball Arena</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Backgrounds */
+      --bg-primary: #0A0A0A;
+      --bg-card: #141414;
+      --bg-surface: #141414;
+      --bg-elevated: #161616;
+      --bg-hover: #1A1A1A;
+
+      /* Accent */
+      --accent: #F97316;
+      --accent-hover: #FB923C;
+      --accent-glow-light: rgba(249,115,22,0.15);
+      --accent-glow-strong: rgba(249,115,22,0.3);
+
+      /* Semantic */
+      --success: #22C55E;
+      --error: #EF4444;
+      --warning: #F59E0B;
+      --info: #3B82F6;
+
+      /* Text */
+      --text-primary: #FAFAFA;
+      --text-secondary: #A1A1A1;
+      --text-muted: #737373;
+      --text-dim: #525252;
+
+      /* Borders */
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(249,115,22,0.25);
+      --border-subtle: rgba(255,255,255,0.04);
+
+      /* Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+
+      /* Spacing */
+      --sp-xs: 4px;
+      --sp-sm: 8px;
+      --sp-md: 12px;
+      --sp-lg: 16px;
+      --sp-xl: 24px;
+      --sp-xxl: 32px;
+      --sp-xxxl: 48px;
+
+      /* Typography */
+      --font-display: 'Orbitron', monospace;
+      --font-body: 'Inter', sans-serif;
+
+      /* Shadows */
+      --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow-card-hover: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(249,115,22,0.1);
+      --shadow-button: 0 4px 20px rgba(249,115,22,0.35);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding: var(--sp-xxxl);
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Header */
+    .ds-header { margin-bottom: var(--sp-xxxl); }
+    .ds-header h1 {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #FAFAFA 0%, #F97316 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    .ds-header p { color: var(--text-secondary); margin-top: var(--sp-sm); font-size: 15px; }
+
+    /* Section */
+    .section { margin-bottom: var(--sp-xxxl); }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: var(--sp-xl);
+      padding-bottom: var(--sp-sm);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Color swatches */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--sp-lg);
+    }
+    .swatch {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .swatch-color { height: 80px; }
+    .swatch-info { padding: var(--sp-md) var(--sp-lg); }
+    .swatch-info .name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .swatch-info .hex { font-size: 12px; color: var(--text-muted); font-family: 'Geist Mono', monospace; margin-top: 2px; }
+
+    /* Typography scale */
+    .type-grid { display: flex; flex-direction: column; gap: var(--sp-xl); }
+    .type-item { display: flex; align-items: baseline; gap: var(--sp-xl); padding: var(--sp-lg); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); }
+    .type-label { min-width: 120px; font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .type-sample { flex: 1; }
+
+    /* Spacing table */
+    .spacing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: var(--sp-md); }
+    .spacing-item { text-align: center; padding: var(--sp-lg); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); }
+    .spacing-box { background: var(--accent); border-radius: 4px; margin: 0 auto var(--sp-sm); opacity: 0.5; }
+
+    /* Buttons */
+    .btn-grid { display: flex; flex-wrap: wrap; gap: var(--sp-lg); align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-sm);
+      padding: 12px 24px; border-radius: var(--radius-md); font-family: var(--font-body);
+      font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); text-decoration: none;
+      letter-spacing: 0.2px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: var(--shadow-button); }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 28px rgba(249,115,22,0.45); }
+    .btn-secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); }
+    .btn-ghost:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-error { background: var(--error); color: #fff; }
+    .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: var(--radius-sm); }
+    .btn-lg { padding: 16px 32px; font-size: 16px; border-radius: var(--radius-md); }
+    .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: var(--radius-md); }
+
+    /* Badges */
+    .badge-grid { display: flex; flex-wrap: wrap; gap: var(--sp-md); }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-orange { background: rgba(249,115,22,0.15); color: var(--accent); }
+    .badge-green { background: rgba(34,197,94,0.15); color: var(--success); }
+    .badge-red { background: rgba(239,68,68,0.15); color: var(--error); }
+    .badge-blue { background: rgba(59,130,246,0.15); color: var(--info); }
+    .badge-gray { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+    /* Input */
+    .input-group { max-width: 400px; }
+    .input-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .input { width: 100%; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-body); font-size: 14px; outline: none; transition: all 0.2s; }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow-light); }
+    .input::placeholder { color: var(--text-dim); }
+    .input-error { border-color: var(--error); }
+    .input-error:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+    .input-helper { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .input-error-text { font-size: 12px; color: var(--error); margin-top: 4px; }
+
+    /* Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-xl); }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: var(--sp-xl); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .card:hover { box-shadow: var(--shadow-card-hover); border-color: var(--border-hover); transform: translateY(-4px); }
+
+    .card-glass {
+      background: rgba(20,20,20,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: var(--sp-xxxl) 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="ds-header">
+      <h1>TOSS Design System</h1>
+      <p>eFootball Arena — brand tokens, components, and patterns for the competitive gaming platform.</p>
+    </div>
+
+    <!-- Colors -->
+    <div class="section">
+      <h2 class="section-title">Colors</h2>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#0A0A0A"></div><div class="swatch-info"><div class="name">Primary Background</div><div class="hex">#0A0A0A</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#141414"></div><div class="swatch-info"><div class="name">Card Background</div><div class="hex">#141414</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#161616"></div><div class="swatch-info"><div class="name">Elevated Background</div><div class="hex">#161616</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#F97316"></div><div class="swatch-info"><div class="name">Accent</div><div class="hex">#F97316</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#FB923C"></div><div class="swatch-info"><div class="name">Accent Hover</div><div class="hex">#FB923C</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#22C55E"></div><div class="swatch-info"><div class="name">Success</div><div class="hex">#22C55E</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#EF4444"></div><div class="swatch-info"><div class="name">Error</div><div class="hex">#EF4444</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#F59E0B"></div><div class="swatch-info"><div class="name">Warning</div><div class="hex">#F59E0B</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#3B82F6"></div><div class="swatch-info"><div class="name">Info</div><div class="hex">#3B82F6</div></div></div>
+      </div>
+    </div>
+
+    <!-- Typography -->
+    <div class="section">
+      <h2 class="section-title">Typography</h2>
+      <div class="type-grid">
+        <div class="type-item"><div class="type-label">Display 1</div><div class="type-sample" style="font-family:var(--font-display);font-weight:900;font-size:36px;letter-spacing:-0.5px">Compete. Verify. Win.</div></div>
+        <div class="type-item"><div class="type-label">Display 2</div><div class="type-sample" style="font-family:var(--font-display);font-weight:800;font-size:28px;letter-spacing:-0.3px">Tournament Hub</div></div>
+        <div class="type-item"><div class="type-label">Display 3</div><div class="type-sample" style="font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:0.5px;text-transform:uppercase">LIVE NOW</div></div>
+        <div class="type-item"><div class="type-label">Heading 1</div><div class="type-sample" style="font-family:var(--font-body);font-weight:700;font-size:24px">Active Tournaments</div></div>
+        <div class="type-item"><div class="type-label">Heading 2</div><div class="type-sample" style="font-family:var(--font-body);font-weight:600;font-size:18px">Your Match History</div></div>
+        <div class="type-item"><div class="type-label">Body</div><div class="type-sample" style="font-family:var(--font-body);font-weight:400;font-size:14px;color:var(--text-secondary)">Join ongoing tournaments, challenge players, and climb the leaderboard. Every match brings you closer to the top.</div></div>
+        <div class="type-item"><div class="type-label">Small</div><div class="type-sample" style="font-family:var(--font-body);font-weight:400;font-size:12px;color:var(--text-muted)">Registration closes in 2 days · 16 players registered</div></div>
+        <div class="type-item"><div class="type-label">Mono / Data</div><div class="type-sample" style="font-family:var(--font-body);font-weight:700;font-size:32px;color:var(--accent)">KES 12,500</div></div>
+        <div class="type-item"><div class="type-label">Score</div><div class="type-sample" style="font-family:var(--font-display);font-weight:900;font-size:48px;color:var(--accent);line-height:1">3 — 2</div></div>
+      </div>
+    </div>
+
+    <!-- Spacing -->
+    <div class="section">
+      <h2 class="section-title">Spacing Scale</h2>
+      <div class="spacing-grid">
+        <div class="spacing-item"><div class="spacing-box" style="width:4px;height:4px"></div><div>xs</div><div>4px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:8px;height:8px"></div><div>sm</div><div>8px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:12px;height:12px"></div><div>md</div><div>12px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:16px;height:16px"></div><div>lg</div><div>16px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:24px;height:24px"></div><div>xl</div><div>24px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:32px;height:32px"></div><div>xxl</div><div>32px</div></div>
+        <div class="spacing-item"><div class="spacing-box" style="width:48px;height:48px"></div><div>xxxl</div><div>48px</div></div>
+      </div>
+    </div>
+
+    <!-- Border Radius -->
+    <div class="section">
+      <h2 class="section-title">Border Radius</h2>
+      <div style="display:flex;gap:var(--sp-xl);flex-wrap:wrap">
+        <div style="width:60px;height:60px;background:var(--accent);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">8px</div>
+        <div style="width:60px;height:60px;background:var(--accent);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">12px</div>
+        <div style="width:60px;height:60px;background:var(--accent);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">20px</div>
+        <div style="width:60px;height:60px;background:var(--accent);border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">Full</div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="section">
+      <h2 class="section-title">Buttons</h2>
+      <div class="btn-grid">
+        <button class="btn btn-primary">Primary</button>
+        <button class="btn btn-secondary">Secondary</button>
+        <button class="btn btn-ghost">Ghost</button>
+        <button class="btn btn-success">Success</button>
+        <button class="btn btn-error">Error</button>
+        <button class="btn btn-primary btn-sm">Small</button>
+        <button class="btn btn-primary btn-lg">Large</button>
+        <button class="btn btn-primary btn-sm" disabled style="opacity:0.4;cursor:not-allowed">Disabled</button>
+        <button class="btn btn-primary btn-icon">+</button>
+      </div>
+      <div style="margin-top:var(--sp-lg);display:flex;gap:var(--sp-md)">
+        <button class="btn btn-primary" style="border-radius:var(--radius-sm)">Sharp</button>
+        <button class="btn btn-primary" style="border-radius:var(--radius-lg)">Soft</button>
+        <button class="btn btn-primary" style="border-radius:var(--radius-full)">Pill</button>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <div class="section">
+      <h2 class="section-title">Badges</h2>
+      <div class="badge-grid">
+        <span class="badge badge-orange">Live</span>
+        <span class="badge badge-green">Open</span>
+        <span class="badge badge-red">Ended</span>
+        <span class="badge badge-blue">Info</span>
+        <span class="badge badge-gray">Upcoming</span>
+        <span class="badge badge-orange" style="gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite"></span>In Progress</span>
+        <span class="badge badge-green"><span style="width:6px;height:6px;border-radius:50%;background:var(--success)"></span> Verified</span>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="section">
+      <h2 class="section-title">Card Variants</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="font-family:var(--font-display);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:var(--sp-sm)">Tournament</h3>
+          <p style="font-size:16px;font-weight:600;margin-bottom:var(--sp-sm)">Knockout Cup S3</p>
+          <p style="font-size:13px;color:var(--text-muted)">32 players · KES 200 entry · Best of 3</p>
+        </div>
+        <div class="card-glass" style="padding:var(--sp-xl)">
+          <h3 style="font-family:var(--font-display);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:var(--sp-sm)">Wager</h3>
+          <p style="font-size:16px;font-weight:600;margin-bottom:var(--sp-sm)">KES 500 Challenge</p>
+          <p style="font-size:13px;color:var(--text-muted)">PlayerX vs PlayerY · Pot: KES 900</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--accent)">
+          <h3 style="font-family:var(--font-display);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:var(--sp-sm)">Active</h3>
+          <p style="font-size:16px;font-weight:600;margin-bottom:var(--sp-sm)">Weekend League</p>
+          <p style="font-size:13px;color:var(--text-muted)">Round 3 of 7 · 12 players remaining</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="section">
+      <h2 class="section-title">Form Elements</h2>
+      <div class="input-group">
+        <label class="input-label">Tournament Name</label>
+        <input class="input" placeholder="e.g. Knockout Cup S3" />
+      </div>
+      <div class="input-group" style="margin-top:var(--sp-lg)">
+        <label class="input-label">Entry Fee (KES)</label>
+        <input class="input input-error" placeholder="Amount" value="invalid" />
+        <div class="input-error-text">Must be between KES 50 and KES 500</div>
+      </div>
+    </div>
+
+    <hr />
+
+    <div style="text-align:center;padding:var(--sp-xxxl) 0;color:var(--text-muted);font-size:13px">
+      TOSS — eFootball Arena Design System · v1.0
+    </div>
+  </div>
+</body>
+</html>

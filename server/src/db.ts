@@ -59,6 +59,8 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       avatar_url TEXT,
       is_admin INTEGER DEFAULT 0,
       is_super_admin INTEGER DEFAULT 0,
+      is_organizer INTEGER DEFAULT 0,
+      preferences TEXT DEFAULT '{}',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -254,7 +256,18 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
-  
+
+  sqlDb.run(`
+    CREATE TABLE IF NOT EXISTS waiting_list (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tournament_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
   // ─── Verification tables ───────────────────────────────────────
   sqlDb.run(`
     CREATE TABLE IF NOT EXISTS result_submissions (
@@ -318,6 +331,9 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE matches ADD COLUMN verification_status TEXT DEFAULT \'none\''); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN phone TEXT'); } catch { /* column exists */ }
   try { sqlDb.run('ALTER TABLE users ADD COLUMN registration_paid INTEGER DEFAULT 0'); } catch { /* column exists */ }
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN is_organizer INTEGER DEFAULT 0'); } catch { /* column exists */ }
+
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT \'{}\''); } catch { /* column exists */ }
 
   // Seed default subscription tiers
   const tierCount = sqlDb.exec("SELECT COUNT(*) as c FROM subscription_tiers")[0]?.values[0]?.[0] || 0;
