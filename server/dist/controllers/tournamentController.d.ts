@@ -10,4 +10,6 @@ export declare function updateTournamentStatus(req: AuthRequest, res: Response):
 export declare function updateTournament(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 export declare function deleteTournament(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 export declare function joinTournament(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function withdrawFromTournament(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function joinWaitingList(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 //# sourceMappingURL=tournamentController.d.ts.map

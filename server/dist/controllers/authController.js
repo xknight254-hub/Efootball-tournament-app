@@ -99,6 +99,7 @@ export function getMe(req, res) {
         avatarUrl: req.user.avatar_url || null,
         isAdmin: req.user.is_admin === 1,
         isSuperAdmin: req.user.is_super_admin === 1,
+        isOrganizer: req.user.is_organizer === 1,
         registrationPaid: req.user.registration_paid === 1,
         telegramId: req.user.telegram_id || null,
     });
@@ -161,6 +162,28 @@ export function updateProfile(req, res) {
         isAdmin: updated.is_admin === 1
     });
 }
+// ─── USER PREFERENCES ──────────────────────────────────────────
+export function getPreferences(req, res) {
+    if (!req.user)
+        return res.status(401).json({ error: 'Not authenticated' });
+    const row = db.prepare('SELECT preferences FROM users WHERE id = ?').get(req.user.id);
+    let prefs = {};
+    try {
+        prefs = JSON.parse(row?.preferences || '{}');
+    }
+    catch { /* ignore */ }
+    res.json({ preferences: prefs });
+}
+export function updatePreferences(req, res) {
+    if (!req.user)
+        return res.status(401).json({ error: 'Not authenticated' });
+    const { preferences } = req.body;
+    if (!preferences || typeof preferences !== 'object') {
+        return res.status(400).json({ error: 'Preferences must be a JSON object' });
+    }
+    db.prepare('UPDATE users SET preferences = ? WHERE id = ?').run(JSON.stringify(preferences), req.user.id);
+    res.json({ preferences });
+}
 export function logout(req, res) {
     if (!req.user) {
         return res.status(401).json({ error: 'Not authenticated' });
@@ -171,6 +194,25 @@ export function logout(req, res) {
         db.prepare('INSERT INTO token_blacklist (token, expires_at) VALUES (?, datetime("now", "+7 days"))').run(token);
     }
     res.json({ message: 'Logged out successfully' });
+}
+// ─── ACCOUNT DELETION ─────────────────────────────────────────
+export function deleteAccount(req, res) {
+    if (!req.user)
+        return res.status(401).json({ error: 'Not authenticated' });
+    const userId = req.user.id;
+    try {
+        // Remove user data from related tables
+        db.prepare('DELETE FROM participants WHERE user_id = ?').run(userId);
+        db.prepare('DELETE FROM notifications WHERE user_id = ?').run(userId);
+        db.prepare('DELETE FROM paynecta_payments WHERE user_id = ?').run(userId);
+        db.prepare('DELETE FROM token_blacklist WHERE token IN (SELECT token FROM token_blacklist)').run();
+        db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+        res.json({ message: 'Account deleted permanently' });
+    }
+    catch (err) {
+        console.error('[Auth] Delete account error:', err.message);
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
 }
 // ─── USER STATS ───
 export function getUserStats(req, res) {

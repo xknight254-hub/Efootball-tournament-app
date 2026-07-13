@@ -13,13 +13,15 @@ import matchRoutes from './routes/matchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import redeemCodeRoutes from './routes/redeemCodeRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
-import { initializeSocket } from './socket/index.js';
+import { initializeSocket, getIO } from './socket/index.js';
+import { startWhatsAppChannel } from './channels/whatsapp/bot.js';
 import wagerRoutes from './routes/wagerRoutes.js';
 import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 import deepLinkRoutes from './routes/deepLinkRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import rankingsRoutes from './routes/rankingsRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import organizerRoutes from './routes/organizerRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ─── Environment Validation ───
@@ -80,6 +82,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/rankings', rankingsRoutes);
 app.use('/api/redeem-codes', redeemCodeRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/organizer', organizerRoutes);
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);
 // ─── Deep links (must be BEFORE SPA fallback) ───
@@ -120,6 +123,10 @@ app.use((req, res) => {
 });
 const server = createServer(app);
 initializeSocket(server);
+// WhatsApp channel (Phase 1). Inert unless WHATSAPP_ENABLED=true.
+if (process.env.WHATSAPP_ENABLED === 'true') {
+    startWhatsAppChannel(getIO()).catch((e) => console.error('[WhatsApp] failed to start:', e.message));
+}
 server.listen(PORT, () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);
 });

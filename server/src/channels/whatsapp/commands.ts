@@ -10,6 +10,60 @@ interface Ctx {
   phone: string;
 }
 
+// M-Pesa confirmation messages contain a receipt code (e.g. QGW8H4K9X2)
+// and an amount (Ksh / KES). Phase 1 creates the account on receipt-forward
+// (trust-based); real Paynecta verification is a later hardening step.
+const MPESA_RECEIPT_RE = /\b([A-Z0-9]{8,12})\b/;
+const MPESA_AMOUNT_RE = /(ksh|kes)\s*([\d,]+(?:\.\d{2})?)/i;
+// Only auto-detect a forwarded confirmation when M-Pesa context is present,
+// so normal chat isn't misrouted to signup.
+const MPESA_CONTEXT_RE = /m-?pesa|confirmed|mpesa|receipt/i;
+
+function normalizePhone(phone: string): string {
+  let p = phone.replace(/\D/g, '');
+  if (p.startsWith('0')) p = '254' + p.slice(1);
+  if (p.startsWith('2540')) p = '254' + p.slice(4);
+  return p;
+}
+
+// Mirror authController.verifyOTP auto-create, so WhatsApp-paid signup and
+// OTP signup produce identical account shapes.
+function createUserFromPhone(phone: string): { id: number; username: string } {
+  const normalized = normalizePhone(phone);
+  const existing = db
+    .prepare('SELECT id, username FROM users WHERE phone = ?')
+    .get(normalized) as { id: number; username: string } | undefined;
+  if (existing) return existing;
+
+  const base = `p_${normalized.slice(-8)}`;
+  let finalUsername = base;
+  let counter = 1;
+  while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+    finalUsername = `${base}_${counter}`;
+    counter++;
+  }
+  const email = `${normalized}@phone.efootball`;
+  const isFirstUser =
+    (db.prepare('SELECT COUNT(*) as c FROM users').get() as any).c === 0;
+
+  const result = db
+    .prepare(
+      'INSERT INTO users (username, email, password_hash, phone, is_admin, is_super_admin) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .run(
+      finalUsername,
+      email,
+      'phone_auth',
+      normalized,
+      isFirstUser ? 1 : 0,
+      isFirstUser ? 1 : 0
+    );
+  return {
+    id: Number(result.lastInsertRowid),
+    username: finalUsername,
+  };
+}
+
 function help(): string {
   return [
     '🤖 *TOSS WhatsApp Assistant*',
@@ -21,6 +75,7 @@ function help(): string {
     '• `me` — your stats (link first)',
     '• `join <id>` — join a tournament (link first)',
     '• `link <token>` — link your TOSS account',
+    '• `pay` — forward your M-Pesa confirmation to register',
     '• `help` — this message',
   ].join('\n');
 }
@@ -144,6 +199,36 @@ async function join(phone: string, idStr?: string): Promise<string> {
   return `✅ Joined *${t.name}* as seed #${seed}.`;
 }
 
+// Player forwards their M-Pesa payment confirmation; bot creates a TOSS
+// account for that phone and replies with the new user ID.
+async function pay(phone: string, text: string): Promise<string> {
+  if (!text || text.length < 4)
+    return '❌ Forward your M-Pesa confirmation message so I can register you.';
+  const receipt = text.match(MPESA_RECEIPT_RE)?.[1];
+  if (!receipt)
+    return '❌ Could not find an M-Pesa receipt code. Forward the full confirmation SMS.';
+  const amount = text.match(MPESA_AMOUNT_RE)?.[2] || 'unknown';
+
+  const user = createUserFromPhone(phone);
+  linkStore.set(phone, user.id); // auto-link so `me`/`join` work immediately
+
+  // Audit trail (mirrors OTP logging in authController).
+  try {
+    db.prepare(
+      "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_signup', ?)"
+    ).run(`phone=${normalizePhone(phone)} receipt=${receipt} amount=${amount} user=${user.id}`);
+  } catch { /* admin_logs optional */ }
+
+  return [
+    `✅ *Account created*`,
+    `User ID: *${user.id}*`,
+    `Username: ${user.username}`,
+    ``,
+    `Payment noted: ${receipt} (Ksh ${amount}).`,
+    `Set a password later via the app. Use \`me\` to see your stats.`,
+  ].join('\n');
+}
+
 export async function handleCommand(
   text: string,
   ctx: Ctx
@@ -170,7 +255,12 @@ export async function handleCommand(
       return me(ctx.phone);
     case 'join':
       return join(ctx.phone, arg);
+    case 'pay':
+      return pay(ctx.phone, arg);
     default:
+      // Auto-detect a forwarded M-Pesa confirmation (no command prefix).
+      if (MPESA_RECEIPT_RE.test(raw) && MPESA_CONTEXT_RE.test(raw))
+        return pay(ctx.phone, raw);
       return `Unknown command: \`${cmd}\`. Send \`help\`.`;
   }
 }

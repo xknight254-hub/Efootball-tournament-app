@@ -13,7 +13,7 @@ export function authenticateToken(req, res, next) {
         }
         const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, telegram_id, registration_paid FROM users WHERE id = ?').get(decoded.userId);
+        const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, is_organizer, telegram_id, registration_paid FROM users WHERE id = ?').get(decoded.userId);
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
         }
@@ -34,7 +34,7 @@ export function optionalAuth(req, res, next) {
     try {
         const JWT_SECRET = process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, telegram_id, registration_paid FROM users WHERE id = ?').get(decoded.userId);
+        const user = db.prepare('SELECT id, username, email, is_admin, is_super_admin, is_organizer, telegram_id, registration_paid FROM users WHERE id = ?').get(decoded.userId);
         if (user) {
             req.userId = user.id;
             req.user = user;
@@ -54,6 +54,12 @@ export function requireAdmin(req, res, next) {
 export function requireSuperAdmin(req, res, next) {
     if (!req.user || req.user.is_super_admin !== 1) {
         return res.status(403).json({ error: 'Super admin access required' });
+    }
+    next();
+}
+export function requireOrganizer(req, res, next) {
+    if (!req.user || (req.user.is_organizer !== 1 && req.user.is_admin !== 1 && req.user.is_super_admin !== 1)) {
+        return res.status(403).json({ error: 'Organizer access required' });
     }
     next();
 }

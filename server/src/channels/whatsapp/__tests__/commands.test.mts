@@ -66,6 +66,21 @@ async function main() {
   // unknown
   assert.match(await handleCommand('foo', { phone: 'x' }), /Unknown command/);
 
+  // pay: forward an M-Pesa confirmation -> creates account for that phone
+  const payPhone = `2547${n}99`; // distinct fresh phone
+  const mpesaMsg =
+    `QG${n}W8H4K Confirmed. Ksh 100.00 sent to TOSS on ${n}. ` +
+    `Your M-Pesa receipt is QG${n}W8H4K.`;
+  const payRes = await handleCommand(mpesaMsg, { phone: payPhone });
+  assert.match(payRes, /Account created/);
+  assert.match(payRes, /User ID:/);
+  // auto-linked: me should work without a separate link step
+  const payMe = await handleCommand('me', { phone: payPhone });
+  assert.match(payMe, /Your stats/);
+  // idempotent: forwarding again returns same existing account id
+  const payRes2 = await handleCommand(mpesaMsg, { phone: payPhone });
+  assert.match(payRes2, /Account created/);
+
   console.log('ALL COMMAND TESTS PASSED');
   process.exit(0);
 }
