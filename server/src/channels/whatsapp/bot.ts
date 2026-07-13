@@ -1,19 +1,28 @@
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { createHash } from 'crypto';
+import { mkdirSync, writeFileSync } from 'fs';
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadContentFromMessage,
   type WAMessage,
+  type WAMessageContent,
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import type { Server as SocketIOServer } from 'socket.io';
 import { whatsappConfig } from './config.js';
-import { handleCommand } from './commands.js';
+import { handleCommand, handleResultScreenshot } from './commands.js';
 import { setConnectionState } from './whatsappSettings.js';
+import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
+import { processVerification } from '../../services/verificationService.js';
+import db from '../../db.js';
+import { linkStore } from './linkStore.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', 'client', 'public', 'screenshots', 'whatsapp');
 
 // One Baileys session for the TOSS product (separate number/process from
 // any BusinessOS Baileys instance). In-process: reads the same DB and the
@@ -65,12 +74,22 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     const remoteJid = m.key.remoteJid || '';
     // Phase 1: handle direct messages only (user@s.whatsapp.net).
     if (!remoteJid.endsWith('@s.whatsapp.net')) return;
+    const phone = remoteJid.split('@')[0];
     const text =
       (m.message.conversation as string) ||
       (m.message.extendedTextMessage?.text as string) ||
       '';
+    const imageMsg = m.message.imageMessage;
+    if (imageMsg) {
+      try {
+        const reply = await handleResultScreenshot(sock, remoteJid, phone, m.message, text);
+        if (reply) await sock.sendMessage(remoteJid, { text: reply });
+      } catch (e: any) {
+        logger.error({ err: e?.message }, 'screenshot handling failed');
+      }
+      return;
+    }
     if (!text) return;
-    const phone = remoteJid.split('@')[0];
     try {
       const reply = await handleCommand(text, { phone });
       await sock.sendMessage(remoteJid, { text: reply });

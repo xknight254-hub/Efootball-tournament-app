@@ -23,8 +23,17 @@ interface Payment {
   created_at: string; username: string | null; phone: string | null;
   tournament_name: string | null;
 }
+interface ResultReview {
+  id: number; match_id: number; uploader_username: string | null;
+  ocr_score_left: number | null; ocr_score_right: number | null;
+  ocr_team_left: string | null; ocr_team_right: string | null;
+  verification_status: string; verification_confidence: number | null;
+  fraud_score: number | null; screenshot_url: string | null;
+  created_at: string; player1_username: string | null; player2_username: string | null;
+  player1_id: number | null; player2_id: number | null;
+}
 
-type Sub = 'gateway' | 'ai' | 'payments' | 'link';
+type Sub = 'gateway' | 'ai' | 'payments' | 'link' | 'results';
 
 export function WhatsAppAdmin() {
   const [sub, setSub] = useState<Sub>('gateway');
@@ -35,6 +44,13 @@ export function WhatsAppAdmin() {
   const [lowconf, setLowconf] = useState<LowConf[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [resolving, setResolving] = useState<number | null>(null);
+
+  const [results, setResults] = useState<ResultReview[]>([]);
+  const [selectedResult, setSelectedResult] = useState<ResultReview | null>(null);
+  const [resWinner, setResWinner] = useState<number | 0>(0);
+  const [resS1, setResS1] = useState('');
+  const [resS2, setResS2] = useState('');
+  const [resMsg, setResMsg] = useState('');
 
   const [linkUserId, setLinkUserId] = useState('');
   const [linkToken, setLinkToken] = useState('');
@@ -61,9 +77,30 @@ export function WhatsAppAdmin() {
     } catch {}
   }, []);
 
+  const loadResults = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/whatsapp/result-reviews', { headers: auth() });
+      if (r.ok) { const d = await r.json(); setResults(d.items || []); }
+    } catch {}
+  }, []);
+
+  const resolveResult = async (id: number) => {
+    setResMsg('');
+    try {
+      const r = await fetch(`/api/admin/whatsapp/result-reviews/${id}/resolve`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winnerId: resWinner, player1Score: Number(resS1), player2Score: Number(resS2) }),
+      });
+      const d = await r.json();
+      if (r.ok) { setSelectedResult(null); loadResults(); }
+      else setResMsg(d.error || 'Failed');
+    } catch { setResMsg('Network error'); }
+  };
+
   useEffect(() => { if (sub === 'gateway') loadSettings(); }, [sub, loadSettings]);
   useEffect(() => { if (sub === 'ai') loadLowconf(); }, [sub, loadLowconf]);
   useEffect(() => { if (sub === 'payments') loadPayments(); }, [sub, loadPayments]);
+  useEffect(() => { if (sub === 'results') loadResults(); }, [sub, loadResults]);
 
   const saveSettings = async () => {
     try {
@@ -118,6 +155,7 @@ export function WhatsAppAdmin() {
     { key: 'gateway', label: 'Gateway' },
     { key: 'ai', label: 'AI Review', badge: lowconf.length },
     { key: 'payments', label: 'Payments', badge: payments.length },
+    { key: 'results', label: 'Results', badge: results.length },
     { key: 'link', label: 'Link Tokens' },
   ];
 
@@ -219,6 +257,71 @@ export function WhatsAppAdmin() {
             </div>
           ))}
           {payments.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No pending payments</p>}
+        </div>
+      )}
+
+      {sub === 'results' && (
+        <div className="space-y-2">
+          <p className="text-xs text-[var(--color-text-muted)]">{results.length} WhatsApp result submissions pending review</p>
+          {results.map(r => (
+            <div key={r.id} className="p-3 rounded-xl" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm text-white">Match #{r.match_id} — {r.player1_username || 'P1'} vs {r.player2_username || 'P2'}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    OCR {r.ocr_score_left ?? '?'}-{r.ocr_score_right ?? '?'}
+                    {r.ocr_team_left ? ` (${r.ocr_team_left} / ${r.ocr_team_right})` : ''} ·
+                    conf {r.verification_confidence ?? '?'}% · fraud {r.fraud_score ?? '?'}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">by {r.uploader_username || 'unknown'} · {new Date(r.created_at).toLocaleString()}</p>
+                </div>
+                <button onClick={() => { setSelectedResult(r); setResWinner(r.player1_id || 0); setResS1(String(r.ocr_score_left ?? '')); setResS2(String(r.ocr_score_right ?? '')); setResMsg(''); }}
+                  className="px-3 py-1 rounded-lg text-xs font-medium shrink-0"
+                  style={{ background: 'rgba(249,115,22,0.12)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.25)' }}>
+                  Review
+                </button>
+              </div>
+              {r.screenshot_url && (
+                <img src={r.screenshot_url} alt="submission" className="mt-2 rounded-lg max-h-40 object-contain" />
+              )}
+            </div>
+          ))}
+          {results.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No pending result reviews</p>}
+        </div>
+      )}
+
+      {selectedResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedResult(null)}>
+          <div className="rounded-2xl p-5 w-full max-w-md space-y-3" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-white">Resolve Match #{selectedResult.match_id}</h3>
+            {selectedResult.screenshot_url && <img src={selectedResult.screenshot_url} alt="submission" className="rounded-lg max-h-56 object-contain w-full" />}
+            <p className="text-xs text-[var(--color-text-muted)]">
+              OCR: {selectedResult.ocr_score_left ?? '?'}-{selectedResult.ocr_score_right ?? '?'} ·
+              {selectedResult.ocr_team_left || '?'} vs {selectedResult.ocr_team_right || '?'}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-xs text-[var(--color-text-muted)] block mb-1">P1 score</label>
+                <input type="number" value={resS1} onChange={e => setResS1(e.target.value)} className="input-field text-sm w-full" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--color-text-muted)] block mb-1">P2 score</label>
+                <input type="number" value={resS2} onChange={e => setResS2(e.target.value)} className="input-field text-sm w-full" />
+              </div>
+              <div>
+                <label className="text-xs text-[var(--color-text-muted)] block mb-1">Winner</label>
+                <select value={resWinner} onChange={e => setResWinner(Number(e.target.value))} className="input-field text-sm">
+                  <option value={selectedResult.player1_id || 0}>{selectedResult.player1_username || 'P1'}</option>
+                  <option value={selectedResult.player2_id || 0}>{selectedResult.player2_username || 'P2'}</option>
+                </select>
+              </div>
+            </div>
+            {resMsg && <p className="text-xs" style={{ color: '#ef4444' }}>{resMsg}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setSelectedResult(null)} className="px-3 py-1.5 rounded-lg text-xs" style={{ background: 'var(--color-border)', color: 'var(--color-text-muted)' }}>Cancel</button>
+              <Button variant="neon" onClick={() => resolveResult(selectedResult.id)}>Confirm Result</Button>
+            </div>
+          </div>
         </div>
       )}
 

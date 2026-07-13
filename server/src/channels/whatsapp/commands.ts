@@ -1,8 +1,14 @@
 import db from '../../db.js';
 import jwt from 'jsonwebtoken';
+import { createHash } from 'crypto';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join as joinPath } from 'path';
+import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { whatsappConfig } from './config.js';
 import { linkStore } from './linkStore.js';
 import { interpret, interpretWithLLM } from './assistant.js';
+import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
+import { processVerification } from '../../services/verificationService.js';
 
 const JWT_SECRET =
   process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
@@ -311,15 +317,139 @@ function recordPaymentAndJoin(
   return [`💰 Payment recorded for *${t.name}*.`, joined].join('\n');
 }
 
+// ─── Phase 3: WhatsApp result submission ───────────────────────
+// Text-based: `result <matchId> <a>-<b>`. Updates the match for the
+// WhatsApp-linked user and records a result_submissions row so it shows
+// in the admin review queue. The screenshot path (bot.ts) calls the
+// full OCR verification pipeline instead.
+function submitResultText(phone: string, matchId: number, a: number, b: number): string {
+  const userId = linkStore.getUserId(phone);
+  if (!userId) return '❌ Link your TOSS account first with `link <token>`.';
+
+  const m = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId) as any;
+  if (!m) return `❌ Match #${matchId} not found.`;
+  if (m.status === 'completed') return `❌ Match #${matchId} is already completed.`;
+
+  const isP1 = m.player1_id === userId;
+  const isP2 = m.player2_id === userId;
+  if (!isP1 && !isP2) return `❌ You are not a participant in match #${matchId}.`;
+
+  db.prepare(`
+    UPDATE matches SET
+      player1_score = ?, player2_score = ?,
+      submitted_by = ?, submitted_at = CURRENT_TIMESTAMP,
+      status = 'playing'
+    WHERE id = ?
+  `).run(isP1 ? a : m.player1_score, isP2 ? b : m.player2_score, userId, matchId);
+
+  try {
+    db.prepare(`
+      INSERT INTO result_submissions (match_id, uploader_id, ocr_score_left, ocr_score_right, verification_status, team_match_result)
+      VALUES (?, ?, ?, ?, 'pending', 'both')
+    `).run(matchId, userId, a, b);
+  } catch (e) { console.error('[whatsapp] result submit', (e as Error).message); }
+
+  try {
+    const oppId = isP1 ? m.player2_id : m.player1_id;
+    if (oppId) {
+      db.prepare(`INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, 'result')`)
+        .run(oppId, 'Result Submitted', `A result for match #${matchId} was submitted via WhatsApp. Confirm or dispute.`, 'result');
+    }
+  } catch { /* ignore */ }
+
+  const decisive = a !== b;
+  const winnerLine = decisive
+    ? `Winner: *${a > b ? (isP1 ? 'you' : 'opponent') : (isP1 ? 'opponent' : 'you')}*.`
+    : `It's a draw — awaiting confirmation.`;
+  return [
+    `✅ Result submitted for match #${matchId}: *${a} - ${b}*.`,
+    winnerLine,
+    `Send a screenshot of the final score to auto-verify.`,
+  ].join('\n');
+}
+
+// ─── Phase 3: WhatsApp screenshot result (OCR verification) ────
+// User sends a screenshot of the final score with an optional caption
+// `result <matchId>`. We download the image, OCR it, and run the existing
+// verification pipeline (team validation + fraud + confidence). The match
+// is auto-approved on high confidence, otherwise escalated for review.
+export async function handleResultScreenshot(
+  sock: any,
+  remoteJid: string,
+  phone: string,
+  msg: any,
+  caption: string
+): Promise<string> {
+  const userId = linkStore.getUserId(phone);
+  if (!userId) return '❌ Link your TOSS account first with `link <token>` before submitting results.';
+
+  const matchIdMatch = caption.match(/result\s+(\d+)/i);
+  if (!matchIdMatch) {
+    return '📸 Got your screenshot. To verify a result, send it with a caption: `result <matchId>` (e.g. `result 15`).';
+  }
+  const matchId = Number(matchIdMatch[1]);
+  const fixture = db.prepare('SELECT id, player1_id, player2_id, player1_team, player2_team, status FROM matches WHERE id = ?').get(matchId) as any;
+  if (!fixture) return `❌ Match #${matchId} not found.`;
+  if (fixture.status === 'completed') return `❌ Match #${matchId} is already completed.`;
+  if (fixture.player1_id !== userId && fixture.player2_id !== userId)
+    return `❌ You are not a participant in match #${matchId}.`;
+
+  try {
+    const stream = await downloadContentFromMessage(msg.imageMessage, 'image');
+    const chunks: Buffer[] = [];
+    for await (const c of stream) chunks.push(c as Buffer);
+    const buffer = Buffer.concat(chunks);
+
+    // Persist locally so it's viewable in the admin console.
+    const hash = createHash('sha256').update(buffer).digest('hex');
+    const dir = joinPath(__dirname, '..', '..', '..', 'client', 'public', 'screenshots', 'whatsapp');
+    mkdirSync(dir, { recursive: true });
+    const rel = `/screenshots/whatsapp/${hash}.jpg`;
+    writeFileSync(joinPath(dir, `${hash}.jpg`), buffer);
+
+    // OCR
+    const w = await getWorker();
+    const { data: { text } } = await w.recognize(buffer);
+    const parsed = parseEFOTBScreenshot(text);
+
+    const ocrTeams = {
+      leftTeam: parsed.player1Name,
+      rightTeam: parsed.player2Name,
+      leftScore: parsed.player1Score,
+      rightScore: parsed.player2Score,
+      matchTime: parsed.matchTime,
+      rawText: text,
+      ocrConfidence: parsed.confidence,
+    };
+
+    const result = await processVerification(matchId, userId, rel, buffer, ocrTeams as any);
+
+    if (result.status === 'auto_approved') {
+      return `✅ Result auto-verified for match #${matchId} (${result.player1Score}-${result.player2Score}). Confidence ${result.overallConfidence}%.`;
+    }
+    if (result.status === 'rejected') {
+      return `⚠️ Submission rejected (fraud score ${result.fraudCheck.score}). An admin will review.`;
+    }
+    if (result.status === 'opponent_review') {
+      return `🔍 Screenshot verified at ${result.overallConfidence}% confidence. Awaiting opponent confirmation.`;
+    }
+    return `🔍 Submitted for admin review (confidence ${result.overallConfidence}%). You'll be notified when resolved.`;
+  } catch (e: any) {
+    console.error('[whatsapp] OCR failed', e?.message);
+    return '❌ Could not read the screenshot. Make sure it clearly shows the final score screen and resend.';
+  }
+}
+
 export async function handleCommand(
   text: string,
   ctx: Ctx
 ): Promise<string> {
   const raw = (text || '').trim();
   if (!raw) return help();
+
   const [cmd, ...rest] = raw.split(/\s+/);
   const arg = rest.join(' ').trim();
-  const known = ['help','start','link','table','tournaments','rank','rankings','fixtures','me','join','pay'];
+  const known = ['help','start','link','table','tournaments','rank','rankings','fixtures','me','join','pay','result'];
   if (known.includes(cmd.toLowerCase())) {
     switch (cmd.toLowerCase()) {
       case 'help':
@@ -341,6 +471,12 @@ export async function handleCommand(
         return join(ctx.phone, arg);
       case 'pay':
         return pay(ctx.phone, arg);
+      case 'result': {
+        // result <matchId> <a>-<b>  (e.g. "result 15 3-1")
+        const m = arg.match(/^(\d+)\s+(\d+)\s*[-–—:]\s*(\d+)$/);
+        if (!m) return '❌ Usage: `result <matchId> <scoreA>-<scoreB>` (e.g. `result 15 3-1`).';
+        return submitResultText(ctx.phone, Number(m[1]), Number(m[2]), Number(m[3]));
+      }
     }
   }
 
