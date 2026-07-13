@@ -410,6 +410,22 @@ async function initDBInternal() {
     }
     catch { /* column exists */ }
     try {
+        sqlDb.run('ALTER TABLE matches ADD COLUMN scheduled_time DATETIME');
+    }
+    catch { /* column exists */ }
+    try {
+        sqlDb.run('ALTER TABLE whatsapp_settings ADD COLUMN reminder_enabled INTEGER DEFAULT 1');
+    }
+    catch { /* column exists */ }
+    try {
+        sqlDb.run('ALTER TABLE whatsapp_settings ADD COLUMN status_enabled INTEGER DEFAULT 0');
+    }
+    catch { /* column exists */ }
+    try {
+        sqlDb.run('ALTER TABLE whatsapp_settings ADD COLUMN reminder_hours INTEGER DEFAULT 1');
+    }
+    catch { /* column exists */ }
+    try {
         sqlDb.run('ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT \'{}\'');
     }
     catch { /* column exists */ }

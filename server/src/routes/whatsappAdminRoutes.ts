@@ -9,6 +9,7 @@ import {
   hasApiKey,
 } from '../channels/whatsapp/whatsappSettings.js';
 import { whatsappConfig, JWT_SECRET } from '../channels/whatsapp/config.js';
+import { publishAdminStatus, triggerReminders } from '../channels/whatsapp/bot.js';
 
 const router = Router();
 
@@ -38,11 +39,37 @@ router.put('/settings', (req, res) => {
   if (typeof body.aiModel === 'string') patch.aiModel = body.aiModel.trim();
   if ('broadcastGroupJid' in body) patch.broadcastGroupJid = body.broadcastGroupJid || null;
   if (typeof body.enabled === 'boolean') patch.enabled = body.enabled;
+  if (typeof body.reminderEnabled === 'boolean') patch.reminderEnabled = body.reminderEnabled;
+  if (typeof body.statusEnabled === 'boolean') patch.statusEnabled = body.statusEnabled;
+  if (Number.isFinite(Number(body.reminderHours))) patch.reminderHours = Number(body.reminderHours);
   try {
     const next = updateSettings(patch);
     res.json(next);
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Failed to update settings' });
+  }
+});
+
+// ─── WhatsApp Status publish (admin-triggered) ───
+router.post('/status', async (req, res) => {
+  const text = (req.body?.text as string) || '';
+  if (!text.trim()) return res.status(400).json({ error: 'text required' });
+  try {
+    const ok = await publishAdminStatus(text);
+    if (ok) res.json({ ok: true });
+    else res.status(409).json({ error: 'WhatsApp channel not connected' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Run reminder sweep immediately (admin-triggered) ───
+router.post('/reminders/run', async (req, res) => {
+  try {
+    const sent = await triggerReminders();
+    res.json({ ok: true, sent });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 

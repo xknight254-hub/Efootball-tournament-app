@@ -20,9 +20,28 @@ import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
 import { processVerification } from '../../services/verificationService.js';
 import db from '../../db.js';
 import { linkStore } from './linkStore.js';
+import { getSettings } from './whatsappSettings.js';
+import { publishStatus, startReminderScheduler, runReminderCheck } from './whatsappNotify.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', 'client', 'public', 'screenshots', 'whatsapp');
+
+// Live Baileys socket, set once connected. Lets the admin API publish Status
+// updates and trigger reminders without a second socket.
+let whatsappSock: any = null;
+export function getWhatsAppSock(): any { return whatsappSock; }
+
+/** Publish a message to the TOSS WhatsApp Status (admin-triggered). */
+export async function publishAdminStatus(text: string): Promise<boolean> {
+  if (!whatsappSock) return false;
+  return publishStatus(whatsappSock, text);
+}
+
+/** Run the reminder sweep immediately (admin-triggered). */
+export async function triggerReminders(): Promise<number> {
+  if (!whatsappSock) return 0;
+  return runReminderCheck(whatsappSock);
+}
 
 // One Baileys session for the TOSS product (separate number/process from
 // any BusinessOS Baileys instance). In-process: reads the same DB and the
@@ -65,6 +84,7 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     } else if (connection === 'open') {
       logger.info('WhatsApp channel connected');
       setConnectionState('connected');
+      whatsappSock = sock;
     }
   });
 
@@ -110,6 +130,12 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     } catch (e: any) {
       logger.error({ err: e?.message }, 'broadcast failed');
     }
+    // Optionally mirror important announcements to WhatsApp Status.
+    if (getSettings().statusEnabled) {
+      try { await publishStatus(sock, msg); } catch (e: any) {
+        logger.error({ err: e?.message }, 'status publish failed');
+      }
+    }
   };
 
   io.on('tournament:created', (d: any) =>
@@ -129,4 +155,5 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
   );
 
   logger.info('WhatsApp channel initialized (events subscribed)');
+  startReminderScheduler(sock);
 }

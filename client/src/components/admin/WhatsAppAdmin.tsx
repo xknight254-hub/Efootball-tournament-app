@@ -13,6 +13,9 @@ interface Settings {
   hasApiKey: boolean;
   connectionState: string;
   modelOptions: string[];
+  reminderEnabled: boolean;
+  statusEnabled: boolean;
+  reminderHours: number;
 }
 
 interface LowConf { id: number; details: string; payload: string; created_at: string; }
@@ -146,6 +149,32 @@ export function WhatsAppAdmin() {
     } catch { setLinkMsg('Network error'); }
   };
 
+  const [statusText, setStatusText] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
+  const publishStatus = async () => {
+    setStatusMsg('');
+    try {
+      const r = await fetch('/api/admin/whatsapp/status', {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: statusText }),
+      });
+      const d = await r.json();
+      if (r.ok) { setStatusMsg('Published'); setStatusText(''); }
+      else setStatusMsg(d.error || 'Failed');
+    } catch { setStatusMsg('Network error'); }
+  };
+
+  const [reminderMsg, setReminderMsg] = useState('');
+  const runReminders = async () => {
+    setReminderMsg('');
+    try {
+      const r = await fetch('/api/admin/whatsapp/reminders/run', { method: 'POST', headers: auth() });
+      const d = await r.json();
+      if (r.ok) setReminderMsg(`Sent ${d.sent} reminder(s)`);
+      else setReminderMsg(d.error || 'Failed');
+    } catch { setReminderMsg('Network error'); }
+  };
+
   const connColor: Record<string, string> = {
     connected: '#22c55e', qr: '#f59e0b', disconnected: '#ef4444',
     logged_out: '#ef4444', unknown: '#71717a',
@@ -206,6 +235,29 @@ export function WhatsAppAdmin() {
               </select>
             </div>
             <Field label="Broadcast group JID (optional)" value={form.broadcastGroupJid || ''} onChange={v => setForm({ ...form, broadcastGroupJid: v || null })} placeholder="e.g. 1234567890-abcdef@g.us" />
+            <div className="pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Reminders & Status</p>
+              <Toggle label="Send result-due reminders (every 15 min)" value={!!form.reminderEnabled} onChange={v => setForm({ ...form, reminderEnabled: v })} />
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex-1">
+                  <Field label="Reminder after (hours, no result)" value={String(form.reminderHours ?? 1)} onChange={v => setForm({ ...form, reminderHours: Number(v) || 1 })} placeholder="1" />
+                </div>
+                <Button variant="neon" onClick={runReminders}>Run now</Button>
+              </div>
+              {reminderMsg && <p className="text-xs" style={{ color: reminderMsg.includes('Failed') ? '#ef4444' : '#22c55e' }}>{reminderMsg}</p>}
+              <div className="mt-2">
+                <Toggle label="Publish broadcasts to WhatsApp Status" value={!!form.statusEnabled} onChange={v => setForm({ ...form, statusEnabled: v })} />
+              </div>
+              <div className="mt-3 rounded-lg p-3" style={{ background: 'var(--color-bg-surface)' }}>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Post to WhatsApp Status (manual)</p>
+                <textarea value={statusText} onChange={e => setStatusText(e.target.value)} rows={3} placeholder="Tournament finals live now! Watch on TOSS..."
+                  className="input-field text-sm w-full resize-none" />
+                <div className="flex items-center gap-2 mt-2">
+                  <Button variant="neon" onClick={publishStatus}>Publish</Button>
+                  {statusMsg && <span className="text-xs" style={{ color: statusMsg.includes('Failed') || statusMsg.includes('error') ? '#ef4444' : '#22c55e' }}>{statusMsg}</span>}
+                </div>
+              </div>
+            </div>
             <div className="flex items-center gap-3 pt-2">
               <Button variant="neon" onClick={saveSettings}>Save</Button>
               {saved && <span className="text-xs" style={{ color: saved.includes('Failed') || saved.includes('error') ? '#ef4444' : '#22c55e' }}>{saved}</span>}

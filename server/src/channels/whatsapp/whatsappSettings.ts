@@ -12,6 +12,9 @@ export interface WhatsAppSettings {
   aiEnabled: boolean;
   aiModel: string;
   broadcastGroupJid: string | null;
+  reminderEnabled: boolean;
+  statusEnabled: boolean;
+  reminderHours: number;
 }
 
 const DEFAULTS: WhatsAppSettings = {
@@ -20,6 +23,9 @@ const DEFAULTS: WhatsAppSettings = {
   aiEnabled: process.env.WHATSAPP_AI_ENABLED === 'true',
   aiModel: process.env.WHATSAPP_AI_MODEL || 'oc/deepseek-v4-flash-free',
   broadcastGroupJid: process.env.WHATSAPP_BROADCAST_GROUP_JID || null,
+  reminderEnabled: process.env.WHATSAPP_REMINDER_ENABLED !== 'false',
+  statusEnabled: process.env.WHATSAPP_STATUS_ENABLED === 'true',
+  reminderHours: Number(process.env.WHATSAPP_REMINDER_HOURS || 1),
 };
 
 let cache: WhatsAppSettings | null = null;
@@ -28,14 +34,17 @@ function ensureRow(): void {
   const row = db.prepare('SELECT * FROM whatsapp_settings WHERE id = 1').get() as any;
   if (!row) {
     db.prepare(
-      `INSERT INTO whatsapp_settings (id, enabled, mpesa_till, ai_enabled, ai_model, broadcast_group_jid)
-       VALUES (1, ?, ?, ?, ?, ?)`
+      `INSERT INTO whatsapp_settings (id, enabled, mpesa_till, ai_enabled, ai_model, broadcast_group_jid, reminder_enabled, status_enabled, reminder_hours)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       DEFAULTS.enabled ? 1 : 0,
       DEFAULTS.mpesaTill,
       DEFAULTS.aiEnabled ? 1 : 0,
       DEFAULTS.aiModel,
-      DEFAULTS.broadcastGroupJid
+      DEFAULTS.broadcastGroupJid,
+      DEFAULTS.reminderEnabled ? 1 : 0,
+      DEFAULTS.statusEnabled ? 1 : 0,
+      DEFAULTS.reminderHours
     );
   }
 }
@@ -50,6 +59,9 @@ export function getSettings(): WhatsAppSettings {
     aiEnabled: !!row.ai_enabled,
     aiModel: row.ai_model || DEFAULTS.aiModel,
     broadcastGroupJid: row.broadcast_group_jid || null,
+    reminderEnabled: row.reminder_enabled ? true : false,
+    statusEnabled: row.status_enabled ? true : false,
+    reminderHours: Number(row.reminder_hours || 1),
   };
   return cache;
 }
@@ -60,14 +72,17 @@ export function updateSettings(patch: Partial<WhatsAppSettings>): WhatsAppSettin
   const next: WhatsAppSettings = { ...cur, ...patch };
   db.prepare(
     `UPDATE whatsapp_settings
-     SET enabled = ?, mpesa_till = ?, ai_enabled = ?, ai_model = ?, broadcast_group_jid = ?
+     SET enabled = ?, mpesa_till = ?, ai_enabled = ?, ai_model = ?, broadcast_group_jid = ?, reminder_enabled = ?, status_enabled = ?, reminder_hours = ?
      WHERE id = 1`
   ).run(
     next.enabled ? 1 : 0,
     next.mpesaTill,
     next.aiEnabled ? 1 : 0,
     next.aiModel,
-    next.broadcastGroupJid
+    next.broadcastGroupJid,
+    next.reminderEnabled ? 1 : 0,
+    next.statusEnabled ? 1 : 0,
+    next.reminderHours
   );
   cache = next;
   // Apply to the live config so the channel reacts without a restart.
