@@ -14,7 +14,8 @@ import matchRoutes from './routes/matchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import redeemCodeRoutes from './routes/redeemCodeRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
-import { initializeSocket } from './socket/index.js';
+import { initializeSocket, getIO } from './socket/index.js';
+import { startWhatsAppChannel } from './channels/whatsapp/bot.js';
 import wagerRoutes from './routes/wagerRoutes.js';
 import paynectaWebhookRoutes from './routes/paynectaWebhookRoutes.js';
 import deepLinkRoutes from './routes/deepLinkRoutes.js';
@@ -140,6 +141,13 @@ app.use((req, res) => {
 
 const server = createServer(app);
 initializeSocket(server);
+
+// WhatsApp channel (Phase 1). Inert unless WHATSAPP_ENABLED=true.
+if (process.env.WHATSAPP_ENABLED === 'true') {
+  startWhatsAppChannel(getIO()).catch((e) =>
+    console.error('[WhatsApp] failed to start:', e.message)
+  );
+}
 
 server.listen(PORT, () => {
   console.log(`[Server] Running on http://localhost:${PORT}`);
