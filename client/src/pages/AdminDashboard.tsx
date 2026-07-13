@@ -5,6 +5,7 @@ import { api } from '../api';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
+import { WhatsAppAdmin } from '../components/admin/WhatsAppAdmin';
 
 interface AdminStats {
   stats: { userCount: number; tournamentCount: number; matchCount: number; participantCount: number };
@@ -37,7 +38,7 @@ interface AdminCode {
 
 interface CodeStats { total: number; active: number; used: number; deactivated: number; }
 
-type Tab = 'overview' | 'users' | 'tournaments' | 'logs' | 'codes';
+type Tab = 'overview' | 'users' | 'tournaments' | 'logs' | 'whatsapp' | 'codes';
 
 export function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -176,6 +177,7 @@ export function AdminDashboard() {
     { key: 'users', label: 'Users' },
     { key: 'tournaments', label: 'Tournaments' },
     { key: 'logs', label: 'Logs' },
+    { key: 'whatsapp', label: 'WhatsApp' },
     { key: 'codes', label: 'Admin Codes', superOnly: true },
   ];
 
@@ -370,6 +372,11 @@ export function AdminDashboard() {
             {logs.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No logs yet</p>}
           </div>
         </div>
+      )}
+
+      {/* ==================== WHATSAPP GATEWAY ==================== */}
+      {tab === 'whatsapp' && (
+        <WhatsAppAdmin />
       )}
 
       {/* ==================== ADMIN CODES (SUPER ADMIN ONLY) ==================== */}

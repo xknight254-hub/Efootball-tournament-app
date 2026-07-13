@@ -11,6 +11,7 @@ import pino from 'pino';
 import type { Server as SocketIOServer } from 'socket.io';
 import { whatsappConfig } from './config.js';
 import { handleCommand } from './commands.js';
+import { setConnectionState } from './whatsappSettings.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -39,19 +40,22 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
-    if (qr) logger.info('Scan the QR above to pair WhatsApp');
+    if (qr) { logger.info('Scan the QR above to pair WhatsApp'); setConnectionState('qr'); }
     if (connection === 'close') {
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
       if (reason !== DisconnectReason.loggedOut) {
         logger.warn('WhatsApp disconnected, retrying...');
+        setConnectionState('disconnected');
         startWhatsAppChannel(io).catch((e) =>
           logger.error({ err: e.message }, 'reconnect failed')
         );
       } else {
         logger.error('WhatsApp logged out — re-pair required');
+        setConnectionState('logged_out');
       }
     } else if (connection === 'open') {
       logger.info('WhatsApp channel connected');
+      setConnectionState('connected');
     }
   });
 

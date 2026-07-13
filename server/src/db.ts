@@ -222,6 +222,15 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS whatsapp_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER DEFAULT 0,
+      mpesa_till TEXT DEFAULT '',
+      ai_enabled INTEGER DEFAULT 0,
+      ai_model TEXT DEFAULT 'oc/deepseek-v4-flash-free',
+      broadcast_group_jid TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS wager_challenges (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       creator_id INTEGER NOT NULL,
@@ -349,6 +358,17 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
   try { sqlDb.run('ALTER TABLE users ADD COLUMN is_organizer INTEGER DEFAULT 0'); } catch { /* column exists */ }
 
   try { sqlDb.run('ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT \'{}\''); } catch { /* column exists */ }
+
+  // ─── WhatsApp admin-console support (Phase 2 review queues) ───
+  try { sqlDb.run('ALTER TABLE admin_logs ADD COLUMN whatsapp_ai_lowconf INTEGER DEFAULT 0'); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE admin_logs ADD COLUMN whatsapp_pay_review INTEGER DEFAULT 0'); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE admin_logs ADD COLUMN payload TEXT'); } catch { /* exists */ }
+
+  try { sqlDb.run('ALTER TABLE tournament_payments ADD COLUMN checkout_request_id TEXT'); } catch { /* exists */ }
+  try { sqlDb.run("ALTER TABLE tournament_payments ADD COLUMN source TEXT DEFAULT 'mpesa_stk'"); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE tournament_payments ADD COLUMN verified_by INTEGER'); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE tournament_payments ADD COLUMN verified_at DATETIME'); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE tournament_payments ADD COLUMN review_note TEXT'); } catch { /* exists */ }
 
   // Seed default subscription tiers
   const tierCount = sqlDb.exec("SELECT COUNT(*) as c FROM subscription_tiers")[0]?.values[0]?.[0] || 0;

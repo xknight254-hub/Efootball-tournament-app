@@ -1,0 +1,270 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '../ui/Button';
+
+const token = () => localStorage.getItem('token') || '';
+const auth = () => ({ Authorization: `Bearer ${token()}` });
+
+interface Settings {
+  enabled: boolean;
+  mpesaTill: string;
+  aiEnabled: boolean;
+  aiModel: string;
+  broadcastGroupJid: string | null;
+  hasApiKey: boolean;
+  connectionState: string;
+  modelOptions: string[];
+}
+
+interface LowConf { id: number; details: string; payload: string; created_at: string; }
+interface Payment {
+  id: number; user_id: number; tournament_id: number; amount: number;
+  receipt_code: string | null; till: string | null; status: string;
+  source: string | null; verified_by: number | null; review_note: string | null;
+  created_at: string; username: string | null; phone: string | null;
+  tournament_name: string | null;
+}
+
+type Sub = 'gateway' | 'ai' | 'payments' | 'link';
+
+export function WhatsAppAdmin() {
+  const [sub, setSub] = useState<Sub>('gateway');
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [form, setForm] = useState<Partial<Settings>>({});
+  const [saved, setSaved] = useState('');
+
+  const [lowconf, setLowconf] = useState<LowConf[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [resolving, setResolving] = useState<number | null>(null);
+
+  const [linkUserId, setLinkUserId] = useState('');
+  const [linkToken, setLinkToken] = useState('');
+  const [linkMsg, setLinkMsg] = useState('');
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/whatsapp/settings', { headers: auth() });
+      if (r.ok) { const d = await r.json(); setSettings(d); setForm(d); }
+    } catch {}
+  }, []);
+
+  const loadLowconf = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/whatsapp/lowconf', { headers: auth() });
+      if (r.ok) { const d = await r.json(); setLowconf(d.items || []); }
+    } catch {}
+  }, []);
+
+  const loadPayments = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/whatsapp/payments?status=pending', { headers: auth() });
+      if (r.ok) { const d = await r.json(); setPayments(d.items || []); }
+    } catch {}
+  }, []);
+
+  useEffect(() => { if (sub === 'gateway') loadSettings(); }, [sub, loadSettings]);
+  useEffect(() => { if (sub === 'ai') loadLowconf(); }, [sub, loadLowconf]);
+  useEffect(() => { if (sub === 'payments') loadPayments(); }, [sub, loadPayments]);
+
+  const saveSettings = async () => {
+    try {
+      const r = await fetch('/api/admin/whatsapp/settings', {
+        method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (r.ok) { setSaved('Saved'); setSettings(await r.json()); setTimeout(() => setSaved(''), 2500); }
+      else setSaved('Failed to save');
+    } catch { setSaved('Network error'); }
+  };
+
+  const resolveLowconf = async (id: number) => {
+    setResolving(id);
+    try {
+      await fetch(`/api/admin/whatsapp/lowconf/${id}/resolve`, { method: 'POST', headers: auth() });
+      loadLowconf();
+    } catch {} finally { setResolving(null); }
+  };
+
+  const verifyPayment = async (id: number) => {
+    try {
+      await fetch(`/api/admin/whatsapp/payments/${id}/verify`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: 'Verified by admin (WhatsApp-reported M-Pesa)' }),
+      });
+      loadPayments();
+    } catch {}
+  };
+
+  const genLink = async () => {
+    setLinkMsg(''); setLinkToken('');
+    const uid = parseInt(linkUserId);
+    if (!uid) { setLinkMsg('Enter a valid user ID'); return; }
+    try {
+      const r = await fetch('/api/admin/whatsapp/link-token', {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid }),
+      });
+      const d = await r.json();
+      if (r.ok) setLinkToken(d.token);
+      else setLinkMsg(d.error || 'Failed');
+    } catch { setLinkMsg('Network error'); }
+  };
+
+  const connColor: Record<string, string> = {
+    connected: '#22c55e', qr: '#f59e0b', disconnected: '#ef4444',
+    logged_out: '#ef4444', unknown: '#71717a',
+  };
+
+  const subs: { key: Sub; label: string; badge?: number }[] = [
+    { key: 'gateway', label: 'Gateway' },
+    { key: 'ai', label: 'AI Review', badge: lowconf.length },
+    { key: 'payments', label: 'Payments', badge: payments.length },
+    { key: 'link', label: 'Link Tokens' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 p-1 rounded-xl flex-wrap" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+        {subs.map(s => (
+          <button key={s.key} onClick={() => setSub(s.key)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider"
+            style={sub === s.key ? { background: 'rgba(249,115,22,0.15)', color: '#fff' } : { color: 'var(--color-text-muted)' }}>
+            {s.label}
+            {s.badge ? <span className="px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: '#ef4444', color: '#fff' }}>{s.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      {sub === 'gateway' && (
+        <div className="space-y-4">
+          {settings && (
+            <div className="rounded-xl p-5 space-y-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-white">Gateway Status</h3>
+                <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: `${connColor[settings.connectionState] || '#71717a'}20`, color: connColor[settings.connectionState] || '#71717a' }}>
+                  {settings.connectionState}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-3 rounded-lg" style={{ background: 'var(--color-bg-surface)' }}>
+                  <p className="text-xs text-[var(--color-text-muted)]">AI Key</p>
+                  <p className="text-white font-medium">{settings.hasApiKey ? 'Configured' : 'Missing'}</p>
+                </div>
+                <div className="p-3 rounded-lg" style={{ background: 'var(--color-bg-surface)' }}>
+                  <p className="text-xs text-[var(--color-text-muted)]">Channel</p>
+                  <p className="text-white font-medium">{settings.enabled ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="rounded-xl p-5 space-y-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-base font-semibold text-white">Configuration</h3>
+            <Toggle label="WhatsApp channel enabled" value={!!form.enabled} onChange={v => setForm({ ...form, enabled: v })} />
+            <Field label="M-Pesa Till (payments must reference this)" value={form.mpesaTill || ''} onChange={v => setForm({ ...form, mpesaTill: v })} placeholder="e.g. 123456" />
+            <Toggle label="AI assistant (Omniroute intent extraction)" value={!!form.aiEnabled} onChange={v => setForm({ ...form, aiEnabled: v })} />
+            <div>
+              <label className="text-xs font-medium text-[var(--color-text-muted)] block mb-1">AI Model</label>
+              <select value={form.aiModel || ''} onChange={e => setForm({ ...form, aiModel: e.target.value })} className="input-field text-sm">
+                {(settings?.modelOptions || ['oc/deepseek-v4-flash-free']).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <Field label="Broadcast group JID (optional)" value={form.broadcastGroupJid || ''} onChange={v => setForm({ ...form, broadcastGroupJid: v || null })} placeholder="e.g. 1234567890-abcdef@g.us" />
+            <div className="flex items-center gap-3 pt-2">
+              <Button variant="neon" onClick={saveSettings}>Save</Button>
+              {saved && <span className="text-xs" style={{ color: saved.includes('Failed') || saved.includes('error') ? '#ef4444' : '#22c55e' }}>{saved}</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sub === 'ai' && (
+        <div className="space-y-2">
+          <p className="text-xs text-[var(--color-text-muted)]">{lowconf.length} low-confidence messages awaiting review</p>
+          {lowconf.map(l => {
+            let parsed: any = {};
+            try { parsed = JSON.parse(l.payload || '{}'); } catch {}
+            return (
+              <div key={l.id} className="p-3 rounded-xl" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white break-words">{(parsed.text as string) || l.details}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">from {parsed.phone || 'unknown'} · {new Date(l.created_at).toLocaleString()}</p>
+                  </div>
+                  <button onClick={() => resolveLowconf(l.id)} disabled={resolving === l.id}
+                    className="px-3 py-1 rounded-lg text-xs font-medium shrink-0"
+                    style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                    {resolving === l.id ? '...' : 'Resolve'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {lowconf.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No pending AI reviews</p>}
+        </div>
+      )}
+
+      {sub === 'payments' && (
+        <div className="space-y-2">
+          <p className="text-xs text-[var(--color-text-muted)]">{payments.length} WhatsApp-reported payments pending verification</p>
+          {payments.map(p => (
+            <div key={p.id} className="p-3 rounded-xl flex items-center justify-between gap-2" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+              <div className="min-w-0">
+                <p className="text-sm text-white">User {p.username || p.user_id} · Tournament {p.tournament_name || p.tournament_id}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Ksh {p.amount} · Receipt {p.receipt_code || 'n/a'} · Till {p.till || 'n/a'} · {new Date(p.created_at).toLocaleString()}</p>
+              </div>
+              <button onClick={() => verifyPayment(p.id)}
+                className="px-3 py-1 rounded-lg text-xs font-medium shrink-0"
+                style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
+                Verify
+              </button>
+            </div>
+          ))}
+          {payments.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No pending payments</p>}
+        </div>
+      )}
+
+      {sub === 'link' && (
+        <div className="rounded-xl p-5 space-y-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+          <h3 className="text-base font-semibold text-white">Generate Link Token</h3>
+          <p className="text-xs text-[var(--color-text-muted)]">Mint a token an existing app user pastes in WhatsApp as <code>link &lt;token&gt;</code> to bind their account.</p>
+          <div className="flex gap-2">
+            <input type="number" value={linkUserId} onChange={e => setLinkUserId(e.target.value)} placeholder="User ID"
+              className="input-field text-sm w-32" />
+            <Button variant="neon" onClick={genLink}>Generate</Button>
+          </div>
+          {linkMsg && <p className="text-xs" style={{ color: '#ef4444' }}>{linkMsg}</p>}
+          {linkToken && (
+            <div className="p-3 rounded-lg" style={{ background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.15)' }}>
+              <p className="text-xs text-[var(--color-text-muted)] mb-1">Token (expires in 7 days):</p>
+              <code className="text-sm text-[#fb923c] break-all">{linkToken}</code>
+              <button onClick={() => navigator.clipboard?.writeText(linkToken)}
+                className="ml-3 px-2 py-1 rounded text-xs" style={{ background: 'rgba(249,115,22,0.15)', color: '#fb923c' }}>Copy</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between py-1">
+      <span className="text-sm text-[var(--color-text-secondary)]">{label}</span>
+      <button onClick={() => onChange(!value)}
+        className="w-12 h-6 rounded-full transition-colors relative"
+        style={{ background: value ? '#F97316' : 'var(--color-border)' }}>
+        <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: value ? '22px' : '2px' }} />
+      </button>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-[var(--color-text-muted)] block mb-1">{label}</label>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="input-field text-sm w-full" />
+    </div>
+  );
+}

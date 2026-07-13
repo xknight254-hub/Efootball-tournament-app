@@ -256,11 +256,12 @@ async function pay(phone: string, text: string): Promise<string> {
   linkStore.set(phone, user.id);
   try {
     db.prepare(
-      "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_signup', ?)"
+      "INSERT INTO admin_logs (admin_id, action, details, whatsapp_pay_review, payload) VALUES ('system', 'whatsapp_pay_signup', ?, 1, ?)"
     ).run(
-      `phone=${normalizePhone(phone)} till=${msgTill || 'n/a'} receipt=${receipt} amount=${amount} user=${user.id}`
+      `phone=${normalizePhone(phone)} till=${msgTill || 'n/a'} receipt=${receipt} amount=${amount} user=${user.id}`,
+      JSON.stringify({ phone: normalizePhone(phone), receipt, till: msgTill || null, amount, userId: user.id, type: 'signup' })
     );
-  } catch { /* admin_logs optional */ }
+  } catch (e) { console.error('[whatsapp] log signup', (e as Error).message); }
   return [
     `✅ *Account created*`,
     `User ID: *${user.id}*`,
@@ -298,9 +299,10 @@ function recordPaymentAndJoin(
   const joined = doJoin(userId, t);
   try {
     db.prepare(
-      "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_join', ?)"
-    ).run(`phone=${normalizePhone(phone)} user=${userId} tournament=${t.id} receipt=${receipt}`);
-  } catch { /* admin_logs optional */ }
+      "INSERT INTO admin_logs (admin_id, action, details, whatsapp_pay_review, payload) VALUES ('system', 'whatsapp_pay_join', ?, 1, ?)"
+    ).run(`phone=${normalizePhone(phone)} user=${userId} tournament=${t.id} receipt=${receipt}`,
+      JSON.stringify({ phone: normalizePhone(phone), userId, tournamentId: t.id, receipt, type: 'join' }));
+  } catch (e) { console.error('[whatsapp] log join', (e as Error).message); }
   return [`💰 Payment recorded for *${t.name}*.`, joined].join('\n');
 }
 
@@ -354,9 +356,10 @@ export async function handleCommand(
     if (intent.needsReview) {
       try {
         db.prepare(
-          "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_ai_lowconf', ?)"
-        ).run(`phone=${normalizePhone(ctx.phone)} text=${raw.slice(0,200)}`);
-      } catch { /* optional */ }
+          "INSERT INTO admin_logs (admin_id, action, details, whatsapp_ai_lowconf, payload) VALUES ('system', 'whatsapp_ai_lowconf', ?, 1, ?)"
+        ).run(`phone=${normalizePhone(ctx.phone)} text=${raw.slice(0,200)}`,
+          JSON.stringify({ phone: normalizePhone(ctx.phone), text: raw.slice(0, 500), type: 'lowconf' }));
+      } catch (e) { console.error('[whatsapp] log lowconf', (e as Error).message); }
     }
     return intent.clarification;
   }

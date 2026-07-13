@@ -22,11 +22,14 @@ export const whatsappConfig = {
   mpesaTill: process.env.WHATSAPP_MPESA_TILL || '',
   // Phase 2 AI assistant — Omniroute (OpenAI-compatible gateway) model.
   // When `aiEnabled` is true AND a key is present, free-text is routed
-  // through the LLM for intent extraction, then executed by the same
-  // deterministic handlers (the LLM never returns user-facing data).
+  // through interpretWithLLM(); otherwise the offline deterministic rules run.
   aiEnabled: process.env.WHATSAPP_AI_ENABLED === 'true',
   omnirouteKey: process.env.OMNIROUTE_API_KEY || '',
   omnirouteBase:
     process.env.OMNIROUTE_BASE_URL || 'http://178.105.198.217:20128/api/v1',
   aiModel: process.env.WHATSAPP_AI_MODEL || 'oc/deepseek-v4-flash-free',
 };
+
+// Shared JWT secret (same value used by the WhatsApp link command).
+export const JWT_SECRET =
+  process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
