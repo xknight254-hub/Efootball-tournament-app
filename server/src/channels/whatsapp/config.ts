@@ -20,4 +20,13 @@ export const whatsappConfig = {
   // is only treated as payment when it references this till (so a stranger's
   // random M-Pesa SMS can't mint an account). Empty = accept any till.
   mpesaTill: process.env.WHATSAPP_MPESA_TILL || '',
+  // Phase 2 AI assistant — Omniroute (OpenAI-compatible gateway) model.
+  // When `aiEnabled` is true AND a key is present, free-text is routed
+  // through the LLM for intent extraction, then executed by the same
+  // deterministic handlers (the LLM never returns user-facing data).
+  aiEnabled: process.env.WHATSAPP_AI_ENABLED === 'true',
+  omnirouteKey: process.env.OMNIROUTE_API_KEY || '',
+  omnirouteBase:
+    process.env.OMNIROUTE_BASE_URL || 'http://178.105.198.217:20128/api/v1',
+  aiModel: process.env.WHATSAPP_AI_MODEL || 'gpt-4o-mini',
 };

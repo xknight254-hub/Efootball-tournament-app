@@ -2,7 +2,7 @@ import db from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { whatsappConfig } from './config.js';
 import { linkStore } from './linkStore.js';
-import { interpret } from './assistant.js';
+import { interpret, interpretWithLLM } from './assistant.js';
 
 const JWT_SECRET =
   process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
@@ -337,8 +337,19 @@ export async function handleCommand(
     }
   }
 
-  // Phase 2: natural-language assistant for everything else.
-  const intent = interpret(raw);
+  // Phase 2: natural-language assistant. When the Omniroute LLM is enabled,
+  // use it for intent extraction (with deterministic fallback); otherwise
+  // use the offline rules. Either way, execution goes through the same
+  // DB-backed handlers — the LLM never returns user-facing data.
+  const useLLM =
+    whatsappConfig.aiEnabled && whatsappConfig.omnirouteKey.length > 0;
+  const intent = useLLM
+    ? await interpretWithLLM(raw, {
+        baseUrl: whatsappConfig.omnirouteBase,
+        apiKey: whatsappConfig.omnirouteKey,
+        model: whatsappConfig.aiModel,
+      })
+    : interpret(raw);
   if (intent.clarification) {
     if (intent.needsReview) {
       try {

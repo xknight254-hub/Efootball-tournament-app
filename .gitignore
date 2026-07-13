@@ -44,3 +44,7 @@ client/reference.html
 .memory/.backup/
 .memory/.lock
 server/src/data/whatsapp/
+.env
+**/.env
+server/.env
+.env.*

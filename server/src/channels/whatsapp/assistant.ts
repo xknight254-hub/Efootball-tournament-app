@@ -9,6 +9,8 @@
 // cover the common cases and always run first, so the assistant works with
 // zero external dependencies and can be verified offline.
 
+import { omnirouteChat } from './omniroute.js';
+
 export interface Intent {
   action: 'help' | 'table' | 'rank' | 'fixtures' | 'me' | 'join' | 'pay' | 'signup' | 'unknown';
   arg?: string;       // tournament id or raw payment text
@@ -104,4 +106,70 @@ function MPESA_RECEIPT_TEST(t: string): boolean {
   const RECEIPT = /\b([A-Z0-9]{8,12})\b/;
   const CTX = /m-?pesa|confirmed|mpesa|receipt|till|buy goods/i;
   return RECEIPT.test(t) && CTX.test(t);
+}
+
+const ACTIONS = ['help', 'table', 'rank', 'fixtures', 'me', 'join', 'pay', 'signup', 'unknown'];
+
+// LLM-backed intent extraction. The model returns ONLY a JSON object
+// {action, arg} from the fixed enum; it never produces free-form prose,
+// so it cannot invent tournament data. On any failure we fall back to the
+// deterministic `interpret` (which is fully offline + testable).
+export async function interpretWithLLM(
+  text: string,
+  llm: { baseUrl: string; apiKey: string; model: string }
+): Promise<Intent> {
+  const sys =
+    'You are an intent classifier for a Kenyan eFootball tournament WhatsApp bot. ' +
+    'Respond with ONLY a JSON object of the form {"action":"<one>","arg":"<optional id or text>"}. ' +
+    `Allowed actions: ${ACTIONS.join(', ')}. ` +
+    'Use action "join" or "pay" when the user wants to enter/pay for a tournament (include the id in arg). ' +
+    'Use "fixtures" for match lists, "table" for open tournaments, "rank" for leaderboards, ' +
+    '"me" for the user\'s own stats, "help" for the menu. ' +
+    'If unclear, return {"action":"unknown"}. Do not add any text outside the JSON.';
+  try {
+    const raw = await omnirouteChat(sys, text, {
+      baseUrl: llm.baseUrl,
+      apiKey: llm.apiKey,
+      model: llm.model,
+      timeoutMs: 8000,
+    });
+    const json = extractJson(raw);
+    if (json && typeof json.action === 'string' && ACTIONS.includes(json.action)) {
+      const action = json.action as Intent['action'];
+      const intent: Intent = {
+        action,
+        arg: typeof json.arg === 'string' ? json.arg : undefined,
+        confidence: 0.95,
+      };
+      // A bare "pay" with no receipt text still needs the user to forward it.
+      if (action === 'pay' && !MPESA_RECEIPT_TEST(intent.arg || text)) {
+        return {
+          action: 'unknown',
+          confidence: 0.5,
+          clarification:
+            '💰 To pay, forward your M-Pesa confirmation SMS (the one with the receipt code). For joining, include the tournament, e.g. `pay 20 <confirmation>`.',
+        };
+      }
+      return intent;
+    }
+  } catch {
+    // network/parse failure -> fall through to deterministic
+  }
+  return interpret(text);
+}
+
+function extractJson(s: string): { action?: string; arg?: unknown } | null {
+  try {
+    return JSON.parse(s);
+  } catch {
+    const m = s.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
 }
