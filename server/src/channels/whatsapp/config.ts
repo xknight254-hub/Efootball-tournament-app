@@ -28,5 +28,5 @@ export const whatsappConfig = {
   omnirouteKey: process.env.OMNIROUTE_API_KEY || '',
   omnirouteBase:
     process.env.OMNIROUTE_BASE_URL || 'http://178.105.198.217:20128/api/v1',
-  aiModel: process.env.WHATSAPP_AI_MODEL || 'gpt-4o-mini',
+  aiModel: process.env.WHATSAPP_AI_MODEL || 'oc/deepseek-v4-flash-free',
 };
