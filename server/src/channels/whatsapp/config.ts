@@ -16,4 +16,8 @@ export const whatsappConfig = {
   maxTournaments: Number(process.env.WHATSAPP_MAX_TOURNAMENTS || 10),
   maxRankings: Number(process.env.WHATSAPP_MAX_RANKINGS || 10),
   logLevel: process.env.WHATSAPP_LOG_LEVEL || 'info',
+  // Your M-Pesa Buy-Goods Till number. When set, a forwarded confirmation
+  // is only treated as payment when it references this till (so a stranger's
+  // random M-Pesa SMS can't mint an account). Empty = accept any till.
+  mpesaTill: process.env.WHATSAPP_MPESA_TILL || '',
 };

@@ -10,14 +10,17 @@ interface Ctx {
   phone: string;
 }
 
-// M-Pesa confirmation messages contain a receipt code (e.g. QGW8H4K9X2)
-// and an amount (Ksh / KES). Phase 1 creates the account on receipt-forward
-// (trust-based); real Paynecta verification is a later hardening step.
+// Player forwards their M-Pesa (Buy-Goods / Till) payment confirmation;
+// bot creates a TOSS account for that phone and replies with the new ID.
+// Phase 1 is trust-based on the confirmation text; real Till reconciliation
+// against Safaricom callbacks is a later hardening step.
 const MPESA_RECEIPT_RE = /\b([A-Z0-9]{8,12})\b/;
 const MPESA_AMOUNT_RE = /(ksh|kes)\s*([\d,]+(?:\.\d{2})?)/i;
+// Buy-Goods Till numbers appear as "Till No. 123456" or "123456".
+const MPESA_TILL_RE = /till\s*(?:no\.?|number)?\s*[:#]?\s*(\d{5,7})/i;
 // Only auto-detect a forwarded confirmation when M-Pesa context is present,
 // so normal chat isn't misrouted to signup.
-const MPESA_CONTEXT_RE = /m-?pesa|confirmed|mpesa|receipt/i;
+const MPESA_CONTEXT_RE = /m-?pesa|confirmed|mpesa|receipt|till|buy goods/i;
 
 function normalizePhone(phone: string): string {
   let p = phone.replace(/\D/g, '');
@@ -199,14 +202,22 @@ async function join(phone: string, idStr?: string): Promise<string> {
   return `✅ Joined *${t.name}* as seed #${seed}.`;
 }
 
-// Player forwards their M-Pesa payment confirmation; bot creates a TOSS
-// account for that phone and replies with the new user ID.
+// Player forwards their M-Pesa (Buy-Goods / Till) payment confirmation;
+// bot creates a TOSS account for that phone and replies with the new ID.
 async function pay(phone: string, text: string): Promise<string> {
   if (!text || text.length < 4)
     return '❌ Forward your M-Pesa confirmation message so I can register you.';
   const receipt = text.match(MPESA_RECEIPT_RE)?.[1];
   if (!receipt)
     return '❌ Could not find an M-Pesa receipt code. Forward the full confirmation SMS.';
+
+  // Till gating: if a till is configured, the confirmation must reference it.
+  const configuredTill = process.env.WHATSAPP_MPESA_TILL || whatsappConfig.mpesaTill;
+  const msgTill = text.match(MPESA_TILL_RE)?.[1];
+  if (configuredTill && msgTill !== configuredTill) {
+    return `❌ That payment was not made to our Till ${configuredTill}. Forward the confirmation for the correct till.`;
+  }
+
   const amount = text.match(MPESA_AMOUNT_RE)?.[2] || 'unknown';
 
   const user = createUserFromPhone(phone);
@@ -216,7 +227,9 @@ async function pay(phone: string, text: string): Promise<string> {
   try {
     db.prepare(
       "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_signup', ?)"
-    ).run(`phone=${normalizePhone(phone)} receipt=${receipt} amount=${amount} user=${user.id}`);
+    ).run(
+      `phone=${normalizePhone(phone)} till=${msgTill || 'n/a'} receipt=${receipt} amount=${amount} user=${user.id}`
+    );
   } catch { /* admin_logs optional */ }
 
   return [
@@ -224,7 +237,7 @@ async function pay(phone: string, text: string): Promise<string> {
     `User ID: *${user.id}*`,
     `Username: ${user.username}`,
     ``,
-    `Payment noted: ${receipt} (Ksh ${amount}).`,
+    `Payment noted: ${receipt} (Ksh ${amount})${msgTill ? ` · Till ${msgTill}` : ''}.`,
     `Set a password later via the app. Use \`me\` to see your stats.`,
   ].join('\n');
 }

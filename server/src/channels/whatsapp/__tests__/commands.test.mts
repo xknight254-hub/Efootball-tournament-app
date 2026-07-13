@@ -1,5 +1,8 @@
 // Parser test for the WhatsApp command handlers. No Baileys, no network.
 // Run: npx tsx src/channels/whatsapp/__tests__/commands.test.mts
+// The bot's M-Pesa Till is read lazily from env at command time, so we
+// set it here (ESM import-hoist is irrelevant now).
+process.env.WHATSAPP_MPESA_TILL = '123456';
 import assert from 'assert';
 import db, { initDB } from '../../../db.js';
 import { handleCommand } from '../commands.js';
@@ -66,20 +69,27 @@ async function main() {
   // unknown
   assert.match(await handleCommand('foo', { phone: 'x' }), /Unknown command/);
 
-  // pay: forward an M-Pesa confirmation -> creates account for that phone
+  // pay: forward an M-Pesa TILL confirmation -> creates account for that phone
   const payPhone = `2547${n}99`; // distinct fresh phone
   const mpesaMsg =
     `QG${n}W8H4K Confirmed. Ksh 100.00 sent to TOSS on ${n}. ` +
-    `Your M-Pesa receipt is QG${n}W8H4K.`;
+    `Till No. 123456. Your M-Pesa receipt is QG${n}W8H4K.`;
   const payRes = await handleCommand(mpesaMsg, { phone: payPhone });
   assert.match(payRes, /Account created/);
   assert.match(payRes, /User ID:/);
+  assert.match(payRes, /Till 123456/);
   // auto-linked: me should work without a separate link step
   const payMe = await handleCommand('me', { phone: payPhone });
   assert.match(payMe, /Your stats/);
-  // idempotent: forwarding again returns same existing account id
+  // idempotent: forwarding again returns the same existing account id
   const payRes2 = await handleCommand(mpesaMsg, { phone: payPhone });
   assert.match(payRes2, /Account created/);
+
+  // till mismatch -> rejected (not our till)
+  const wrongTill =
+    `AB${n}W8H4K Confirmed. Ksh 50.00. Till No. 999999. receipt AB${n}W8H4K.`;
+  const wrong = await handleCommand(wrongTill, { phone: `2547${n}88` });
+  assert.match(wrong, /not made to our Till 123456/);
 
   console.log('ALL COMMAND TESTS PASSED');
   process.exit(0);
