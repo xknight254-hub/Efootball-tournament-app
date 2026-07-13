@@ -261,6 +261,11 @@ async function pay(phone: string, text: string): Promise<string> {
       `phone=${normalizePhone(phone)} till=${msgTill || 'n/a'} receipt=${receipt} amount=${amount} user=${user.id}`,
       JSON.stringify({ phone: normalizePhone(phone), receipt, till: msgTill || null, amount, userId: user.id, type: 'signup' })
     );
+    // Record the signup payment for admin verification (source=whatsapp_sms, pending).
+    db.prepare(
+      `INSERT INTO tournament_payments (user_id, tournament_id, amount, receipt_code, till, status, source)
+       VALUES (?, 0, ?, ?, ?, 'pending', 'whatsapp_sms')`
+    ).run(user.id, Number(amount.replace(/,/g, '')) || 0, receipt, msgTill || null);
   } catch (e) { console.error('[whatsapp] log signup', (e as Error).message); }
   return [
     `✅ *Account created*`,
@@ -288,8 +293,8 @@ function recordPaymentAndJoin(
     .get(userId, t.id) as any;
   if (!prior) {
     db.prepare(
-      `INSERT INTO tournament_payments (user_id, tournament_id, amount, receipt_code, till, status)
-       VALUES (?, ?, ?, ?, ?, 'completed')`
+      `INSERT INTO tournament_payments (user_id, tournament_id, amount, receipt_code, till, status, source)
+       VALUES (?, ?, ?, ?, ?, 'pending', 'whatsapp_sms')`
     ).run(userId, t.id, Number(amount.replace(/,/g, '')) || 0, receipt, till || null);
   }
   const alreadyJoined = db
