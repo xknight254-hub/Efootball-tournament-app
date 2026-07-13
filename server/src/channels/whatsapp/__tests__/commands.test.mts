@@ -66,8 +66,8 @@ async function main() {
   const me = await handleCommand('me', { phone: joinPhone });
   assert.match(me, /Wins: 1/);
 
-  // unknown
-  assert.match(await handleCommand('foo', { phone: 'x' }), /Unknown command/);
+  // unknown command -> assistant clarification (not a raw error)
+  assert.match(await handleCommand('foo', { phone: 'x' }), /Try:/);
 
   // pay: forward an M-Pesa TILL confirmation -> creates account for that phone
   const payPhone = `2547${n}99`; // distinct fresh phone
@@ -113,6 +113,21 @@ async function main() {
   // (d) paying again is idempotent -> already registered
   const joinRes2 = await handleCommand(joinMsg, { phone: payJoinPhone });
   assert.match(joinRes2, /already registered/);
+
+  // PHASE 2 AI ASSISTANT: natural-language routing (EN + Kiswahili)
+  assert.match(await handleCommand('show me the tournaments', { phone: 'x' }), /Tournaments/);
+  assert.match(await handleCommand('naona rank kwa wachezaji', { phone: 'x' }), /Rankings/);
+  assert.match(await handleCommand(`ratiba ya ${T + 1}`, { phone: 'x' }), /Fixtures/);
+  assert.match(await handleCommand('my stats', { phone: payJoinPhone }), /Your stats/);
+  // join w/o id -> clarifying question (no blind guess)
+  assert.match(await handleCommand('I want to join', { phone: 'x' }), /Which tournament/);
+  // fixtures w/o id -> clarifying question
+  assert.match(await handleCommand('show fixtures', { phone: 'x' }), /Which tournament/);
+  // low-confidence gibberish -> help + human-review flag (logged)
+  const gibberish = await handleCommand('asdkjf lasdjf qwer', { phone: 'x' });
+  assert.match(gibberish, /Try:/);
+  const review = db.prepare("SELECT * FROM admin_logs WHERE action='whatsapp_ai_lowconf'").get() as any;
+  assert.ok(review, 'low-confidence input should be flagged for human review');
 
   console.log('ALL COMMAND TESTS PASSED');
   process.exit(0);

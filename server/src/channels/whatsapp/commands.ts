@@ -2,6 +2,7 @@ import db from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { whatsappConfig } from './config.js';
 import { linkStore } from './linkStore.js';
+import { interpret } from './assistant.js';
 
 const JWT_SECRET =
   process.env.JWT_SECRET || 'efootball-arena-super-secret-key-2024';
@@ -311,30 +312,52 @@ export async function handleCommand(
   if (!raw) return help();
   const [cmd, ...rest] = raw.split(/\s+/);
   const arg = rest.join(' ').trim();
-  switch (cmd.toLowerCase()) {
-    case 'help':
-    case 'start':
-      return help();
-    case 'link':
-      return link(ctx.phone, arg);
-    case 'table':
-    case 'tournaments':
-      return table();
-    case 'rank':
-    case 'rankings':
-      return rank();
-    case 'fixtures':
-      return fixtures(arg);
-    case 'me':
-      return me(ctx.phone);
-    case 'join':
-      return join(ctx.phone, arg);
-    case 'pay':
-      return pay(ctx.phone, arg);
-    default:
-      // Auto-detect a forwarded M-Pesa confirmation (no command prefix).
-      if (MPESA_RECEIPT_RE.test(raw) && MPESA_CONTEXT_RE.test(raw))
-        return pay(ctx.phone, raw);
-      return `Unknown command: \`${cmd}\`. Send \`help\`.`;
+  const known = ['help','start','link','table','tournaments','rank','rankings','fixtures','me','join','pay'];
+  if (known.includes(cmd.toLowerCase())) {
+    switch (cmd.toLowerCase()) {
+      case 'help':
+      case 'start':
+        return help();
+      case 'link':
+        return link(ctx.phone, arg);
+      case 'table':
+      case 'tournaments':
+        return table();
+      case 'rank':
+      case 'rankings':
+        return rank();
+      case 'fixtures':
+        return fixtures(arg);
+      case 'me':
+        return me(ctx.phone);
+      case 'join':
+        return join(ctx.phone, arg);
+      case 'pay':
+        return pay(ctx.phone, arg);
+    }
+  }
+
+  // Phase 2: natural-language assistant for everything else.
+  const intent = interpret(raw);
+  if (intent.clarification) {
+    if (intent.needsReview) {
+      try {
+        db.prepare(
+          "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_ai_lowconf', ?)"
+        ).run(`phone=${normalizePhone(ctx.phone)} text=${raw.slice(0,200)}`);
+      } catch { /* optional */ }
+    }
+    return intent.clarification;
+  }
+  switch (intent.action) {
+    case 'help': return help();
+    case 'table': return table();
+    case 'rank': return rank();
+    case 'fixtures': return fixtures(intent.arg || '');
+    case 'me': return me(ctx.phone);
+    case 'join': return join(ctx.phone, intent.arg);
+    case 'pay': return pay(ctx.phone, intent.arg || raw);
+    case 'signup': return pay(ctx.phone, raw);
+    default: return help();
   }
 }
