@@ -51,10 +51,10 @@ async function main() {
   const rk = await handleCommand('rank', { phone: '254700000001' });
   assert.match(rk, new RegExp(`alice_${n}`));
 
-  // join without link -> prompt (use a fresh phone that has no prior link)
+  // join without link -> prompt to pay (replaces old "link first" message)
   const joinPhone = `2547${n}`;
   const noLink = await handleCommand(`join ${T+2}`, { phone: joinPhone });
-  assert.match(noLink, /Link your account first/);
+  assert.match(noLink, /Forward your M-Pesa confirmation/);
 
   // link with valid token -> maps phone->userId
   const token = jwt.sign({ userId: U + 1 }, JWT_SECRET);
@@ -90,6 +90,29 @@ async function main() {
     `AB${n}W8H4K Confirmed. Ksh 50.00. Till No. 999999. receipt AB${n}W8H4K.`;
   const wrong = await handleCommand(wrongTill, { phone: `2547${n}88` });
   assert.match(wrong, /not made to our Till 123456/);
+
+  // PAY-TO-JOIN flow:
+  // (a) linked but UNPAID user -> join shows paywall
+  const linkedUnpaid = `2547${n}66`;
+  const linkTok = jwt.sign({ userId: U + 2 }, JWT_SECRET); // bob_ (not a seeded participant)
+  await handleCommand(`link ${linkTok}`, { phone: linkedUnpaid });
+  const noPay = await handleCommand(`join ${T + 1}`, { phone: linkedUnpaid });
+  assert.match(noPay, /Pay the entry fee to join/);
+  // (b) unlinked user -> join tells them to pay to register
+  const unlinked = `2547${n}55`;
+  const needPay = await handleCommand(`join ${T + 1}`, { phone: unlinked });
+  assert.match(needPay, /Forward your M-Pesa confirmation/);
+  // (c) pay <id> <confirmation> -> records fee + auto-joins (creates acct if needed)
+  const payJoinPhone = `2547${n}77`; // fresh phone
+  const joinMsg =
+    `QH${n}J2K9L Confirmed. Ksh 50.00 sent to TOSS. ` +
+    `Till No. 123456. receipt QH${n}J2K9L. pay ${T + 1}`;
+  const joinRes = await handleCommand(joinMsg, { phone: payJoinPhone });
+  assert.match(joinRes, /Payment recorded for/);
+  assert.match(joinRes, /Joined/);
+  // (d) paying again is idempotent -> already registered
+  const joinRes2 = await handleCommand(joinMsg, { phone: payJoinPhone });
+  assert.match(joinRes2, /already registered/);
 
   console.log('ALL COMMAND TESTS PASSED');
   process.exit(0);

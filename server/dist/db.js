@@ -142,6 +142,20 @@ async function initDBInternal() {
       FOREIGN KEY (subscription_id) REFERENCES admin_subscriptions(id)
     );
 
+    CREATE TABLE IF NOT EXISTS tournament_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      tournament_id INTEGER NOT NULL,
+      amount INTEGER NOT NULL,
+      receipt_code TEXT,
+      till TEXT,
+      status TEXT DEFAULT 'completed',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
+      UNIQUE (user_id, tournament_id)
+    );
+
     CREATE TABLE IF NOT EXISTS tournaments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

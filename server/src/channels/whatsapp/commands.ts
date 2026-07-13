@@ -171,7 +171,8 @@ function me(phone: string): string {
 
 async function join(phone: string, idStr?: string): Promise<string> {
   const userId = linkStore.getUserId(phone);
-  if (!userId) return '❌ Link your account first: `link <token>`';
+  if (!userId)
+    return '❌ Account not found. Forward your M-Pesa confirmation with `pay <id> <confirmation>` to register and join.';
   const id = Number(idStr);
   if (!idStr || isNaN(id))
     return '❌ Usage: `join <id>` — e.g. `join 20`';
@@ -188,25 +189,38 @@ async function join(phone: string, idStr?: string): Promise<string> {
     .prepare('SELECT * FROM participants WHERE tournament_id = ? AND user_id = ?')
     .get(id, userId);
   if (existing) return '❌ You are already registered in this tournament.';
+  // PAY-TO-JOIN: a completed M-Pesa payment for this tournament is required.
+  const paid = db
+    .prepare(
+      'SELECT * FROM tournament_payments WHERE user_id = ? AND tournament_id = ? AND status = ?'
+    )
+    .get(userId, id, 'completed') as any;
+  if (!paid)
+    return `❌ Pay the entry fee to join. Forward your M-Pesa confirmation with \`pay ${id} <confirmation>\`, or \`pay ${id}\` then paste it.`;
+  return doJoin(userId, t);
+}
+
+function doJoin(userId: number, t: any): string {
   const count = db
     .prepare('SELECT COUNT(*) as c FROM participants WHERE tournament_id = ?')
-    .get(id) as any;
-  // max_players column may not exist on every row shape; read defensively
+    .get(t.id) as any;
   const maxPlayers = t.max_players ?? 0;
   if (maxPlayers && count.c >= maxPlayers)
     return '❌ Tournament is full.';
   const seed = (count.c || 0) + 1;
   db.prepare(
     'INSERT INTO participants (tournament_id, user_id, seed, status) VALUES (?, ?, ?, ?)'
-  ).run(id, userId, seed, 'registered');
+  ).run(t.id, userId, seed, 'registered');
   return `✅ Joined *${t.name}* as seed #${seed}.`;
 }
 
-// Player forwards their M-Pesa (Buy-Goods / Till) payment confirmation;
-// bot creates a TOSS account for that phone and replies with the new ID.
+// Player pays via M-Pesa (Buy-Goods / Till) and forwards the confirmation.
+// Two modes:
+//   pay <tournamentId> <confirmation text>  -> record fee + auto-join
+//   pay <confirmation text>                  -> signup-by-payment (account from phone)
 async function pay(phone: string, text: string): Promise<string> {
   if (!text || text.length < 4)
-    return '❌ Forward your M-Pesa confirmation message so I can register you.';
+    return '❌ Forward your M-Pesa confirmation message. For joining, use `pay <id> <confirmation>`.';
   const receipt = text.match(MPESA_RECEIPT_RE)?.[1];
   if (!receipt)
     return '❌ Could not find an M-Pesa receipt code. Forward the full confirmation SMS.';
@@ -220,10 +234,25 @@ async function pay(phone: string, text: string): Promise<string> {
 
   const amount = text.match(MPESA_AMOUNT_RE)?.[2] || 'unknown';
 
-  const user = createUserFromPhone(phone);
-  linkStore.set(phone, user.id); // auto-link so `me`/`join` work immediately
+  // Mode 1: joining a specific tournament -> pay <id> <text>
+  const idMatch = text.match(/\bpay\s+(\d+)\b/i) || text.match(/^(\d{1,6})\b/);
+  const joinId = idMatch ? Number(idMatch[1]) : NaN;
+  if (!isNaN(joinId)) {
+    const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(joinId) as any;
+    if (!t) return `❌ Tournament #${joinId} not found.`;
+    const userId = linkStore.getUserId(phone);
+    if (!userId) {
+      // Not linked yet: create the account from the phone, then pay+join.
+      const u = createUserFromPhone(phone);
+      linkStore.set(phone, u.id);
+      return recordPaymentAndJoin(u.id, t, receipt, msgTill, amount, phone);
+    }
+    return recordPaymentAndJoin(userId, t, receipt, msgTill, amount, phone);
+  }
 
-  // Audit trail (mirrors OTP logging in authController).
+  // Mode 2: signup-by-payment (no tournament specified)
+  const user = createUserFromPhone(phone);
+  linkStore.set(phone, user.id);
   try {
     db.prepare(
       "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_signup', ?)"
@@ -231,15 +260,47 @@ async function pay(phone: string, text: string): Promise<string> {
       `phone=${normalizePhone(phone)} till=${msgTill || 'n/a'} receipt=${receipt} amount=${amount} user=${user.id}`
     );
   } catch { /* admin_logs optional */ }
-
   return [
     `✅ *Account created*`,
     `User ID: *${user.id}*`,
     `Username: ${user.username}`,
     ``,
     `Payment noted: ${receipt} (Ksh ${amount})${msgTill ? ` · Till ${msgTill}` : ''}.`,
-    `Set a password later via the app. Use \`me\` to see your stats.`,
+    `To join a tournament, send \`pay <id> <confirmation>\`.`,
   ].join('\n');
+}
+
+function recordPaymentAndJoin(
+  userId: number,
+  t: any,
+  receipt: string,
+  till: string | undefined,
+  amount: string,
+  phone: string
+): string {
+  // Idempotent: one completed payment per (user, tournament).
+  const prior = db
+    .prepare(
+      'SELECT * FROM tournament_payments WHERE user_id = ? AND tournament_id = ?'
+    )
+    .get(userId, t.id) as any;
+  if (!prior) {
+    db.prepare(
+      `INSERT INTO tournament_payments (user_id, tournament_id, amount, receipt_code, till, status)
+       VALUES (?, ?, ?, ?, ?, 'completed')`
+    ).run(userId, t.id, Number(amount.replace(/,/g, '')) || 0, receipt, till || null);
+  }
+  const alreadyJoined = db
+    .prepare('SELECT * FROM participants WHERE tournament_id = ? AND user_id = ?')
+    .get(t.id, userId);
+  if (alreadyJoined) return `✅ Payment recorded for *${t.name}*. You are already registered.`;
+  const joined = doJoin(userId, t);
+  try {
+    db.prepare(
+      "INSERT INTO admin_logs (admin_id, action, details) VALUES ('system', 'whatsapp_pay_join', ?)"
+    ).run(`phone=${normalizePhone(phone)} user=${userId} tournament=${t.id} receipt=${receipt}`);
+  } catch { /* admin_logs optional */ }
+  return [`💰 Payment recorded for *${t.name}*.`, joined].join('\n');
 }
 
 export async function handleCommand(
