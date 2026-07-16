@@ -8,7 +8,8 @@ import { rmSync, existsSync } from 'fs';
 import pino from 'pino';
 import type { Server as SocketIOServer } from 'socket.io';
 import { whatsappConfig } from './config.js';
-import { handleCommand, handleResultScreenshot } from './commands.js';
+import { handleCommand, handleResultScreenshot, getCreate, handleCreateImage } from './commands.js';
+import { isAdminPhone } from '../../db.js';
 import { setConnectionState, getConnectionState } from './whatsappSettings.js';
 import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
 import { processVerification } from '../../services/verificationService.js';
@@ -204,11 +205,21 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
       '';
     const imageMsg = m.message.imageMessage;
     if (imageMsg) {
-      try {
-        const reply = await handleResultScreenshot(sock, remoteJid, phone, m.message, text);
-        if (reply) await sock.sendMessage(remoteJid, { text: reply });
-      } catch (e: any) {
-        logger.error({ err: e?.message }, 'screenshot handling failed');
+      // Admin mid-creation? Route the photo to the tournament-create flow.
+      if (isAdminPhone(phone) && getCreate(phone)?.step === 'await_image') {
+        try {
+          const reply = await handleCreateImage(sock, remoteJid, phone, m.message);
+          if (reply) await sock.sendMessage(remoteJid, { text: reply });
+        } catch (e: any) {
+          logger.error({ err: e?.message }, 'create-image handling failed');
+        }
+      } else {
+        try {
+          const reply = await handleResultScreenshot(sock, remoteJid, phone, m.message, text);
+          if (reply) await sock.sendMessage(remoteJid, { text: reply });
+        } catch (e: any) {
+          logger.error({ err: e?.message }, 'screenshot handling failed');
+        }
       }
       return;
     }

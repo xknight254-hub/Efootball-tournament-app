@@ -424,6 +424,20 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
       added_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`
   );
+  // Per-admin multi-step WhatsApp tournament-creation state.
+  sqlDb.run(
+    `CREATE TABLE IF NOT EXISTS wx_create_state (
+      phone TEXT PRIMARY KEY,
+      step TEXT NOT NULL,
+      name TEXT,
+      format TEXT,
+      max_players INTEGER,
+      image_url TEXT,
+      fee_type TEXT,
+      fee INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
   // Seed from env so the operator can pre-authorize a number.
   const adminPhone = (process.env.TOSS_ADMIN_PHONE || '').replace(/[^\d]/g, '');
   if (adminPhone) {

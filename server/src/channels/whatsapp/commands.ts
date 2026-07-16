@@ -1,8 +1,11 @@
 import db, { isAdminPhone, addAdminPhone, grantPasses, consumeFreePass } from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
-import { mkdirSync, writeFileSync } from 'fs';
-import { join as joinPath } from 'path';
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
+import { join as joinPath, extname } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import sharp from 'sharp';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { whatsappConfig } from './config.js';
 import { linkStore } from './linkStore.js';
@@ -91,6 +94,200 @@ function help(): string {
     '• `link <token>` — link your TOSS account',
     '• `pay` — forward your M-Pesa confirmation to register',
     '• `help` — this message',
+  ].join('\n');
+}
+
+// ─── Multi-step WhatsApp tournament creation (admin) ──────────────
+// The AI guides the admin step-by-step; the tournament image is uploaded
+// via WhatsApp, auto-cropped to 16:9, and stored as the banner.
+// OCR stays match-submission-only (per project decision).
+const CREATE_DIR = joinPath(
+  dirname(fileURLToPath(import.meta.url)),
+  '..', '..', '..', 'client', 'public', 'tournament-images'
+);
+const VALID_FORMATS = ['knockout', 'league', 'multi_bracket', 'swiss'];
+const VALID_MAX = [2, 4, 8, 16, 32];
+
+interface CreateState {
+  step: 'name' | 'format' | 'max' | 'await_image' | 'type' | 'confirm';
+  name?: string;
+  format?: string;
+  max_players?: number;
+  image_url?: string;
+  fee_type?: 'paid' | 'free';
+  fee?: number;
+}
+
+export function getCreate(phone: string): CreateState | null {
+  return (db.prepare('SELECT * FROM wx_create_state WHERE phone = ?').get(phone) as CreateState | undefined) || null;
+}
+function setCreate(phone: string, s: Partial<CreateState> & { step: CreateState['step'] }) {
+  const cur = getCreate(phone) || { step: s.step };
+  const next = { ...cur, ...s };
+  db.prepare(
+    `INSERT INTO wx_create_state (phone, step, name, format, max_players, image_url, fee_type, fee, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(phone) DO UPDATE SET step=?, name=?, format=?, max_players=?, image_url=?, fee_type=?, fee=?, updated_at=CURRENT_TIMESTAMP`
+  ).run(
+    phone, next.step, next.name ?? null, next.format ?? null, next.max_players ?? null,
+    next.image_url ?? null, next.fee_type ?? null, next.fee ?? 0,
+    next.step, next.name ?? null, next.format ?? null, next.max_players ?? null,
+    next.image_url ?? null, next.fee_type ?? null, next.fee ?? 0
+  );
+}
+function clearCreate(phone: string) {
+  db.prepare('DELETE FROM wx_create_state WHERE phone = ?').run(phone);
+}
+
+export function startCreate(phone: string): string {
+  setCreate(phone, { step: 'name' });
+  return [
+    '🏆 *New Tournament*',
+    'Step 1/5 — what is the tournament *name*?',
+    '(e.g. "Weekend Cup")',
+  ].join('\n');
+}
+
+export async function handleCreateImage(sock: any, remoteJid: string, phone: string, msg: any): Promise<string> {
+  const st = getCreate(phone);
+  if (!st || st.step !== 'await_image') return '';
+  try {
+    if (!existsSync(CREATE_DIR)) mkdirSync(CREATE_DIR, { recursive: true });
+    const buffer = await sock.downloadMediaMessage(msg);
+    if (!buffer || buffer.length === 0) return '❌ Could not download the image. Send it again.';
+    const rawName = `tcreate_${Date.now()}.jpg`;
+    const rawPath = joinPath(CREATE_DIR, rawName);
+    writeFileSync(rawPath, buffer);
+    // Auto-crop to 16:9 (center, cover) — same math as /api/images/crop.
+    const meta = await sharp(buffer).metadata();
+    const ow = meta.width || 1280, oh = meta.height || 720;
+    const RATIO = 16 / 9;
+    const cw = ow, ch = Math.round(cw / RATIO);
+    const left = Math.max(0, Math.min(Math.round((ow - cw) / 2), ow - cw));
+    const top = Math.max(0, Math.min(Math.round((oh - ch) / 2), oh - ch));
+    const cropW = Math.min(cw, ow), cropH = Math.min(ch, oh);
+    const outName = `tcreate_${Date.now()}_crop.jpg`;
+    const outPath = joinPath(CREATE_DIR, outName);
+    await sharp(rawPath)
+      .extract({ left, top, width: cropW, height: cropH })
+      .resize(1280, 720, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 85 })
+      .toFile(outPath);
+    const url = `/tournament-images/${outName}`;
+    setCreate(phone, { step: 'type', image_url: url });
+    return [
+      '✅ Image received & cropped (16:9 banner).',
+      'Step 4/5 — is this *paid* or *free*?',
+      '• `paid <fee KES>`  (e.g. `paid 100`)',
+      '• `free`',
+    ].join('\n');
+  } catch (e: any) {
+    return `❌ Image processing failed: ${e.message}`;
+  }
+}
+
+export async function handleCreateStep(phone: string, raw: string): Promise<string | null> {
+  const st = getCreate(phone);
+  if (!st) return null;
+  const text = raw.trim();
+  if (/^cancel$/i.test(text)) {
+    clearCreate(phone);
+    return '🚫 Tournament creation cancelled.';
+  }
+  switch (st.step) {
+    case 'name': {
+      if (text.length < 2) return '❌ Name too short. Send the tournament name.';
+      setCreate(phone, { step: 'format', name: text });
+      return [
+        `🏆 *${text}*`,
+        'Step 2/5 — format?',
+        '• `knockout`  • `league`  • `multi_bracket`  • `swiss`',
+      ].join('\n');
+    }
+    case 'format': {
+      const f = text.toLowerCase().replace(/[^a-z_]/g, '');
+      if (!VALID_FORMATS.includes(f)) return '❌ Invalid format. Reply one of: knockout, league, multi_bracket, swiss.';
+      setCreate(phone, { step: 'max', format: f });
+      return [
+        `Format: *${f}*`,
+        'Step 3/5 — max players?',
+        '• `2` • `4` • `8` • `16` • `32`',
+      ].join('\n');
+    }
+    case 'max': {
+      const n = parseInt(text, 10);
+      if (!VALID_MAX.includes(n)) return '❌ Invalid max players. Reply one of: 2, 4, 8, 16, 32.';
+      setCreate(phone, { step: 'await_image', max_players: n });
+      return [
+        `Players: *${n}*`,
+        'Step 4/5 — 📷 *send the tournament image* (banner/logo).',
+        'It will be auto-cropped to 16:9.',
+      ].join('\n');
+    }
+    case 'await_image': {
+      return '📷 Please send the tournament image (a photo), not text.';
+    }
+    case 'type': {
+      const paid = text.match(/^paid\s+(\d+)$/i);
+      if (paid) {
+        const fee = parseInt(paid[1], 10);
+        if (fee < 0) return '❌ Fee must be ≥ 0.';
+        setCreate(phone, { step: 'confirm', fee_type: 'paid', fee });
+      } else if (/^free$/i.test(text)) {
+        setCreate(phone, { step: 'confirm', fee_type: 'free', fee: 0 });
+      } else {
+        return '❌ Reply `paid <fee KES>` (e.g. `paid 100`) or `free`.';
+      }
+      const c = getCreate(phone)!;
+      return [
+        '📋 *Confirm tournament*',
+        `Name: *${c.name}*`,
+        `Format: *${c.format}*`,
+        `Max players: *${c.max_players}*`,
+        `Image: ✅ banner set`,
+        `Type: *${c.fee_type === 'paid' ? `paid — KES ${c.fee}` : 'free'}*`,
+        '',
+        'Reply `yes` to publish or `no` to cancel.',
+      ].join('\n');
+    }
+    case 'confirm': {
+      if (/^no$/i.test(text)) {
+        clearCreate(phone);
+        return '🚫 Cancelled. No tournament was created.';
+      }
+      if (!/^yes$/i.test(text)) return '❌ Reply `yes` to publish or `no` to cancel.';
+      return finalizeCreate(phone);
+    }
+  }
+  return null;
+}
+
+function finalizeCreate(phone: string): string {
+  const c = getCreate(phone);
+  if (!c || !c.name || !c.format || !c.max_players) {
+    clearCreate(phone);
+    return '❌ Incomplete tournament data. Start over with `create`.';
+  }
+  const ownerId = linkStore.getUserId(phone);
+  const groupCount = c.format === 'multi_bracket' ? 2 : 0;
+  const bracketType = c.format === 'multi_bracket' ? 'group_knockout' : 'single';
+  const res = db.prepare(
+    `INSERT INTO tournaments (name, description, platform, format, max_players, best_of, prize_pool,
+       registration_deadline, result_deadline_hours, rules, owner_id, status, group_count, bracket_type, image_url, entry_fee, is_private, access_token)
+     VALUES (?, ?, 'efootball', ?, ?, 1, NULL, NULL, 24, NULL, ?, 'registration_open', ?, ?, ?, ?, 0, NULL)`
+  ).run(
+    c.name, null, c.format, c.max_players, ownerId ?? 1, groupCount, bracketType, c.image_url ?? null, c.fee_type === 'paid' ? (c.fee || 0) : 0
+  );
+  const id = Number(res.lastInsertRowid);
+  clearCreate(phone);
+  const link = `https://xtournament.duckdns.org/t/${id}`;
+  return [
+    `✅ *${c.name}* published!`,
+    `ID: #${id}`,
+    `Type: ${c.fee_type === 'paid' ? `paid — KES ${c.fee}` : 'free'}`,
+    `Status: registration open`,
+    '',
+    `Join link: ${link}`,
   ].join('\n');
 }
 
@@ -487,6 +684,9 @@ export async function handleCommand(
     const [acmd, ...arest] = raw.split(/\s+/);
     const aarg = arest.join(' ').trim();
     switch (acmd.toLowerCase()) {
+      case 'create': {
+        return startCreate(ctx.phone);
+      }
       case 'broadcast': {
         if (!aarg) return '❌ Usage: `broadcast <text>`';
         try {
@@ -556,6 +756,15 @@ export async function handleCommand(
   const [cmd, ...rest] = raw.split(/\s+/);
   const arg = rest.join(' ').trim();
   const known = ['help','start','link','table','tournaments','rank','rankings','fixtures','me','join','pay','result'];
+  // Mid-create-flow routing: if this admin is mid-tournament-creation,
+  // every text reply advances the guided step (unless they cancel).
+  if (isAdminPhone(ctx.phone)) {
+    const creating = getCreate(ctx.phone);
+    if (creating) {
+      const stepReply = await handleCreateStep(ctx.phone, raw);
+      if (stepReply) return stepReply;
+    }
+  }
   if (known.includes(cmd.toLowerCase())) {
     switch (cmd.toLowerCase()) {
       case 'help':
