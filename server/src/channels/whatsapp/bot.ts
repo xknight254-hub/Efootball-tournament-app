@@ -119,7 +119,27 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     return;
   }
 
-  const logger = pino({ level: whatsappConfig.logLevel });
+  // Custom logger: Baileys internally logs benign boot noise as ERROR
+  // ("init queries" Timed Out during reconnect, "No matching sessions"
+  // for the bot's own echoed fromMe messages). Downgrade those to debug
+  // so the channel reads clean while real errors still surface.
+  const baseLogger = pino({ level: whatsappConfig.logLevel });
+  const logger = {
+    ...baseLogger,
+    error: (obj: any, msg?: string) => {
+      const s = typeof obj === 'string' ? obj : msg || JSON.stringify(obj || {});
+      const str = typeof s === 'string' ? s : JSON.stringify(s);
+      if (
+        /init queries/i.test(str) ||
+        /No matching sessions found for message/i.test(str) ||
+        /unexpected error in 'init queries'/i.test(str)
+      ) {
+        baseLogger.debug(obj, msg);
+        return;
+      }
+      baseLogger.error(obj, msg as any);
+    },
+  };
   const { join } = await import('path');
   const { mkdirSync, writeFileSync } = await import('fs');
   const { fileURLToPath } = await import('url');
