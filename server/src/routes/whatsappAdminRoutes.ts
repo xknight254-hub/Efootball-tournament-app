@@ -7,9 +7,22 @@ import {
   updateSettings,
   getConnectionState,
   hasApiKey,
+  getLLMConfig,
 } from '../channels/whatsapp/whatsappSettings.js';
 import { whatsappConfig, JWT_SECRET } from '../channels/whatsapp/config.js';
-import { publishAdminStatus, triggerReminders } from '../channels/whatsapp/bot.js';
+import { AI_PROVIDERS } from '../channels/whatsapp/whatsappSettings.js';
+import {
+  publishAdminStatus,
+  triggerReminders,
+  startWhatsAppChannel,
+  stopWhatsAppChannel,
+  getWhatsAppSock,
+  getQrCode,
+  getPairingCode,
+  pairWithPhone,
+  logoutWhatsApp,
+} from '../channels/whatsapp/bot.js';
+import { getIO } from '../socket/index.js';
 
 const router = Router();
 
@@ -18,16 +31,21 @@ router.use(authenticateToken, requireAdmin);
 // ─── Gateway settings (read + live update) ───
 router.get('/settings', (req, res) => {
   const s = getSettings();
+  const sock = getWhatsAppSock();
   res.json({
     ...s,
-    hasApiKey: whatsappConfig.omnirouteKey.length > 0,
+    hasApiKey: hasApiKey(),
     connectionState: getConnectionState(),
-    modelOptions: [
-      'oc/deepseek-v4-flash-free',
-      'gpt-4o-mini',
-      'openai/gpt-4o-mini',
-      'anthropic/claude-3-haiku',
-    ],
+    qrCode: getQrCode(),
+    pairingCode: getPairingCode(),
+    hasSession: !!sock,
+    channelActive: getConnectionState() !== 'unknown' && getConnectionState() !== 'disconnected',
+    providerOptions: AI_PROVIDERS.map((p) => ({
+      id: p.id,
+      label: p.label,
+      defaultBaseUrl: p.defaultBaseUrl,
+      models: p.models,
+    })),
   });
 });
 
@@ -36,7 +54,10 @@ router.put('/settings', (req, res) => {
   const patch: any = {};
   if (typeof body.mpesaTill === 'string') patch.mpesaTill = body.mpesaTill.trim();
   if (typeof body.aiEnabled === 'boolean') patch.aiEnabled = body.aiEnabled;
+  if (typeof body.aiProvider === 'string') patch.aiProvider = body.aiProvider.trim();
   if (typeof body.aiModel === 'string') patch.aiModel = body.aiModel.trim();
+  if (typeof body.aiBaseUrl === 'string') patch.aiBaseUrl = body.aiBaseUrl.trim();
+  if (typeof body.aiApiKey === 'string') patch.aiApiKey = body.aiApiKey.trim();
   if ('broadcastGroupJid' in body) patch.broadcastGroupJid = body.broadcastGroupJid || null;
   if (typeof body.enabled === 'boolean') patch.enabled = body.enabled;
   if (typeof body.reminderEnabled === 'boolean') patch.reminderEnabled = body.reminderEnabled;
@@ -47,6 +68,77 @@ router.put('/settings', (req, res) => {
     res.json(next);
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Failed to update settings' });
+  }
+});
+
+// ─── List models from the active AI provider's /models endpoint ───
+router.get('/models', async (req, res) => {
+  const llm = getLLMConfig();
+  if (!llm.baseUrl || !llm.apiKey) {
+    return res.json({ models: [], error: 'No provider base URL or API key configured' });
+  }
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    const resp = await fetch(`${llm.baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${llm.apiKey}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      return res.json({ models: [], error: `Provider returned ${resp.status}: ${body.slice(0, 160)}` });
+    }
+    const json = (await resp.json()) as any;
+    const models: string[] = Array.isArray(json?.data)
+      ? json.data.map((m: any) => m.id).filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+    res.json({ models, provider: llm.provider });
+  } catch (e: any) {
+    res.json({ models: [], error: e?.message || 'Failed to fetch models' });
+  }
+});
+
+// ─── Start/stop the WhatsApp channel dynamically ───
+router.post('/start', async (req, res) => {
+  try {
+    const sock = getWhatsAppSock();
+    if (sock) return res.json({ ok: true, message: 'Already running' });
+    await startWhatsAppChannel(getIO());
+    res.json({ ok: true, message: 'Channel started' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed to start channel' });
+  }
+});
+
+router.post('/stop', async (req, res) => {
+  try {
+    await stopWhatsAppChannel();
+    res.json({ ok: true, message: 'Channel stopped' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Failed to stop channel' });
+  }
+});
+
+// ─── Pair with phone number (code-based pairing) ───
+router.post('/pair', async (req, res) => {
+  const phone = (req.body?.phone || '').toString().replace(/\D/g, '');
+  if (!phone) return res.status(400).json({ error: 'Phone number required' });
+  try {
+    const code = await pairWithPhone(phone);
+    res.json({ ok: true, pairingCode: code, message: `Pairing code sent for ${phone}` });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Pairing failed' });
+  }
+});
+
+// ─── Logout: stop channel + delete auth session ───
+router.post('/logout', async (req, res) => {
+  try {
+    await logoutWhatsApp();
+    res.json({ ok: true, message: 'Logged out — auth session deleted' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message || 'Logout failed' });
   }
 });
 

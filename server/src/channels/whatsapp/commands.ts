@@ -1,4 +1,4 @@
-import db from '../../db.js';
+import db, { isAdminPhone, addAdminPhone, grantPasses, consumeFreePass } from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
 import { mkdirSync, writeFileSync } from 'fs';
@@ -6,7 +6,11 @@ import { join as joinPath } from 'path';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import { whatsappConfig } from './config.js';
 import { linkStore } from './linkStore.js';
-import { interpret, interpretWithLLM } from './assistant.js';
+import { interpret, interpretWithLLM, sanitizeReply, runAssistantWithTools } from './assistant.js';
+import { getActiveTools, getAgentAssignments, AGENT_PERSONAS } from './tools.js';
+import { agentApi } from './agents/agentApi.js';
+import { approveAction, getEngineMetrics } from './agents/automationEngine.js';
+import { getConnectionState } from './whatsappSettings.js';
 import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
 import { processVerification } from '../../services/verificationService.js';
 
@@ -196,6 +200,17 @@ async function join(phone: string, idStr?: string): Promise<string> {
     .prepare('SELECT * FROM participants WHERE tournament_id = ? AND user_id = ?')
     .get(id, userId);
   if (existing) return '❌ You are already registered in this tournament.';
+  // FREE PASS: testers / pass-holders join paid tournaments with no M-Pesa.
+  if (consumeFreePass(phone)) {
+    try {
+      db.prepare(
+        `INSERT INTO tournament_payments (user_id, tournament_id, amount, receipt_code, till, status, source)
+         VALUES (?, ?, 0, 'free_pass', NULL, 'completed', 'free_pass')`
+      ).run(userId, id);
+    } catch { /* idempotent-ish; join below still gates */ }
+    const joined = doJoin(userId, t);
+    return `🎟 Joined *${t.name}* on a free pass — no M-Pesa needed.\n${joined}`;
+  }
   // PAY-TO-JOIN: a completed M-Pesa payment for this tournament is required.
   const paid = db
     .prepare(
@@ -447,6 +462,97 @@ export async function handleCommand(
   const raw = (text || '').trim();
   if (!raw) return help();
 
+  // ─── Admin self-connect + admin command surface ────────
+  // Any user can claim admin with a one-time code: `/admin <code>`.
+  // Once their phone is in admin_phones, they get the admin commands.
+  const claimMatch = raw.match(/^\/admin\s+(\S+)$/i);
+  if (claimMatch) {
+    const code = claimMatch[1];
+    const row = db.prepare(
+      `SELECT id, used_by, is_active FROM admin_codes WHERE code = ?`
+    ).get(code) as any;
+    if (!row || row.is_active !== 1 || row.used_by) {
+      return '❌ Invalid or already-used admin code.';
+    }
+    const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(ctx.phone) as any;
+    db.prepare('UPDATE admin_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(existing?.id ?? null, row.id);
+    const added = addAdminPhone(ctx.phone, 'self-claimed');
+    if (!added) return '❌ Could not register admin number.';
+    return '✅ You are now an admin on this number. Commands: `broadcast <text>`, `status`, `agents`, `approve <id>`, `tester <phone>`, `passes <phone> <n>`.';
+  }
+
+  const isAdmin = isAdminPhone(ctx.phone);
+  if (isAdmin) {
+    const [acmd, ...arest] = raw.split(/\s+/);
+    const aarg = arest.join(' ').trim();
+    switch (acmd.toLowerCase()) {
+      case 'broadcast': {
+        if (!aarg) return '❌ Usage: `broadcast <text>`';
+        try {
+          const api = agentApi('');
+          await api.sendBroadcast(aarg);
+          return '✅ Broadcast sent.';
+        } catch (e: any) { return `❌ ${e.message}`; }
+      }
+      case 'status': {
+        const m = getEngineMetrics();
+        const t = db.prepare('SELECT (SELECT COUNT(*) FROM tournaments) AS t, (SELECT COUNT(*) FROM users) AS u, (SELECT COUNT(*) FROM participants) AS p').get() as any;
+        return [
+          `🤖 TOSS status`,
+          `WhatsApp: ${getConnectionState()}`,
+          `Agents online: ${m.agentsOnline}/${m.agentsOnline + m.agentsOffline}`,
+          `Actions executed: ${m.actionsExecuted} | queued: ${m.actionsQueued}`,
+          `Tournaments: ${t?.t || 0} | Users: ${t?.u || 0} | Participants: ${t?.p || 0}`,
+        ].join('\n');
+      }
+      case 'agents': {
+        const a = getAgentAssignments();
+        const list = Object.keys(AGENT_PERSONAS)
+          .map(id => `• ${id}: ${a[id]?.for_interactions ? 'ON' : 'off'}`)
+          .join('\n');
+        return `Agents (interactions):\n${list}`;
+      }
+      case 'approve': {
+        if (!aarg) return '❌ Usage: `approve <actionId>`';
+        const ok = approveAction(aarg);
+        return ok ? '✅ Action approved & executed.' : '❌ Action not found (expired?).';
+      }
+      case 'tester': {
+        if (!aarg) return '❌ Usage: `tester <phone>`';
+        const p = aarg.replace(/\D/g, '');
+        const r = db.prepare('UPDATE users SET is_tester = 1 WHERE phone = ?').run(p);
+        return r.changes ? `✅ ${p} is now a permanent tester (free entry).` : `❌ No user with phone ${p}.`;
+      }
+      case 'passes': {
+        const m = aarg.match(/^(\+?\d[\d\s-]{6,})\s+(\d+)$/);
+        if (!m) return '❌ Usage: `passes <phone> <n>`';
+        const p = m[1].replace(/\D/g, '');
+        const ok = grantPasses(p, Number(m[2]));
+        return ok ? `✅ Granted ${m[2]} free pass(es) to ${p}.` : `❌ Grant failed.`;
+      }
+      case 'user': {
+        if (!aarg) return '❌ Usage: `user <phone>`';
+        const p = aarg.replace(/\D/g, '');
+        const u = db.prepare(
+          `SELECT u.id, u.username, u.is_tester, COALESCE(u.free_passes,0) AS fp,
+                  (SELECT COUNT(*) FROM participants p WHERE p.user_id=u.id) AS tours,
+                  (SELECT COUNT(*) FROM tournament_payments tp WHERE tp.user_id=u.id AND tp.status='completed') AS paid
+           FROM users u WHERE u.phone = ?`
+        ).get(p) as any;
+        if (!u) return `❌ No user with phone ${p}.`;
+        return [
+          `👤 User ${u.id} — ${u.username || '(no name)'}`,
+          `Tester: ${u.is_tester ? 'yes' : 'no'} | Free passes: ${u.fp}`,
+          `Tournaments joined: ${u.tours} | Paid entries: ${u.paid}`,
+        ].join('\n');
+      }
+      default:
+        // Not an admin command — fall through to normal handling below.
+        break;
+    }
+  }
+
   const [cmd, ...rest] = raw.split(/\s+/);
   const arg = rest.join(' ').trim();
   const known = ['help','start','link','table','tournaments','rank','rankings','fixtures','me','join','pay','result'];
@@ -481,18 +587,23 @@ export async function handleCommand(
   }
 
   // Phase 2: natural-language assistant. When the Omniroute LLM is enabled,
-  // use it for intent extraction (with deterministic fallback); otherwise
-  // use the offline rules. Either way, execution goes through the same
-  // DB-backed handlers — the LLM never returns user-facing data.
+  // try the tool-calling path FIRST (answers with REAL DB data via tools);
+  // if it returns nothing, fall back to the intent classifier + deterministic handlers.
   const useLLM =
     whatsappConfig.aiEnabled && whatsappConfig.omnirouteKey.length > 0;
-  const intent = useLLM
-    ? await interpretWithLLM(raw, {
-        baseUrl: whatsappConfig.omnirouteBase,
-        apiKey: whatsappConfig.omnirouteKey,
-        model: whatsappConfig.aiModel,
-      })
-    : interpret(raw);
+  const llm = {
+    baseUrl: whatsappConfig.omnirouteBase,
+    apiKey: whatsappConfig.omnirouteKey,
+    model: whatsappConfig.aiModel,
+  };
+  if (useLLM) {
+    const tools = getActiveTools();
+    if (tools.length) {
+      const toolReply = await runAssistantWithTools(raw, llm, tools);
+      if (toolReply && toolReply.trim()) return sanitizeReply(toolReply);
+    }
+  }
+  const intent = useLLM ? await interpretWithLLM(raw, llm) : interpret(raw);
   if (intent.clarification) {
     if (intent.needsReview) {
       try {
@@ -502,7 +613,7 @@ export async function handleCommand(
           JSON.stringify({ phone: normalizePhone(ctx.phone), text: raw.slice(0, 500), type: 'lowconf' }));
       } catch (e) { console.error('[whatsapp] log lowconf', (e as Error).message); }
     }
-    return intent.clarification;
+    return sanitizeReply(intent.clarification);
   }
   switch (intent.action) {
     case 'help': return help();

@@ -119,8 +119,10 @@ export async function interpretWithLLM(
   llm: { baseUrl: string; apiKey: string; model: string }
 ): Promise<Intent> {
   const sys =
-    'You are an intent classifier for a Kenyan eFootball tournament WhatsApp bot. ' +
-    'Respond with ONLY a JSON object of the form {"action":"<one>","arg":"<optional id or text>"}. ' +
+    'You are TOSS, the support assistant for a Kenyan eFootball tournament platform. ' +
+    'You NEVER say you are an AI, bot, assistant, model, or chatbot. ' +
+    'You NEVER narrate your reasoning — no "let me analyze", "this is case A/B", "according to the rules", "first I need to", or any internal monologue. ' +
+    'Output ONLY a JSON object and nothing else: {"action":"<one>","arg":"<optional id or text>"}. ' +
     `Allowed actions: ${ACTIONS.join(', ')}. ` +
     'Use action "join" or "pay" when the user wants to enter/pay for a tournament (include the id in arg). ' +
     'Use "fixtures" for match lists, "table" for open tournaments, "rank" for leaderboards, ' +
@@ -158,6 +160,22 @@ export async function interpretWithLLM(
   return interpret(text);
 }
 
+// Defensive guard: scrub any leaked reasoning or AI self-disclosure from
+// text that could reach the user. If a model ever emits a monologue or
+// admits it is an AI, replace it with a clean support line so players
+// never see the machinery (and never doubt it is a real TOSS rep).
+const LEAK_RE =
+  /(let me analyze|let's analyze|first,? i need|i need to (decide|determine)|this is (case|clearly)|according to (the )?rules|okay,? let's|we need to (decide|determine)|the message (is|starts)|breaking down|key (points|rule)|i am (an )?ai|i'm an ai|as an ai|i am a (bot|chatbot|model|language model)|i am a virtual)/i;
+
+export function sanitizeReply(reply: string): string {
+  const s = (reply || '').trim();
+  if (!s) return s;
+  if (LEAK_RE.test(s)) {
+    return "Hey! I'm TOSS support. Send `help` to see what I can do, or ask me how to join a tournament.";
+  }
+  return s;
+}
+
 function extractJson(s: string): { action?: string; arg?: unknown } | null {
   try {
     return JSON.parse(s);
@@ -171,5 +189,89 @@ function extractJson(s: string): { action?: string; arg?: unknown } | null {
       }
     }
     return null;
+  }
+}
+
+// ─── Tool-calling assistant (real data, no guessing) ──────────
+// Conversational-first: builds a persona from the multi-selected agents,
+// answers naturally, and uses tools only when it needs REAL DB data.
+// If no tool is needed it still returns a conversational reply (never ''
+// unless something truly fails) so the caller never falls back to the
+// command menu for an ordinary message.
+import { AgentTool } from './tools.js';
+import { omnirouteChatWithTools } from './omniroute.js';
+import { whatsappConfig } from './config.js';
+import { buildPersonaPrompt, getAgentAssignments } from './tools.js';
+
+export async function runAssistantWithTools(
+  text: string,
+  llm: { baseUrl: string; apiKey: string; model: string },
+  tools: AgentTool[]
+): Promise<string> {
+  const persona = buildPersonaPrompt(getAgentAssignments());
+  const sys =
+    persona +
+    ' You have tools that return REAL tournament data — use one whenever the user asks ' +
+    'about a specific tournament, its fee, fixtures, standings, or their own account. ' +
+    'Answer concisely using the tool result. Never invent numbers or tournament names. ' +
+    'If you lack a tool for the request, just reply helpfully in 1-3 short sentences. ' +
+    'HARD RULE: never narrate your reasoning, never mention the tools, the result format, ' +
+    'or your own process. Output ONLY the user-facing answer.';
+  const opts = {
+    baseUrl: llm.baseUrl,
+    apiKey: llm.apiKey,
+    model: llm.model,
+    timeoutMs: 12000,
+  };
+  try {
+    const first = await omnirouteChatWithTools(sys, text, opts, tools);
+    // Tool path: execute handler(s), feed back, synthesize.
+    if (first.toolCalls.length > 0) {
+      const toolMessages: any[] = [];
+      for (const tc of first.toolCalls) {
+        const tool = tools.find((t) => t.name === tc.name);
+        let result: any;
+        if (!tool) {
+          result = { error: `unknown tool: ${tc.name}` };
+        } else {
+          try {
+            result = await tool.handler(tc.arguments || {});
+          } catch (e) {
+            result = { error: (e as Error).message };
+          }
+        }
+        toolMessages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: JSON.stringify(result),
+        });
+      }
+      const followUp = [
+        { role: 'system', content: sys },
+        { role: 'user', content: text },
+        {
+          role: 'assistant',
+          content: first.content || '',
+          tool_calls: first.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.name, arguments: JSON.stringify(tc.arguments || {}) },
+          })),
+        },
+        ...toolMessages,
+      ];
+      const second = await omnirouteChatWithTools(sys, text, opts, tools, followUp);
+      const out = (second.content || '').trim();
+      if (out) return out;
+    }
+    // No tool needed: the model's direct reply (if any) is the answer.
+    const direct = (first.content || '').trim();
+    if (direct) return direct;
+    // Last resort: a pure chat call (no tools) so we always answer.
+    const chat = await omnirouteChat(sys, text, opts);
+    const plain = (chat || '').trim();
+    return plain;
+  } catch {
+    return '';
   }
 }

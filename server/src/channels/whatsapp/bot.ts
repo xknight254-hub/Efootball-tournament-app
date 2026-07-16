@@ -1,27 +1,22 @@
+// Dynamic Baileys import — loaded only when WhatsApp is enabled.
+// Prevents the whole backend from crashing if @whiskeysockets/baileys
+// fails to load or has a native dependency issue at boot time.
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { createHash } from 'crypto';
-import { mkdirSync, writeFileSync } from 'fs';
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  downloadContentFromMessage,
-  type WAMessage,
-  type WAMessageContent,
-} from '@whiskeysockets/baileys';
+import { rmSync, existsSync } from 'fs';
 import pino from 'pino';
 import type { Server as SocketIOServer } from 'socket.io';
 import { whatsappConfig } from './config.js';
 import { handleCommand, handleResultScreenshot } from './commands.js';
-import { setConnectionState } from './whatsappSettings.js';
+import { setConnectionState, getConnectionState } from './whatsappSettings.js';
 import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
 import { processVerification } from '../../services/verificationService.js';
 import db from '../../db.js';
 import { linkStore } from './linkStore.js';
 import { getSettings } from './whatsappSettings.js';
 import { publishStatus, startReminderScheduler, runReminderCheck } from './whatsappNotify.js';
+import { getIO } from '../../socket/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', 'client', 'public', 'screenshots', 'whatsapp');
@@ -30,6 +25,16 @@ const SCREENSHOT_DIR = join(__dirname, '..', '..', '..', 'client', 'public', 'sc
 // updates and trigger reminders without a second socket.
 let whatsappSock: any = null;
 export function getWhatsAppSock(): any { return whatsappSock; }
+// Raw socket ref — set as soon as makeWASocket returns (before auth).
+// Used by pairWithPhone() so the user can pair during the QR phase.
+let _rawSocket: any = null;
+
+// In-memory QR string (set by connection.update). Read by admin API.
+let _qrCode = '';
+export function getQrCode(): string { return _qrCode; }
+// In-memory pairing code (set after requestPairingCode).
+let _pairingCode = '';
+export function getPairingCode(): string { return _pairingCode; }
 
 /** Publish a message to the TOSS WhatsApp Status (admin-triggered). */
 export async function publishAdminStatus(text: string): Promise<boolean> {
@@ -43,6 +48,47 @@ export async function triggerReminders(): Promise<number> {
   return runReminderCheck(whatsappSock);
 }
 
+/** Stop the current WhatsApp socket cleanly. */
+export async function stopWhatsAppChannel(): Promise<void> {
+  if (whatsappSock) {
+    try { whatsappSock.end(); } catch {}
+    try { whatsappSock.removeAllListeners(); } catch {}
+    whatsappSock = null;
+  }
+  if (_rawSocket) {
+    try { _rawSocket.end(); } catch {}
+    _rawSocket = null;
+  }
+  _qrCode = '';
+  _pairingCode = '';
+  setConnectionState('disconnected');
+}
+
+/** Pair using a phone number (code-based pairing). Returns the pairing code. */
+export async function pairWithPhone(phone: string): Promise<string> {
+  const sock = _rawSocket || whatsappSock;
+  if (!sock) throw new Error('WhatsApp channel not started');
+  const code = await sock.requestPairingCode(phone);
+  _pairingCode = code;
+  setConnectionState('pairing_code');
+  return code;
+}
+
+/** Logout: stop the channel, delete the saved auth session,
+ *  then restart so a fresh QR code appears immediately. */
+export async function logoutWhatsApp(): Promise<void> {
+  await stopWhatsAppChannel();
+  const authDir = join(whatsappConfig.dataDir, 'auth');
+  if (existsSync(authDir)) {
+    rmSync(authDir, { recursive: true, force: true });
+    console.log('[WhatsApp] auth session deleted');
+  }
+  // Auto-restart so the admin sees a fresh QR right away.
+  startWhatsAppChannel(getIO()).catch((e) =>
+    console.error('[WhatsApp] restart after logout failed:', e.message)
+  );
+}
+
 // One Baileys session for the TOSS product (separate number/process from
 // any BusinessOS Baileys instance). In-process: reads the same DB and the
 // in-process io — no self-HTTP, no second service.
@@ -52,7 +98,34 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     return;
   }
 
+  // Let the UI know we're starting up — QR/pairing will follow.
+  setConnectionState('connecting');
+
+  // Dynamic Baileys import — isolated from boot-time module resolution.
+  // If @whiskeysockets/baileys has issues, only the WhatsApp feature fails,
+  // not the whole backend.
+  let makeWASocket: any, useMultiFileAuthState: any, fetchLatestBaileysVersion: any;
+  let DisconnectReason: any, downloadContentFromMessage: any;
+  try {
+    const baileys = await import('@whiskeysockets/baileys');
+    makeWASocket = baileys.default || baileys.makeWASocket;
+    useMultiFileAuthState = baileys.useMultiFileAuthState;
+    fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+    DisconnectReason = baileys.DisconnectReason;
+    downloadContentFromMessage = baileys.downloadContentFromMessage;
+  } catch (e: any) {
+    console.error('[WhatsApp] Baileys import failed — WhatsApp channel unavailable:', e?.message);
+    setConnectionState('error');
+    return;
+  }
+
   const logger = pino({ level: whatsappConfig.logLevel });
+  const { join } = await import('path');
+  const { mkdirSync, writeFileSync } = await import('fs');
+  const { fileURLToPath } = await import('url');
+  const { dirname } = await import('path');
+  const { createHash } = await import('crypto');
+  const __dirname = dirname(fileURLToPath(import.meta.url));
   const authDir = join(whatsappConfig.dataDir, 'auth');
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
   const { version } = await fetchLatestBaileysVersion();
@@ -63,12 +136,18 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     printQRInTerminal: true,
     logger: logger as any,
   });
+  _rawSocket = sock; // make available for requestPairingCode immediately
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on('connection.update', (update: any) => {
     const { connection, lastDisconnect, qr } = update;
-    if (qr) { logger.info('Scan the QR above to pair WhatsApp'); setConnectionState('qr'); }
+    if (qr) {
+      _qrCode = qr;
+      _pairingCode = ''; // clear any previous pairing code
+      logger.info('QR code received — scan to pair');
+      setConnectionState('qr');
+    }
     if (connection === 'close') {
       const reason = (lastDisconnect?.error as any)?.output?.statusCode;
       if (reason !== DisconnectReason.loggedOut) {
@@ -88,12 +167,16 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     }
   });
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0] as WAMessage | undefined;
+  sock.ev.on('messages.upsert', async ({ messages }: { messages: any[] }) => {
+    const m = messages[0] as any;
+    logger.info({ fromMe: m?.key?.fromMe, hasMsg: !!m?.message, jid: m?.key?.remoteJid }, 'incoming message');
     if (!m || m.key.fromMe || !m.message) return;
     const remoteJid = m.key.remoteJid || '';
-    // Phase 1: handle direct messages only (user@s.whatsapp.net).
-    if (!remoteJid.endsWith('@s.whatsapp.net')) return;
+    // Phase 1: handle direct messages only (user@s.whatsapp.net or @lid).
+    if (!remoteJid.endsWith('@s.whatsapp.net') && !remoteJid.endsWith('@lid')) {
+      logger.info('skipping non-DM jid: ' + remoteJid);
+      return;
+    }
     const phone = remoteJid.split('@')[0];
     const text =
       (m.message.conversation as string) ||

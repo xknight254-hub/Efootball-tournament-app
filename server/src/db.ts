@@ -383,14 +383,122 @@ async function initDBInternal(): Promise<SqlJsDatabase> {
     sqlDb.run("INSERT INTO subscription_tiers (name, price_kes, tournament_limit, has_sub_admin, sort_order) VALUES ('Enterprise', 5000, -1, 1, 4)");
   }
 
+  // ─── Agent assignment table (multi-agent context flags) ─────
+  // Owning agents for the WhatsApp user-facing tools must have
+  // for_interactions = 1 so getActiveTools() exposes them. The 4 tool
+  // owners are on by default; the rest are management-only until toggled.
+  sqlDb.run(
+    `CREATE TABLE IF NOT EXISTS agent_assignments (
+      agent_id TEXT PRIMARY KEY,
+      enabled INTEGER DEFAULT 0,
+      for_management INTEGER DEFAULT 0,
+      for_interactions INTEGER DEFAULT 0,
+      config TEXT DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
+  const AGENT_IDS = [
+    'tournament_ops', 'conversation', 'support', 'finance',
+    'moderator', 'notification', 'marketing', 'analytics', 'coach',
+  ];
+  const interactionOwners = new Set(['tournament_ops', 'conversation', 'support', 'finance']);
+  for (const id of AGENT_IDS) {
+    const c = sqlDb.exec(`SELECT COUNT(*) as c FROM agent_assignments WHERE agent_id = '${id}'`)[0]?.values[0]?.[0] || 0;
+    if (Number(c) === 0) {
+      sqlDb.run(
+        `INSERT INTO agent_assignments (agent_id, enabled, for_management, for_interactions)
+         VALUES ('${id}', 1, 1, ${interactionOwners.has(id) ? 1 : 0})`
+      );
+    }
+  }
+
+  // ─── Admin phone allowlist (operator self-connect) ──────
+  // The operator's personal WhatsApp number(s) gain admin command
+  // access by being present in this table. A one-time claim code
+  // (admin_codes) lets them add their number from the bot itself.
+  sqlDb.run(
+    `CREATE TABLE IF NOT EXISTS admin_phones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT UNIQUE NOT NULL,
+      label TEXT,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
+  );
+  // Seed from env so the operator can pre-authorize a number.
+  const adminPhone = (process.env.TOSS_ADMIN_PHONE || '').replace(/[^\d]/g, '');
+  if (adminPhone) {
+    try {
+      sqlDb.run(
+        `INSERT OR IGNORE INTO admin_phones (phone, label) VALUES (?, 'owner')`,
+        [adminPhone]
+      );
+    } catch { /* ignore */ }
+  }
+
+  // ─── Free-pass / tester columns on users ──────────────────
+  // B: consumable free-entry balance. Testers (is_tester=1) get
+  // unlimited free entry; others consume free_passes per paid join.
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN is_tester INTEGER DEFAULT 0'); } catch { /* exists */ }
+  try { sqlDb.run('ALTER TABLE users ADD COLUMN free_passes INTEGER DEFAULT 0'); } catch { /* exists */ }
+
   // Auto-save every 30 seconds and on exit
   setInterval(saveDb, 30000);
   process.on('exit', saveDb);
   process.on('SIGINT', () => { saveDb(); process.exit(0); });
   process.on('SIGTERM', () => { saveDb(); process.exit(0); });
-  
+
   console.log('[DB] Database initialized');
   return sqlDb;
+}
+
+// ─── Admin phone helpers ────────────────────────────────────────
+export function isAdminPhone(phone: string): boolean {
+  const p = (phone || '').replace(/[^\d]/g, '');
+  if (!p) return false;
+  const row = db.prepare('SELECT 1 FROM admin_phones WHERE phone = ?').get(p);
+  return !!row;
+}
+
+export function addAdminPhone(phone: string, label = 'operator'): boolean {
+  const p = (phone || '').replace(/[^\d]/g, '');
+  if (!p) return false;
+  try {
+    db.prepare('INSERT OR IGNORE INTO admin_phones (phone, label) VALUES (?, ?)').run(p, label);
+    return true;
+  } catch { return false; }
+}
+
+// ─── Free-pass / tester helpers ───────────────────────────────
+export function isFreeUser(phone: string): boolean {
+  const p = (phone || '').replace(/[^\d]/g, '');
+  if (!p) return false;
+  const row = db.prepare('SELECT is_tester, free_passes FROM users WHERE phone = ?').get(p) as any;
+  if (!row) return false;
+  return row.is_tester === 1 || (Number(row.free_passes) || 0) > 0;
+}
+
+export function grantPasses(phone: string, n: number): boolean {
+  const p = (phone || '').replace(/[^\d]/g, '');
+  if (!p || !(Number(n) > 0)) return false;
+  try {
+    db.prepare('UPDATE users SET free_passes = COALESCE(free_passes,0) + ? WHERE phone = ?').run(Number(n), p);
+    return true;
+  } catch { return false; }
+}
+
+// Consume one free pass (or use tester flag). Returns true if a pass was
+// available and consumed/granted. Caller skips M-Pesa when true.
+export function consumeFreePass(phone: string): boolean {
+  const p = (phone || '').replace(/[^\d]/g, '');
+  if (!p) return false;
+  const row = db.prepare('SELECT id, is_tester, free_passes FROM users WHERE phone = ?').get(p) as any;
+  if (!row) return false;
+  if (row.is_tester === 1) return true;
+  if ((Number(row.free_passes) || 0) > 0) {
+    db.prepare('UPDATE users SET free_passes = free_passes - 1 WHERE id = ?').run(row.id);
+    return true;
+  }
+  return false;
 }
 
 let initPromise: Promise<SqlJsDatabase> | null = null;

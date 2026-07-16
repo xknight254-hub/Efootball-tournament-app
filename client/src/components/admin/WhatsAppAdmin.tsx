@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 
 const token = () => localStorage.getItem('token') || '';
-const auth = () => ({ Authorization: `Bearer ${token()}` });
+  const auth = () => {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
 interface Settings {
   enabled: boolean;
