@@ -211,12 +211,12 @@ export async function runAssistantWithTools(
   const persona = buildPersonaPrompt(getAgentAssignments());
   const sys =
     persona +
-    ' You have tools that return REAL tournament data — use one whenever the user asks ' +
-    'about a specific tournament, its fee, fixtures, standings, or their own account. ' +
-    'Answer concisely using the tool result. Never invent numbers or tournament names. ' +
-    'If you lack a tool for the request, just reply helpfully in 1-3 short sentences. ' +
-    'HARD RULE: never narrate your reasoning, never mention the tools, the result format, ' +
-    'or your own process. Output ONLY the user-facing answer.';
+    ' Keep EVERY reply SHORT and LIVELY — max 2 sentences, under ~40 words. ' +
+    'Warm, energetic Kenyan tone. One light emoji is fine. ' +
+    'NEVER use bullet lists, headers, or "firstly/secondly". Guide the user to the NEXT step in one line. ' +
+    'Use your tools for real tournament data (fees, fixtures, standings, their account). ' +
+    'Never invent numbers or names. HARD RULE: never narrate reasoning, never mention tools, ' +
+    'or your own process. Output ONLY the user-facing reply, no preamble.';
   const opts = {
     baseUrl: llm.baseUrl,
     apiKey: llm.apiKey,
