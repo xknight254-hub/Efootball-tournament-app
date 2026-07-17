@@ -94,6 +94,8 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setVal = (k: string, v: string) => setVals((s) => ({ ...s, [k]: v }));
@@ -183,7 +185,21 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
     }
   };
 
-  const handleTemplate = (t: string) => { setTemplate(t); setVals({}); setPreview(null); };
+  const handleTemplate = (t: string) => { setTemplate(t); setVals({}); setPreview(null); setGifUrl(null); };
+
+  const handleExportGif = async () => {
+    setExporting(true);
+    setGifUrl(null);
+    try {
+      const r = await api.marketing.renderGif(buildCampaign(), 24, 12);
+      setGifUrl(r.url);
+      toastOk(`GIF ready (${r.frames} frames)`);
+    } catch (e: any) {
+      toastErr(e.message || 'GIF export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -302,6 +318,21 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
               {publishing ? 'Publishing…' : 'Publish to Status'}
             </Button>
           </div>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={handleExportGif} isLoading={exporting} className="flex-1 text-sm">
+              {exporting ? 'Rendering GIF…' : 'Export GIF'}
+            </Button>
+            {gifUrl && (
+              <a href={gifUrl} target="_blank" rel="noreferrer" className="flex-1">
+                <Button variant="neon" className="w-full text-sm">Download GIF</Button>
+              </a>
+            )}
+          </div>
+          {gifUrl && (
+            <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+              <img src={gifUrl} alt="animated preview" className="w-full" />
+            </div>
+          )}
           <p className="text-[10px] text-[var(--color-text-dim)] mt-2 text-center">
             Publishing posts the rendered image to the connected WhatsApp Status broadcast.
           </p>

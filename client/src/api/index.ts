@@ -413,6 +413,16 @@ export const api = {
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Upload failed'); }
       return res.json();
     },
+    /** Render a campaign as an animated GIF. Returns { url, frames, width, height }. */
+    renderGif: async (campaign: any, frames?: number, fps?: number): Promise<any> => {
+      const res = await fetch(`${API_URL}/admin/whatsapp/marketing/render-gif`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ campaign, frames, fps }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'GIF render failed'); }
+      return res.json();
+    },
   },
 
   redeemCode: async (code: string) => {

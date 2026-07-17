@@ -302,7 +302,7 @@ router.post('/result-reviews/:id/resolve', (req, res) => {
 });
 
 // ─── Brand Rendering Engine: render a campaign to an image ─────────
-import { renderCampaign } from '../modules/marketing/services/renderService.js';
+import { renderCampaign, renderCampaignGif } from '../modules/marketing/services/renderService.js';
 
 router.post('/marketing/render', async (req, res) => {
   const campaign = req.body?.campaign;
@@ -329,6 +329,19 @@ router.post('/marketing/publish', async (req, res) => {
     );
     if (ok) res.json({ ok: true, url: r.url, width: r.width, height: r.height });
     else res.status(409).json({ error: 'WhatsApp not connected' });
+  } catch (e: any) {
+    res.status(422).json({ error: e.message });
+  }
+});
+
+// ─── Brand Rendering Engine: render animated GIF ────────────────
+router.post('/marketing/render-gif', async (req, res) => {
+  const { campaign, frames, fps } = req.body || {};
+  if (!campaign || !campaign.template)
+    return res.status(400).json({ error: 'campaign.template required' });
+  try {
+    const r = await renderCampaignGif(campaign, { frames: frames ? Number(frames) : undefined, fps: fps ? Number(fps) : undefined });
+    res.json({ ok: true, url: r.url, frames: r.frames, width: r.width, height: r.height });
   } catch (e: any) {
     res.status(422).json({ error: e.message });
   }

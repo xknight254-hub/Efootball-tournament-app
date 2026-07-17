@@ -8,6 +8,7 @@ import type { Brand, Campaign, RenderResult, RenderSize, QualityIssue } from '..
 import { loadBrand, assetPath } from '../engine/brand.js';
 import { brandCss } from '../engine/brandCss.js';
 import { RENDER_SIZES } from '../types/index.js';
+export { RENDER_SIZES };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMPL_DIR = join(__dirname, '..', 'templates');
@@ -16,7 +17,7 @@ const CHROMIUM = process.env.TOSS_CHROMIUM_PATH || '/usr/bin/chromium-browser';
 
 let browserSingleton: Browser | null = null;
 
-async function getBrowser(): Promise<Browser> {
+export async function getBrowser(): Promise<Browser> {
   if (browserSingleton && browserSingleton.isConnected()) return browserSingleton;
   browserSingleton = await chromium.launch({
     executablePath: CHROMIUM,
@@ -43,7 +44,7 @@ export const TEMPLATES: Record<string, string> = {
   'feature-announcement': 'feature-announcement.html',
 };
 
-function loadTemplate(id: string): string {
+export function loadTemplate(id: string): string {
   const file = TEMPLATES[id];
   if (!file) throw new Error(`Unknown template: ${id}`);
   const p = join(TMPL_DIR, file);
@@ -52,7 +53,7 @@ function loadTemplate(id: string): string {
 }
 
 /** Replace {{TOKEN}} placeholders. Unknown tokens become empty. */
-function inject(html: string, data: Record<string, string>): string {
+export function inject(html: string, data: Record<string, string>): string {
   return html.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_m, k: string) =>
     data[k] !== undefined ? data[k] : ''
   );
@@ -77,7 +78,7 @@ async function qrDataUri(text: string): Promise<string> {
 }
 
 /** Normalize a campaign into flat token map for the chosen template. */
-function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string, string> {
+export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string, string> {
   const a = brand.accentPresets[c.accent as string] ? c.accent as string : undefined;
   const logo = inlineAsset(brand.logo.path) || '';
   const map: Record<string, string> = {
