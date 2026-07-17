@@ -70,12 +70,23 @@ function fieldsFor(tpl: string) {
   return base;
 }
 
-export function BrandStudio() {
+export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
   const { success: toastOk, error: toastErr } = useToast();
-  const [template, setTemplate] = useState<string>('tournament-announcement');
-  const [size, setSize] = useState<string>('1080x1080');
-  const [accent, setAccent] = useState<string>('gold');
-  const [vals, setVals] = useState<Record<string, string>>({});
+  const [template, setTemplate] = useState<string>(initialCampaign?.template || 'tournament-announcement');
+  const [size, setSize] = useState<string>(initialCampaign?.size || '1080x1080');
+  const [accent, setAccent] = useState<string>(initialCampaign?.accent || 'gold');
+  const [vals, setVals] = useState<Record<string, string>>(() => {
+    const v: Record<string, string> = {};
+    if (initialCampaign) {
+      for (const k of ['title', 'subtitle', 'cta', 'tournamentCode', 'prize', 'date', 'registrationDeadline', 'teamA', 'teamB', 'scoreA', 'scoreB', 'round', 'stage', 'period', 'countdown', 'body', 'footer', 'pName', 'pTeam', 'pStat']) {
+        if (initialCampaign[k] != null && initialCampaign[k] !== '') v[k] = String(initialCampaign[k]);
+      }
+    }
+    return v;
+  });
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(initialCampaign?.heroImageUrl || null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -103,8 +114,23 @@ export function BrandStudio() {
         return `<div class="row${top ? ' top' : ''}"><div class="pos">${pos ?? ''}</div><div class="name">${name ?? ''}</div><div class="val">${val ?? ''}</div></div>`;
       });
     }
+    // uploaded media asset (hero/sponsor)
+    if (heroImageUrl) c.heroImageUrl = heroImageUrl;
     return c;
-  }, [template, size, accent, vals]);
+  }, [template, size, accent, vals, heroImageUrl]);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const r = await api.marketing.upload(file);
+      setHeroImageUrl(r.url);
+      toastOk('Asset uploaded');
+    } catch (e: any) {
+      toastErr(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const doRender = useCallback(async () => {
     setRendering(true);
@@ -176,6 +202,25 @@ export function BrandStudio() {
                 {ACCENTS.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* Media asset (hero / sponsor) */}
+          <div>
+            <label className="text-xs font-medium text-[var(--color-text-muted)] block mb-2">Media Asset (optional)</label>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => fileRef.current?.click()} isLoading={uploading} className="text-sm">
+                {uploading ? 'Uploading…' : 'Upload image'}
+              </Button>
+              {heroImageUrl && (
+                <div className="flex items-center gap-2">
+                  <img src={heroImageUrl} alt="asset" className="w-12 h-12 rounded-lg object-cover" style={{ border: '1px solid var(--color-border)' }} />
+                  <button onClick={() => setHeroImageUrl(null)} className="text-xs" style={{ color: '#f87171' }}>Remove</button>
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-[var(--color-text-dim)] mt-1">Used as hero/sponsor image on feature & announcement templates.</p>
           </div>
 
           {/* Dynamic fields */}

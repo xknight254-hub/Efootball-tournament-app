@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import db from '../db.js';
 import {
@@ -331,6 +332,27 @@ router.post('/marketing/publish', async (req, res) => {
   } catch (e: any) {
     res.status(422).json({ error: e.message });
   }
+});
+
+// ─── Brand Rendering Engine: upload a media asset (hero/sponsor) ──
+import { fileURLToPath } from 'url';
+import { join as _join, dirname } from 'path';
+import { mkdirSync } from 'fs';
+const __uploadDirname = dirname(fileURLToPath(import.meta.url));
+const _uploadDir = _join(__uploadDirname, '..', '..', 'client', 'public', 'marketing-out', 'uploads');
+mkdirSync(_uploadDir, { recursive: true });
+const _storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, _uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = (file.originalname.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+    cb(null, `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`);
+  },
+});
+const _upload = multer({ storage: _storage, limits: { fileSize: 8 * 1024 * 1024 } });
+
+router.post('/marketing/upload', _upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file provided' });
+  res.json({ ok: true, url: `/marketing-out/uploads/${req.file.filename}`, filename: req.file.filename });
 });
 
 export default router;

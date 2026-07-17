@@ -401,6 +401,18 @@ export const api = {
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Publish failed'); }
       return res.json();
     },
+    /** Upload a media asset (hero/sponsor image). Returns { url, filename }. */
+    upload: async (file: File): Promise<any> => {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(`${API_URL}/admin/whatsapp/marketing/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+        body: form,
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Upload failed'); }
+      return res.json();
+    },
   },
 
   redeemCode: async (code: string) => {

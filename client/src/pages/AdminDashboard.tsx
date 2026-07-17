@@ -57,6 +57,14 @@ export function AdminDashboard() {
   const [actionMsg, setActionMsg] = useState('');
   const isAdmin = user?.isAdmin;
 
+  // Brand Studio prefill handed off from other admin sections (e.g. tournament Share)
+  const [brandPrefill, setBrandPrefill] = useState<any>(undefined);
+
+  const openBrandStudio = (campaign: any) => {
+    setBrandPrefill(campaign);
+    setTab('brand');
+  };
+
   // Admin Codes state
   const [codes, setCodes] = useState<AdminCode[]>([]);
   const [codeStats, setCodeStats] = useState<CodeStats | null>(null);
@@ -347,6 +355,18 @@ export function AdminDashboard() {
                   style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
                   Delete
                 </button>
+                <button onClick={() => openBrandStudio({
+                  template: 'tournament-announcement',
+                  title: t.name,
+                  subtitle: `${t.format} • ${t.participant_count}/${t.max_players} players`,
+                  cta: 'Register Now',
+                  tournamentCode: `TOSS-${t.id}`,
+                  footer: 'Tap to register',
+                })}
+                  className="px-3 py-1 rounded-lg text-xs font-medium shrink-0"
+                  style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.25)' }}>
+                  Share
+                </button>
               </div>
             ))}
             {tournaments.length === 0 && <p className="text-center text-[var(--color-text-muted)] py-8">No tournaments found</p>}
@@ -383,7 +403,7 @@ export function AdminDashboard() {
 
       {/* ==================== BRAND STUDIO ==================== */}
       {tab === 'brand' && (
-        <BrandStudio />
+        <BrandStudio key={brandPrefill ? JSON.stringify(brandPrefill) : 'blank'} initialCampaign={brandPrefill} />
       )}
 
       {/* ==================== ADMIN CODES (SUPER ADMIN ONLY) ==================== */}
