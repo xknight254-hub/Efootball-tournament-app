@@ -521,11 +521,11 @@ async function execute(action: AgentAction): Promise<{ ok: boolean; error?: stri
         // This action type isn't directly in agentApi; we use publishStatus
         // to notify admins, and escalate for manual processing.
         const { matchId, tournamentName, player1Id, player2Id } = action.params;
-        await api.publishStatus(
-          `⚠️ Walkover needed: Match #${matchId} in "${tournamentName}" ` +
-          `(Player ${player1Id} vs Player ${player2Id}) is past deadline. ` +
-          `Admin intervention required to assign walkover.`
-        );
+        await api.publishStatus({
+          text: `⚠️ Walkover needed: Match #${matchId} in "${tournamentName}" ` +
+            `(Player ${player1Id} vs Player ${player2Id}) is past deadline. ` +
+            `Admin intervention required to assign walkover.`,
+        });
         tasksCompleted++;
         return { ok: true };
       }

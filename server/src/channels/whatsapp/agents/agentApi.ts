@@ -94,8 +94,8 @@ export const agentApi = (token: string) => ({
   sendBroadcast: (text: string) =>
     api(`/admin/agent/broadcast`, { method: 'POST', token, body: { text } }),
 
-  publishStatus: (text: string) =>
-    api(`/admin/agent/status`, { method: 'POST', token, body: { text } }),
+  publishStatus: (body: { text: string; image?: string; imagePrompt?: string; jidList?: string[] }) =>
+    api(`/agent/status`, { method: 'POST', token, body, timeout: 30000 }),
 
   // Reminders
   sendReminder: (matchId: number) =>

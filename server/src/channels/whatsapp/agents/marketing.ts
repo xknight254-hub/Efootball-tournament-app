@@ -2,6 +2,8 @@ import type { AgentAction, AgentHealth } from './agentTypes.js';
 import type { AgentContext } from './agentTypes.js';
 import { actionId, agentApi } from './agentApi.js';
 import db from '../../../db.js';
+import { generateImage } from '../../../services/imageGenService.js';
+import { sendAdminStatus } from '../bot.js';
 
 const ID = 'marketing';
 
@@ -27,24 +29,24 @@ export class MarketingAgent {
         const k = `cd/${t.id}`; if (this.seen.has(k)) continue; this.seen.add(k);
         const rem = Math.ceil((new Date(t.registration_deadline).getTime()-now.getTime())/86400000);
         const slots = t.max_players - (t.pc||0);
-        a.push({ id: actionId(ID,'publish_status','cd',t.id), agentId: ID, type: 'publish_status', params: { text: `⏳ *${rem===1?'Last Day!':`${rem} Days Left`}*\n\n*${t.name}*\n📅 ${new Date(t.registration_deadline).toLocaleDateString('en-KE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}${t.entry_fee?`\n💵 KSh ${t.entry_fee}`:''}\n🎯 ${slots>0?`${slots} slot${slots===1?'':'s'} left`:'Full'}\n\nJoin with *join ${t.id}*` }, priority: 'normal', description: `Countdown for "${t.name}" (${rem}d, ${slots} slots)`, requiresConfirmation: false });
+        a.push({ id: actionId(ID,'publish_status','cd',t.id), agentId: ID, type: 'publish_status', params: { text: `⏳ *${rem===1?'Last Day!':`${rem} Days Left`}*\n\n*${t.name}*\n📅 ${new Date(t.registration_deadline).toLocaleDateString('en-KE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}${t.entry_fee?`\n💵 KSh ${t.entry_fee}`:''}\n🎯 ${slots>0?`${slots} slot${slots===1?'':'s'} left`:'Full'}\n\nJoin with *join ${t.id}*`, imagePrompt: `esports tournament registration banner, countdown timer motif, game controller and stadium silhouette, dramatic dark blue lighting with orange accent, energetic, 16:9` }, priority: 'normal', description: `Countdown for "${t.name}" (${rem}d, ${slots} slots)`, requiresConfirmation: false });
       }
       // 2) Winner announcements (completed in last 24h)
       for (const w of db.prepare(`SELECT t.id, t.name, t.prize_pool, u.username, (SELECT COUNT(*) FROM participants WHERE tournament_id=t.id) AS tp FROM tournaments t LEFT JOIN users u ON u.id=t.winner_id WHERE t.status='completed' AND t.winner_id IS NOT NULL AND t.created_at>datetime(?,'-24 hours')`).all(n()) as any[]) {
         const k = `win/${w.id}`; if (this.seen.has(k)) continue; this.seen.add(k);
-        a.push({ id: actionId(ID,'send_broadcast','wa',w.id), agentId: ID, type: 'send_broadcast', params: { text: `🏆 *Tournament Champion!*\n\n*${w.name}* concluded!\n👑 Winner: *${w.username||'Unknown'}*\n👥 ${w.tp||0} players${w.prize_pool?`\n💰 ${w.prize_pool}`:''}\n\nCongratulations! 🎉` }, priority: 'normal', description: `Announce winner "${w.name}"`, requiresConfirmation: false });
+        a.push({ id: actionId(ID,'publish_status','wa',w.id), agentId: ID, type: 'publish_status', params: { text: `🏆 *Tournament Champion!*\n\n*${w.name}* concluded!\n👑 Winner: *${w.username||'Unknown'}*\n👥 ${w.tp||0} players${w.prize_pool?`\n💰 ${w.prize_pool}`:''}\n\nCongratulations! 🎉`, imagePrompt: `victory celebration esports banner, golden trophy and confetti, bold text "CHAMPION", dark gaming arena background, neon highlights, high energy, 16:9` }, priority: 'normal', description: `Announce winner "${w.name}"`, requiresConfirmation: false });
       }
       // 3) Weekly recap (once per 7 days)
       if (!db.prepare(`SELECT 1 FROM admin_logs WHERE action='agent_weekly_recap' AND created_at>datetime(?,'-6 days') LIMIT 1`).get(n())) {
         const wAgo = n(new Date(now.getTime()-7*86400000));
         const s = db.prepare(`SELECT (SELECT COUNT(*) FROM tournaments WHERE created_at>?) AS t, (SELECT COUNT(*) FROM participants WHERE joined_at>?) AS p, COALESCE((SELECT SUM(amount) FROM tournament_payments WHERE created_at>? AND status='completed'),0) AS pr, (SELECT COUNT(*) FROM matches WHERE created_at>? AND winner_id IS NOT NULL) AS m`).get(wAgo,wAgo,wAgo,wAgo) as any;
-        a.push({ id: actionId(ID,'publish_status','weekly'), agentId: ID, type: 'publish_status', params: { text: `📈 *TOSS Weekly Recap*\n\n🏟️ ${s.t||0} tournament${(s.t||0)!==1?'s':''}\n👥 ${s.p||0} player${(s.p||0)!==1?'s':''}\n⚔️ ${s.m||0} matche${(s.m||0)!==1?'s':''}\n💰 KSh ${(s.pr||0).toLocaleString()}\n\nStay sharp! 🔥` }, priority: 'low', description: 'Weekly tournament recap', requiresConfirmation: false });
+        a.push({ id: actionId(ID,'publish_status','weekly'), agentId: ID, type: 'publish_status', params: { text: `📈 *TOSS Weekly Recap*\n\n🏟️ ${s.t||0} tournament${(s.t||0)!==1?'s':''}\n👥 ${s.p||0} player${(s.p||0)!==1?'s':''}\n⚔️ ${s.m||0} matche${(s.m||0)!==1?'s':''}\n💰 KSh ${(s.pr||0).toLocaleString()}\n\nStay sharp! 🔥`, imagePrompt: `esports weekly stats banner, dynamic charts and trophy icons, dark gradient background with neon blue and orange accents, clean modern infographic style, 16:9` }, priority: 'low', description: 'Weekly tournament recap', requiresConfirmation: false });
       }
       // 4) Status updates for in_progress/live tournaments
       for (const t of db.prepare(`SELECT t.id, t.name, t.format, t.status, (SELECT COUNT(*) FROM matches WHERE tournament_id=t.id AND status='pending') AS pm, (SELECT COUNT(*) FROM matches WHERE tournament_id=t.id AND winner_id IS NOT NULL) AS cm, (SELECT COUNT(*) FROM participants WHERE tournament_id=t.id) AS tp FROM tournaments t WHERE t.status IN ('in_progress','live')`).all() as any[]) {
         const k = `active/${t.id}`; if (this.seen.has(k)) continue; this.seen.add(k);
         const pct = (t.cm+t.pm)>0 ? Math.round(t.cm/(t.cm+t.pm)*100) : 0;
-        a.push({ id: actionId(ID,'publish_status','act',t.id), agentId: ID, type: 'publish_status', params: { text: `⚡ *${t.name}* — ${t.status==='live'?'🔴 LIVE':'In Progress'}\n\n📊 ${pct}% done (${t.cm||0}/${(t.cm||0)+(t.pm||0)})\n👥 ${t.tp||0} players\n\nFollow results in the menu!` }, priority: 'low', description: `Status for "${t.name}"`, requiresConfirmation: false });
+        a.push({ id: actionId(ID,'publish_status','act',t.id), agentId: ID, type: 'publish_status', params: { text: `⚡ *${t.name}* — ${t.status==='live'?'🔴 LIVE':'In Progress'}\n\n📊 ${pct}% done (${t.cm||0}/${(t.cm||0)+(t.pm||0)})\n👥 ${t.tp||0} players\n\nFollow results in the menu!`, imagePrompt: `live esports match in progress banner, scoreboard and stadium crowd, neon green and blue glow, dynamic action shot, 16:9` }, priority: 'low', description: `Status for "${t.name}"`, requiresConfirmation: false });
       }
       // 5) Re-engagement for players inactive >5 days
       const cutoff = n(new Date(now.getTime()-5*86400000));
@@ -72,7 +74,16 @@ export class MarketingAgent {
         }
         case 'send_broadcast': await api.sendBroadcast(act.params.text); break;
         case 'publish_status': {
-          await api.publishStatus(act.params.text);
+          let imageUrl: string | undefined;
+          // Generate a banner image if the action carries a prompt.
+          if (act.params.imagePrompt) {
+            const gen = await generateImage(act.params.imagePrompt, { width: 1280, height: 720 });
+            if (gen) imageUrl = gen;
+          }
+          await sendAdminStatus(
+            { text: act.params.text, image: imageUrl ? { url: imageUrl } : undefined },
+            act.params.jidList ? { jidList: act.params.jidList } : undefined
+          );
           if (act.params.text?.includes('Weekly Recap'))
             db.prepare(`INSERT INTO admin_logs(admin_id,action,details,created_at) VALUES('agent:marketing','agent_weekly_recap',?,CURRENT_TIMESTAMP)`).run(JSON.stringify(act.params));
           break;
