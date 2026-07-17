@@ -29,6 +29,17 @@ export const TEMPLATES: Record<string, string> = {
   'tournament-announcement': 'tournament-announcement.html',
   champion: 'champion.html',
   'live-now': 'live-now.html',
+  'registration-open': 'registration-open.html',
+  fixture: 'fixture.html',
+  'match-reminder': 'match-reminder.html',
+  'halftime': 'halftime.html',
+  'final-score': 'final-score.html',
+  standings: 'standings.html',
+  'top-scorers': 'top-scorers.html',
+  'player-of-the-match': 'player-of-the-match.html',
+  'new-season': 'new-season.html',
+  maintenance: 'maintenance.html',
+  'feature-announcement': 'feature-announcement.html',
 };
 
 function loadTemplate(id: string): string {
@@ -76,7 +87,22 @@ function tokensFor(brand: Brand, c: Campaign): Record<string, string> {
     COUNTDOWN: c.countdown ? `<div class="countdown">⏱ ${c.countdown}</div>` : '',
     AI_BADGE: c.aiRecommendation ? `<div class="aibadge">✦ ${c.aiRecommendation}</div>` : '',
     PLAYERS: (c.players as string) || '',
+    TEAM_A: (c.teamA as string) || '',
+    TEAM_B: (c.teamB as string) || '',
+    SCORE_A: (c.scoreA !== undefined ? `${c.scoreA}` : ''),
+    SCORE_B: (c.scoreB !== undefined ? `${c.scoreB}` : ''),
+    ROUND: (c.round as string) || '',
+    STAGE: (c.stage as string) || '',
+    PERIOD: (c.period as string) || '',
+    BODY: (c.body as string) || '',
+    FOOTER: (c.footer as string) || '',
+    QR: c.qrCode ? `<img class="qr" src="${c.qrCode}" alt="QR" />` : '',
+    SPONSOR: c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" />` : '') : '',
+    ROWS: (c.rows && Array.isArray(c.rows) && c.rows.length) ? c.rows.join('') : '',
+    WIN_A: (c as any).winner === 'A' ? 'win' : '',
+    WIN_B: (c as any).winner === 'B' ? 'win' : '',
   };
+  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<img class="hero-img" src="${map.HERO_IMAGE}" alt="" />` : '';
   if (c.featuredPlayer) {
     const fp = c.featuredPlayer as { name: string; team?: string; stat?: string };
     const hero = c.heroImage ? inlineAsset(c.heroImage as string) : null;
@@ -89,6 +115,7 @@ function tokensFor(brand: Brand, c: Campaign): Record<string, string> {
     const h = inlineAsset(c.heroImage as string);
     if (h) map.HERO_IMAGE = h;
   }
+  if (c.heroImageUrl) map.HERO_IMAGE = c.heroImageUrl as string;
   return map;
 }
 
@@ -103,6 +130,17 @@ export function qualityCheck(brand: Brand, c: Campaign, html: string): QualityIs
     champion: ['TITLE', 'SUBTITLE', 'PRIZE'],
     'live-now': ['TITLE', 'TEAM_A', 'TEAM_B'],
     'tournament-announcement': ['TITLE'],
+    'registration-open': ['TITLE'],
+    fixture: ['TITLE', 'TEAM_A', 'TEAM_B'],
+    'match-reminder': ['TITLE', 'TEAM_A', 'TEAM_B'],
+    halftime: ['TITLE', 'TEAM_A', 'TEAM_B'],
+    'final-score': ['TITLE', 'TEAM_A', 'TEAM_B'],
+    standings: ['TITLE', 'ROWS'],
+    'top-scorers': ['TITLE', 'ROWS'],
+    'player-of-the-match': ['TITLE', 'SUBTITLE'],
+    'new-season': ['TITLE'],
+    maintenance: ['TITLE'],
+    'feature-announcement': ['TITLE'],
   };
   for (const k of need[c.template] || []) {
     if (html.includes(`{{${k}}}`)) issues.push({ rule: 'missing-data', detail: `Required token ${k} not filled for ${c.template}` });

@@ -44,16 +44,30 @@ export interface Campaign {
   date?: string;
   cta?: string;
   heroImage?: string;        // asset filename in assets/ (e.g. "player23.png")
-  acent?: string;            // preset key: gold | teal | pink | live
+  accent?: string;            // preset key: gold | teal | pink | live
   // Optional dynamic components
   countdown?: string;         // e.g. "02:14:55" or "3 Days"
   prizeBadge?: string;        // override prize display
   sponsorLogo?: string;       // asset filename
-  qrCode?: string;           // URL or payload to embed as QR
+  qrCode?: string;            // URL or payload to embed as QR
   tournamentCode?: string;     // short code, e.g. "TOSS-7F3A"
   registrationDeadline?: string;
   featuredPlayer?: { name: string; team?: string; stat?: string };
   aiRecommendation?: string;   // badge text, e.g. "AI Pick: Underdog"
+  // Match / fixture / score components
+  teamA?: string;
+  teamB?: string;
+  scoreA?: string | number;
+  scoreB?: string | number;
+  round?: string;             // e.g. "Quarter Final", "Matchday 3"
+  stage?: string;             // e.g. "Group Stage", "Knockouts"
+  period?: string;            // e.g. "1st Half", "90'"
+  body?: string;              // supporting paragraph text
+  footer?: string;            // footer line (e.g. "Tap to register")
+  // Tabular content (standings / top scorers / fixtures list)
+  // Each row is a label+value or multi-cell; rendered as prebuilt HTML rows.
+  rows?: string[];            // already-formatted HTML row snippets (renderer-safe)
+  heroImageUrl?: string;      // direct URL (optional override of heroImage asset)
   // Responsive target size
   size?: RenderSize;
   // Free-form key/value pairs templates may read

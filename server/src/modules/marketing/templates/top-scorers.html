@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Russo+One&family=Sora:wght@600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+{{{BRAND_CSS}}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%}
+body{background:var(--g-hero);color:var(--c-on-primary);font-family:var(--f-body);
+  display:flex;flex-direction:column;justify-content:space-between;padding:6% 6% 4.5%;position:relative;overflow:hidden}
+body::before{content:"";position:absolute;width:55%;height:55%;left:-10%;bottom:-15%;
+  background:radial-gradient(circle, var(--c-gold) 0%, transparent 70%);opacity:.22;filter:blur(45px);pointer-events:none}
+.topbar{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2;margin-bottom:18px}
+.logo{height:var(--lockup);display:flex;align-items:center}
+.logo img{height:var(--lockup);width:auto}
+.badge{font-family:var(--f-mono);font-size:var(--fs-caption);letter-spacing:.18em;color:var(--c-gold);
+  border:1px solid var(--c-gold);border-radius:var(--r-pill);padding:8px 16px;text-transform:uppercase}
+h1{font-family:var(--f-display);font-size:calc(var(--fs-display) * .72);line-height:.96;text-transform:uppercase;position:relative;z-index:2;text-shadow:var(--sh-accent)}
+.subtitle{font-family:var(--f-headline);font-size:var(--fs-title);color:var(--c-secondary);margin-top:10px;font-weight:600;position:relative;z-index:2}
+.table{position:relative;z-index:2;margin-top:22px;background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-card)}
+.row{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--c-line)}
+.row:last-child{border-bottom:none}
+.row.head{background:rgba(0,0,0,.25);font-family:var(--f-mono);font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted)}
+.row .pos{font-family:var(--f-mono);font-weight:700;width:46px;color:var(--c-muted)}
+.row .name{font-family:var(--f-headline);font-weight:700;font-size:var(--fs-body);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .val{font-family:var(--f-mono);font-weight:700;font-size:var(--fs-body);color:var(--c-gold)}
+.row.top .name{color:var(--c-gold)}
+.row.top .pos{color:var(--c-gold)}
+.meta{position:relative;z-index:2;font-family:var(--f-mono);font-size:var(--fs-micro);color:var(--c-muted);margin-top:16px;letter-spacing:.06em}
+.wm{position:absolute;bottom:4%;right:6%;z-index:1;font-family:var(--f-mono);font-size:var(--fs-caption);color:var(--c-on-primary);opacity:.14;letter-spacing:.1em}
+.aibadge{position:absolute;top:6%;left:6%;z-index:3;font-family:var(--f-mono);font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--c-accent);border:1px solid var(--c-accent);border-radius:var(--r-pill);padding:6px 14px;background:rgba(0,0,0,.25)}
+</style>
+</head>
+<body>
+  {{AI_BADGE}}
+  <div class="topbar">
+    <div class="logo"><img src="{{LOGO}}" alt="TOSS" /></div>
+    <div class="badge">{{STAGE}}</div>
+  </div>
+  <h1>{{TITLE}}</h1>
+  <div class="subtitle">{{SUBTITLE}}</div>
+  <div class="table">
+    <div class="row head"><div class="pos">#</div><div class="name">Player</div><div class="val">G</div></div>
+    {{ROWS}}
+  </div>
+  <div class="meta">{{FOOTER}}</div>
+  <div class="wm">{{WATERMARK}}</div>
+</body>
+</html>
