@@ -58,6 +58,7 @@ h1{
 .chip .v{font-family:var(--f-headline);font-size:var(--fs-subtitle);font-weight:700;margin-top:6px}
 .chip.prize .v{color:var(--c-gold)}
 /* cta */
+.hero-img{display:block;width:100%;max-height:34%;object-fit:cover;object-position:center;border-radius:var(--r-lg);margin-bottom:26px;border:1px solid var(--c-line);box-shadow:var(--sh-card)}
 .cta{
   margin-top:30px;position:relative;z-index:2;display:inline-flex;align-items:center;gap:12px;
   align-self:flex-start;
@@ -99,6 +100,7 @@ h1{
   </div>
 
   <div class="hero">
+    {{HERO_IMAGE_MEDIA}}
     <span class="eyebrow">Registration Open</span>
     <h1>{{TITLE}}</h1>
     <div class="subtitle">{{SUBTITLE}}</div>

@@ -71,6 +71,34 @@ function inlineAsset(rel: string): string | null {
   }
 }
 
+/** Read a public asset (e.g. /marketing-out/uploads/x.jpg) from disk and return a
+ *  base64 data URI. Under page.setContent() the document origin is about:blank,
+ *  so server-relative URLs never resolve — inlining makes uploads render reliably. */
+function inlinePublic(rel: string): string | null {
+  if (!rel) return null;
+  if (/^data:/i.test(rel)) return rel;
+  if (/^https?:\/\//i.test(rel)) return rel; // absolute — browser fetches directly
+  try {
+    const base = join(__dirname, '..', '..', '..', '..', 'client', 'public');
+    const fp = join(base, rel.replace(/^\//, ''));
+    return inlineAssetFromPath(fp);
+  } catch {
+    return null;
+  }
+}
+
+/** Inline an asset file at an absolute path (used for uploaded media). */
+function inlineAssetFromPath(p: string): string | null {
+  try {
+    const buf = readFileSync(p);
+    const ext = p.split('.').pop()?.toLowerCase() || 'png';
+    const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png';
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Generate a QR code data-URI from text/URL. */
 async function qrDataUri(text: string): Promise<string> {
   const buf = await QRCode.toBuffer(text, { margin: 1, width: 240, errorCorrectionLevel: 'M' });
@@ -106,26 +134,18 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     FOOTER: (c.footer as string) || '',
     QR: qr ? `<img class="qr" src="${qr}" alt="QR" />` : '',
     SPONSOR: c.sponsorLogoUrl
-      ? `<img class="sponsor" src="${c.sponsorLogoUrl}" alt="sponsor" />`
+      ? `<img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" />`
       : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" />` : '') : ''),
     ROWS: (c.rows && Array.isArray(c.rows) && c.rows.length) ? c.rows.join('') : '',
     WIN_A: (c as any).winner === 'A' ? 'win' : '',
     WIN_B: (c as any).winner === 'B' ? 'win' : '',
   };
-  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<img class="hero-img" src="${map.HERO_IMAGE}" alt="" />` : '';
-  if (c.featuredPlayer) {
-    const fp = c.featuredPlayer as { name: string; team?: string; stat?: string };
-    const hero = c.heroImage ? inlineAsset(c.heroImage as string) : null;
-    map.PLAYER = `<div class="player">${hero ? `<img src="${hero}" alt=""/>` : '🏅'}
-      <div><div class="pn">${fp.name}</div><div class="ps">${fp.team || ''}${fp.stat ? ` · ${fp.stat}` : ''}</div></div></div>`;
-  } else {
-    map.PLAYER = '';
-  }
   if (c.heroImage) {
     const h = inlineAsset(c.heroImage as string);
     if (h) map.HERO_IMAGE = h;
   }
-  if (c.heroImageUrl) map.HERO_IMAGE = c.heroImageUrl as string;
+  if (c.heroImageUrl) map.HERO_IMAGE = inlinePublic(c.heroImageUrl as string) || (c.heroImageUrl as string);
+  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<img class="hero-img" src="${map.HERO_IMAGE}" alt="" />` : '';
   return map;
 }
 
