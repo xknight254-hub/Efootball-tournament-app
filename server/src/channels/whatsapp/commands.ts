@@ -14,6 +14,7 @@ import { getActiveTools, getAgentAssignments, AGENT_PERSONAS } from './tools.js'
 import { agentApi } from './agents/agentApi.js';
 import { approveAction, getEngineMetrics } from './agents/automationEngine.js';
 import { getConnectionState } from './whatsappSettings.js';
+import { getSettings } from './whatsappSettings.js';
 import { getWorker, parseEFOTBScreenshot } from '../../services/ocrService.js';
 import { processVerification } from '../../services/verificationService.js';
 
@@ -796,14 +797,16 @@ export async function handleCommand(
   }
 
   // Phase 2: natural-language assistant. When the Omniroute LLM is enabled,
-  // try the tool-calling path FIRST (answers with REAL DB data via tools);
-  // if it returns nothing, fall back to the intent classifier + deterministic handlers.
+  // The model + enabled flag are authoritative from the DB (admin console),
+  // not the static config default — the DB holds the working model while the
+  // config default (oc/deepseek-v4-flash-free) is rate-limited/429s.
+  const ws = getSettings();
   const useLLM =
-    whatsappConfig.aiEnabled && whatsappConfig.omnirouteKey.length > 0;
+    ws.aiEnabled && whatsappConfig.omnirouteKey.length > 0;
   const llm = {
-    baseUrl: whatsappConfig.omnirouteBase,
+    baseUrl: ws.aiBaseUrl || whatsappConfig.omnirouteBase,
     apiKey: whatsappConfig.omnirouteKey,
-    model: whatsappConfig.aiModel,
+    model: ws.aiModel || whatsappConfig.aiModel,
   };
   if (useLLM) {
     const tools = getActiveTools();
