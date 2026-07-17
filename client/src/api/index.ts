@@ -380,6 +380,29 @@ export const api = {
     },
   },
 
+  marketing: {
+    /** Render a campaign to a branded image. Returns { url, width, height, template }. */
+    render: async (campaign: any): Promise<any> => {
+      const res = await fetch(`${API_URL}/admin/whatsapp/marketing/render`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ campaign }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Render failed'); }
+      return res.json();
+    },
+    /** Render + publish straight to WhatsApp Status. */
+    publish: async (campaign: any, text?: string, jidList?: string[]): Promise<any> => {
+      const res = await fetch(`${API_URL}/admin/whatsapp/marketing/publish`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ campaign, text, jidList }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Publish failed'); }
+      return res.json();
+    },
+  },
+
   redeemCode: async (code: string) => {
     const res = await fetch(`${API_URL}/auth/redeem-code`, {
       method: 'POST',

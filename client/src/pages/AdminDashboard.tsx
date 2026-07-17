@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { WhatsAppAdmin } from '../components/admin/WhatsAppAdmin';
+import { BrandStudio } from '../components/admin/BrandStudio';
 
 interface AdminStats {
   stats: { userCount: number; tournamentCount: number; matchCount: number; participantCount: number };
@@ -38,7 +39,7 @@ interface AdminCode {
 
 interface CodeStats { total: number; active: number; used: number; deactivated: number; }
 
-type Tab = 'overview' | 'users' | 'tournaments' | 'logs' | 'whatsapp' | 'codes';
+type Tab = 'overview' | 'users' | 'tournaments' | 'logs' | 'whatsapp' | 'codes' | 'brand';
 
 export function AdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -178,6 +179,7 @@ export function AdminDashboard() {
     { key: 'tournaments', label: 'Tournaments' },
     { key: 'logs', label: 'Logs' },
     { key: 'whatsapp', label: 'WhatsApp' },
+    { key: 'brand', label: 'Brand Studio' },
     { key: 'codes', label: 'Admin Codes', superOnly: true },
   ];
 
@@ -377,6 +379,11 @@ export function AdminDashboard() {
       {/* ==================== WHATSAPP GATEWAY ==================== */}
       {tab === 'whatsapp' && (
         <WhatsAppAdmin />
+      )}
+
+      {/* ==================== BRAND STUDIO ==================== */}
+      {tab === 'brand' && (
+        <BrandStudio />
       )}
 
       {/* ==================== ADMIN CODES (SUPER ADMIN ONLY) ==================== */}

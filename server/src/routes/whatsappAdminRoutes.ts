@@ -300,4 +300,37 @@ router.post('/result-reviews/:id/resolve', (req, res) => {
   }
 });
 
+// ─── Brand Rendering Engine: render a campaign to an image ─────────
+import { renderCampaign } from '../modules/marketing/services/renderService.js';
+
+router.post('/marketing/render', async (req, res) => {
+  const campaign = req.body?.campaign;
+  if (!campaign || !campaign.template)
+    return res.status(400).json({ error: 'campaign.template required' });
+  try {
+    const r = await renderCampaign(campaign);
+    res.json({ ok: true, imagePath: r.imagePath, url: r.url, width: r.width, height: r.height, template: r.template, renderTimeMs: r.renderTimeMs });
+  } catch (e: any) {
+    res.status(422).json({ error: e.message });
+  }
+});
+
+// ─── Brand Rendering Engine: render + publish straight to WhatsApp Status ──
+router.post('/marketing/publish', async (req, res) => {
+  const { campaign, text, jidList } = req.body || {};
+  if (!campaign || !campaign.template)
+    return res.status(400).json({ error: 'campaign.template required' });
+  try {
+    const r = await renderCampaign(campaign);
+    const ok = await sendAdminStatus(
+      { text: text || campaign.title || '', image: r.url ? { url: r.url } : undefined },
+      jidList ? { jidList } : undefined
+    );
+    if (ok) res.json({ ok: true, url: r.url, width: r.width, height: r.height });
+    else res.status(409).json({ error: 'WhatsApp not connected' });
+  } catch (e: any) {
+    res.status(422).json({ error: e.message });
+  }
+});
+
 export default router;
