@@ -23,6 +23,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import rankingsRoutes from './routes/rankingsRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import organizerRoutes from './routes/organizerRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ─── Environment Validation ───
@@ -36,6 +37,8 @@ if (isNaN(PORT) || PORT < 1 || PORT > 65535) {
     process.exit(1);
 }
 const app = express();
+// Trust proxy — required when behind nginx for accurate rate limiting + IP detection
+app.set('trust proxy', 1);
 initializeDatabase();
 // ─── Rate Limiters ───
 const globalLimiter = rateLimit({
@@ -85,6 +88,8 @@ app.use('/api/rankings', rankingsRoutes);
 app.use('/api/redeem-codes', redeemCodeRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/organizer', organizerRoutes);
+// ─── AI Agent API (scoped tokens + admin auth) ───
+app.use('/api', agentRoutes);
 // ─── Paynecta webhooks (no auth — called by Paynecta servers) ───
 app.use('/api/paynecta', paynectaWebhookRoutes);
 // ─── Deep links (must be BEFORE SPA fallback) ───
@@ -125,10 +130,77 @@ app.use((req, res) => {
 });
 const server = createServer(app);
 initializeSocket(server);
-// WhatsApp channel (Phase 1). Inert unless WHATSAPP_ENABLED=true.
-if (process.env.WHATSAPP_ENABLED === 'true') {
-    startWhatsAppChannel(getIO()).catch((e) => console.error('[WhatsApp] failed to start:', e.message));
+// WhatsApp channel — auto-starts on boot.
+// The admin console can stop/start it on-demand from the WhatsApp tab.
+startWhatsAppChannel(getIO()).catch((e) => console.error('[WhatsApp] failed to start:', e.message));
+// Patch import-time env vars that config.ts captured too early.
+// dotenv.config() runs after static ES module imports, so any
+// process.env reads at module scope (like omnirouteKey in config.ts)
+// come back empty. Apply the real values here.
+import { whatsappConfig as wConfig } from './channels/whatsapp/config.js';
+if (process.env.OMNIROUTE_API_KEY && !wConfig.omnirouteKey) {
+    wConfig.omnirouteKey = process.env.OMNIROUTE_API_KEY;
 }
+// ─── AI Agent Engine ───────────────────────────────────────
+(async () => {
+    try {
+        const { initEngine, startEngine } = await import('./channels/whatsapp/agents/automationEngine.js');
+        // Build agent list (dynamic import — only loads agents that are available)
+        const agents = [];
+        async function tryLoad(name, path) {
+            try {
+                const mod = await import(path);
+                const keys = Object.keys(mod);
+                const clsName = keys.find(k => k.toLowerCase().includes(name.toLowerCase()));
+                let exported = clsName ? mod[clsName] : mod.default;
+                // Fallback to default export if named export not found
+                if (!exported && mod.default) {
+                    exported = mod.default;
+                }
+                if (exported) {
+                    const token = process.env[`${name.toUpperCase()}_AGENT_TOKEN`] || 'agent-default-token';
+                    // Support both class constructors and plain object exports
+                    if (typeof exported === 'function') {
+                        const instance = new exported({ token });
+                        if (instance && typeof instance.evaluate === 'function') {
+                            agents.push(instance);
+                        }
+                    }
+                    else if (typeof exported === 'object' && exported !== null && typeof exported.evaluate === 'function') {
+                        agents.push(exported);
+                    }
+                    console.log(`[Engine] loaded agent: ${name}`);
+                }
+                else {
+                    console.warn(`[Engine] agent ${name}: no matching export found`);
+                }
+            }
+            catch (e) {
+                console.warn(`[Engine] agent ${name} not available: ${e.message}`);
+            }
+        }
+        // Try to load each agent — failures don't crash the engine
+        await tryLoad('TournamentOps', './channels/whatsapp/agents/tournamentOps.js');
+        await tryLoad('Finance', './channels/whatsapp/agents/finance.js');
+        await tryLoad('Notification', './channels/whatsapp/agents/notification.js');
+        await tryLoad('Marketing', './channels/whatsapp/agents/marketing.js');
+        await tryLoad('Moderator', './channels/whatsapp/agents/moderator.js');
+        await tryLoad('Analytics', './channels/whatsapp/agents/analytics.js');
+        await tryLoad('Coach', './channels/whatsapp/agents/coach.js');
+        await tryLoad('Conversation', './channels/whatsapp/agents/conversation.js');
+        await tryLoad('Support', './channels/whatsapp/agents/support.js');
+        if (agents.length > 0) {
+            initEngine({ enabled: true, adminToken: process.env.AGENT_ADMIN_TOKEN || '' }, agents);
+            startEngine();
+        }
+        else {
+            console.log('[Engine] no agents loaded — skipping');
+        }
+    }
+    catch (e) {
+        console.warn('[Engine] could not initialize:', e.message);
+    }
+})();
 server.listen(PORT, () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);
 });
