@@ -1,0 +1,96 @@
+{
+  "name": "TOSS",
+  "version": "1.0.0",
+  "logo": {
+    "path": "assets/logo/toss-logo.svg",
+    "wordmark": "assets/logo/toss-wordmark.svg",
+    "lockupHeightPx": 64
+  },
+  "watermark": {
+    "text": "@playtoss",
+    "opacity": 0.14,
+    "position": "bottom-right"
+  },
+  "colors": {
+    "primary": "#0B0E14",
+    "primarySoft": "#141A24",
+    "surface": "#1B2230",
+    "onPrimary": "#FFFFFF",
+    "secondary": "#2DD4BF",
+    "secondarySoft": "#0F3B36",
+    "accent": "#FF7A00",
+    "accentGold": "#FFD23F",
+    "accentGoldSoft": "#3A2F00",
+    "accentPink": "#FF2E7E",
+    "success": "#22C55E",
+    "warning": "#F59E0B",
+    "danger": "#EF4444",
+    "muted": "#8A93A6",
+    "line": "rgba(255,255,255,0.08)"
+  },
+  "gradients": {
+    "hero": "linear-gradient(135deg, #0B0E14 0%, #141A24 45%, #0F3B36 100%)",
+    "accent": "linear-gradient(135deg, #FF7A00 0%, #FF2E7E 100%)",
+    "gold": "linear-gradient(135deg, #FFD23F 0%, #FF7A00 100%)",
+    "surface": "linear-gradient(180deg, rgba(27,34,48,0.92) 0%, rgba(11,14,20,0.96) 100%)",
+    "live": "linear-gradient(135deg, #EF4444 0%, #FF2E7E 100%)"
+  },
+  "fonts": {
+    "display": "Russo One",
+    "headline": "Sora",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "fontSizes": {
+    "display": "72px",
+    "headline": "44px",
+    "title": "32px",
+    "subtitle": "20px",
+    "body": "16px",
+    "caption": "13px",
+    "micro": "11px"
+  },
+  "radius": {
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "pill": "999px"
+  },
+  "shadow": {
+    "card": "0 18px 40px -12px rgba(0,0,0,0.6)",
+    "glow": "0 0 32px -4px rgba(45,212,191,0.45)",
+    "accent": "0 0 28px -6px rgba(255,122,0,0.55)"
+  },
+  "card": {
+    "padding": "28px",
+    "background": "linear-gradient(180deg, rgba(27,34,48,0.92) 0%, rgba(11,14,20,0.96) 100%)",
+    "border": "1px solid rgba(255,255,255,0.08)"
+  },
+  "button": {
+    "primaryBg": "linear-gradient(135deg, #FF7A00 0%, #FF2E7E 100%)",
+    "primaryColor": "#FFFFFF",
+    "secondaryBg": "rgba(45,212,191,0.12)",
+    "secondaryColor": "#2DD4BF",
+    "radius": "999px",
+    "padding": "14px 28px",
+    "font": "Sora"
+  },
+  "cta": {
+    "bg": "linear-gradient(135deg, #FF7A00 0%, #FF2E7E 100%)",
+    "color": "#FFFFFF",
+    "radius": "999px",
+    "label": "Play Now"
+  },
+  "social": {
+    "instagram": "@playtoss",
+    "x": "@playtoss",
+    "whatsapp": "+254 700 000000",
+    "web": "playtoss.gg"
+  },
+  "accentPresets": {
+    "gold": { "accent": "#FFD23F", "gradient": "linear-gradient(135deg, #FFD23F 0%, #FF7A00 100%)", "glow": "0 0 28px -6px rgba(255,210,63,0.55)" },
+    "teal": { "accent": "#2DD4BF", "gradient": "linear-gradient(135deg, #2DD4BF 0%, #22C55E 100%)", "glow": "0 0 28px -6px rgba(45,212,191,0.55)" },
+    "pink": { "accent": "#FF2E7E", "gradient": "linear-gradient(135deg, #FF2E7E 0%, #FF7A00 100%)", "glow": "0 0 28px -6px rgba(255,46,126,0.55)" },
+    "live": { "accent": "#EF4444", "gradient": "linear-gradient(135deg, #EF4444 0%, #FF2E7E 100%)", "glow": "0 0 28px -6px rgba(239,68,68,0.55)" }
+  }
+}

@@ -426,31 +426,37 @@ router.post('/agent/broadcast', requireAgentPerm('message.broadcast'), async (re
 });
 
 router.post('/agent/status', requireAgentPerm('status.publish'), async (req: any, res) => {
-  const { text, image, imagePrompt, jidList } = req.body || {};
-    if (!text && !image && !imagePrompt)
-      return res.status(400).json({ error: 'text, image, or imagePrompt required' });
-    try {
-      const { sendAdminStatus } = await import('../channels/whatsapp/bot.js');
-      let imageUrl = image || null;
-      // Generate an image from a prompt if none supplied directly.
-      if (!imageUrl && imagePrompt) {
-        const { generateImage } = await import('../services/imageGenService.js');
-        imageUrl = await generateImage(imagePrompt, { width: 1280, height: 720 });
-      }
-      const ok = await sendAdminStatus(
-        { text, image: imageUrl ? { url: imageUrl } : undefined },
-        jidList ? { jidList } : undefined
-      );
-      if (ok) {
-        logAgentAction(req.agentId, 'publish_status', `Status published${imageUrl ? ' (with image)' : ''}`);
-        res.json({ ok: true, image: imageUrl });
-      } else {
-        res.status(409).json({ error: 'WhatsApp not connected' });
-      }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+  const { text, image, imagePrompt, campaign, jidList } = req.body || {};
+  if (!text && !image && !imagePrompt && !campaign)
+    return res.status(400).json({ error: 'text, image, imagePrompt, or campaign required' });
+  try {
+    const { sendAdminStatus } = await import('../channels/whatsapp/bot.js');
+    let imageUrl = image || null;
+    // Preferred path: render a branded asset from Campaign JSON.
+    if (!imageUrl && campaign?.template) {
+      const { renderCampaign } = await import('../modules/marketing/services/renderService.js');
+      const r = await renderCampaign(campaign);
+      imageUrl = r.url;
     }
-  });
+    // Legacy fallback: AI image prompt (kept for non-branded needs).
+    if (!imageUrl && imagePrompt) {
+      const { generateImage } = await import('../services/imageGenService.js');
+      imageUrl = await generateImage(imagePrompt, { width: 1280, height: 720 });
+    }
+    const ok = await sendAdminStatus(
+      { text, image: imageUrl ? { url: imageUrl } : undefined },
+      jidList ? { jidList } : undefined
+    );
+    if (ok) {
+      logAgentAction(req.agentId, 'publish_status', `Status published${imageUrl ? ' (with image)' : ''}`);
+      res.json({ ok: true, image: imageUrl });
+    } else {
+      res.status(409).json({ error: 'WhatsApp not connected' });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ─── Reminders ──────────────────────────────────────────────────
 
