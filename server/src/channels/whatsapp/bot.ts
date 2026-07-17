@@ -120,27 +120,12 @@ export async function startWhatsAppChannel(io: SocketIOServer): Promise<void> {
     return;
   }
 
-  // Custom logger: Baileys internally logs benign boot noise as ERROR
-  // ("init queries" Timed Out during reconnect, "No matching sessions"
-  // for the bot's own echoed fromMe messages). Downgrade those to debug
-  // so the channel reads clean while real errors still surface.
-  const baseLogger = pino({ level: whatsappConfig.logLevel });
-  const logger = {
-    ...baseLogger,
-    error: (obj: any, msg?: string) => {
-      const s = typeof obj === 'string' ? obj : msg || JSON.stringify(obj || {});
-      const str = typeof s === 'string' ? s : JSON.stringify(s);
-      if (
-        /init queries/i.test(str) ||
-        /No matching sessions found for message/i.test(str) ||
-        /unexpected error in 'init queries'/i.test(str)
-      ) {
-        baseLogger.debug(obj, msg);
-        return;
-      }
-      baseLogger.error(obj, msg as any);
-    },
-  };
+  // Real pino logger. Baileys expects a full pino instance (child(),
+  // writeSym, etc.) — a hand-rolled object breaks it. Benign boot noise
+  // ("init queries", "No matching sessions") logs at ERROR level; that's
+  // acceptable. If a quieter channel is needed later, use a pino transport
+  // or a level filter, not a fake logger object.
+  const logger = pino({ level: whatsappConfig.logLevel });
   const { join } = await import('path');
   const { mkdirSync, writeFileSync } = await import('fs');
   const { fileURLToPath } = await import('url');
