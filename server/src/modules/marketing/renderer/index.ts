@@ -52,10 +52,19 @@ export function loadTemplate(id: string): string {
   return readFileSync(p, 'utf8');
 }
 
-/** Replace {{TOKEN}} placeholders. Unknown tokens become empty. */
+/** Load the shared design-system.css (primitives every template inherits). */
+export function loadDesignSystem(): string {
+  const p = join(TMPL_DIR, 'design-system.css');
+  return existsSync(p) ? readFileSync(p, 'utf8') : '';
+}
+
+/** Replace {{TOKEN}} placeholders. Handles both {{X}} and {{{X}}} (Handlebars-style).
+ *  Unknown tokens become empty. */
 export function inject(html: string, data: Record<string, string>): string {
+  // Collapse {{{X}}} -> {{X}} so a stray brace never wraps the whole stylesheet.
+  html = html.replace(/\{\{\{([A-Z0-9_]+)\}\}\}/g, '{{$1}}');
   return html.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_m, k: string) =>
-    data[k] !== undefined ? data[k] : ''
+    data[k] !== undefined ? data[k] : '',
   );
 }
 
@@ -105,47 +114,115 @@ async function qrDataUri(text: string): Promise<string> {
   return `data:image/png;base64,${buf.toString('base64')}`;
 }
 
+/* ─── Reusable component builders (design-system primitives) ─── */
+
+/** Status / live / generic badge. tone: solid|glass|outline|live|success|gold */
+export function badge(label: string, tone = 'glass', icon?: string): string {
+  if (!label) return '';
+  const ico = icon ? `<span class="ico">${icon}</span>` : '';
+  return `<span class="badge ${tone}">${ico}${label}</span>`;
+}
+
+/** Info card (prize / players / date / venue / code). variant: glass|solid|outline|gradient */
+export function infoCard(k: string, v: string, variant = 'glass', gold = false): string {
+  if (v === '' || v == null) return '';
+  return `<div class="info-card glass ${variant}"><span class="k">${k}</span><span class="v${gold ? ' gold' : ''}">${v}</span></div>`;
+}
+
+/** CTA button. Maps known labels to lucide-safe glyphs (text only; icon optional). */
+export function ctaButton(label: string, icon?: string): string {
+  const lbl = label || 'Register Now';
+  const ico = icon ? `<span>${icon}</span>` : '';
+  return `<div class="cta">${ico}${lbl}</div>`;
+}
+
+/** Background class from a campaign bg hint, defaulting to arena/orange theme. */
+export function bgClass(c: Campaign): string {
+  const b = (c as any).background as string | undefined;
+  const allowed = ['bg-stadium','bg-flood','bg-geo','bg-orange','bg-black','bg-mesh','bg-smoke','bg-arena','bg-min','bg-esports'];
+  return allowed.includes(b as string) ? (b as string) : 'bg-arena';
+}
+
+/** Overlay class from a campaign overlay hint, defaulting to bottom gradient. */
+export function overlayClass(c: Campaign): string {
+  const o = (c as any).overlay as string | undefined;
+  const allowed = ['ov-bottom','ov-top','ov-left','ov-right','ov-full','ov-glass','ov-blur','ov-orange','ov-glow'];
+  return allowed.includes(o as string) ? (o as string) : 'ov-bottom';
+}
+
+/** Top brand bar: logo + watermark (safe, always present). */
+export function brandBar(logo: string, watermark: string): string {
+  return `<div class="brandbar"><div class="logo"><img src="${logo}" alt="TOSS" /></div><div class="wm">${watermark}</div></div>`;
+}
+
+/** Bottom branding footer: code + website + optional QR + sponsor. */
+export function brandFooter(code: string, website: string, qrHtml = '', sponsorHtml = ''): string {
+  return `<div class="foot"><span>${code || ''}</span>${sponsorHtml}<span>${website || ''}</span>${qrHtml}</div>`;
+}
+
 /** Normalize a campaign into flat token map for the chosen template. */
 export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string, string> {
   const a = brand.accentPresets[c.accent as string] ? c.accent as string : undefined;
   const logo = inlineAsset(brand.logo.path) || '';
   const map: Record<string, string> = {
-    BRAND_CSS: brandCss(brand, c),
+    BRAND_CSS: brandCss(brand, c) + '\n' + loadDesignSystem(),
+    DESIGN_SYSTEM: loadDesignSystem(),
     LOGO: logo,
     WATERMARK: brand.watermark.text,
+    BG_CLASS: bgClass(c),
+    OVERLAY_CLASS: overlayClass(c),
+    WEBSITE: brand.social?.website || 'toss.gg',
     TITLE: (c.title as string) || '',
     SUBTITLE: (c.subtitle as string) || '',
     PRIZE: (c.prizeBadge as string) || (c.prize as string) || '',
     DATE: (c.date as string) || '',
     DEADLINE: (c.registrationDeadline as string) || '',
     CTA: (c.cta as string) || brand.cta.label,
+    CTA_HTML: ctaButton((c.cta as string) || brand.cta.label),
     TOURNAMENT_CODE: (c.tournamentCode as string) || '',
-    COUNTDOWN: c.countdown ? `<div class="countdown">⏱ ${c.countdown}</div>` : '',
-    AI_BADGE: c.aiRecommendation ? `<div class="aibadge">✦ ${c.aiRecommendation}</div>` : '',
+    TOURNAMENT_CODE_BADGE: badge((c.tournamentCode as string) ? `CODE ${c.tournamentCode}` : '', 'glass'),
+    STATUS_BADGE: badge(
+      (c.status as string) ? String(c.status).toUpperCase() : ((c.stage as string) ? String(c.stage).toUpperCase() : ''),
+      (c.status === 'live' || c.live) ? 'live' : 'solid',
+    ),
+    COUNTDOWN: c.countdown ? badge(`⏱ ${c.countdown}`, 'glass') : '',
+    AI_BADGE: c.aiRecommendation ? badge(`✦ ${c.aiRecommendation}`, 'outline') : '',
     PLAYERS: (c.players as string) || '',
     TEAM_A: (c.teamA as string) || '',
     TEAM_B: (c.teamB as string) || '',
+    MATCHUP: (c.teamA && c.teamB) ? `${c.teamA} vs ${c.teamB}` : '',
     SCORE_A: (c.scoreA !== undefined ? `${c.scoreA}` : ''),
     SCORE_B: (c.scoreB !== undefined ? `${c.scoreB}` : ''),
     ROUND: (c.round as string) || '',
     STAGE: (c.stage as string) || '',
     PERIOD: (c.period as string) || '',
     BODY: (c.body as string) || '',
+    BODY_CARD: (c.body as string) ? `<div class="glass" style="max-width:72%"><p class="t-body">${c.body}</p></div>` : '',
     FOOTER: (c.footer as string) || '',
+    PRIZE_CARD: infoCard('Prize', (c.prizeBadge as string) || (c.prize as string) || '—', 'glass', true),
+    PLAYERS_CARD: infoCard('Players', (c.players as string) || ((c.participantCount != null) ? `${c.participantCount}/${c.maxPlayers || ''}` : '—')),
+    DATE_CARD: infoCard('Kickoff', (c.date as string) || '—'),
+    DEADLINE_CARD: infoCard('Deadline', (c.registrationDeadline as string) || '—'),
+    VENUE_CARD: infoCard('Venue', (c.venue as string) || '—'),
     QR: qr ? `<img class="qr" src="${qr}" alt="QR" />` : '',
     SPONSOR: c.sponsorLogoUrl
-      ? `<img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" />`
-      : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" />` : '') : ''),
+      ? `<div class="sponsored"><img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" /></div>`
+      : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<div class="sponsored"><img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" /></div>` : '') : ''),
     ROWS: (c.rows && Array.isArray(c.rows) && c.rows.length) ? c.rows.join('') : '',
     WIN_A: (c as any).winner === 'A' ? 'win' : '',
     WIN_B: (c as any).winner === 'B' ? 'win' : '',
+    CHAMPION_RIBBON: (c.ribbon || c.champion) ? `<div class="ribbon">🏆 Champion</div>` : '',
+    WINNER_CARD: infoCard('Winner', (c.winnerName as string) || (c.teamName as string) || (c.prize as string) || '—', 'gradient'),
+    SEASON_LABEL: (c.season as string) ? `Season ${c.season}` : 'New Season',
+    BRAND_BAR: brandBar(logo, brand.watermark.text),
+    BRAND_FOOTER: brandFooter((c.tournamentCode as string) || '', brand.social?.website || 'toss.gg', qr ? `<img class="qr" src="${qr}" alt="QR" />` : '', c.sponsorLogoUrl ? `<div class="sponsored"><img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" /></div>` : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<div class="sponsored"><img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" /></div>` : '') : '')),
   };
   if (c.heroImage) {
     const h = inlineAsset(c.heroImage as string);
     if (h) map.HERO_IMAGE = h;
   }
   if (c.heroImageUrl) map.HERO_IMAGE = inlinePublic(c.heroImageUrl as string) || (c.heroImageUrl as string);
-  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<img class="hero-img" src="${map.HERO_IMAGE}" alt="" />` : '';
+  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<div class="hero-media"><img src="${map.HERO_IMAGE}" alt="" /></div>` : '';
   return map;
 }
 
@@ -153,8 +230,20 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
 export function qualityCheck(brand: Brand, c: Campaign, html: string): QualityIssue[] {
   const issues: QualityIssue[] = [];
   if (!c.title) issues.push({ rule: 'missing-title', detail: 'Campaign has no title' });
-  if (html.includes('{{LOGO}}')) issues.push({ rule: 'asset-missing', detail: 'Logo token not replaced' });
-  if (html.includes('{{TITLE}}')) issues.push({ rule: 'missing-title', detail: 'Title token not replaced' });
+  // Logo must be present and inlined (data URI) — never a broken/relative URL.
+  const logoBroken = html.includes('{{LOGO}}') || /src="\/marketing-out/.test(html);
+  if (logoBroken) issues.push({ rule: 'logo-missing', detail: 'Logo token unresolved or not inlined' });
+  // CTA must be present and styled (our .cta component) ONLY when the
+  // template actually requests one via {{CTA_HTML}}. Templates without a
+  // CTA (scoreboards, standings) are valid.
+  if (html.includes('{{CTA_HTML}}') && !html.includes('class="cta"')) {
+    issues.push({ rule: 'cta-hidden', detail: 'CTA placeholder present but button did not render' });
+  }
+  // No unresolved tokens of any brace-style may remain (catches template breakage).
+  if (/\{\{?\{?[A-Z0-9_]+\}?\}?\}/.test(html)) {
+    const leftover = html.match(/\{\{?\{?[A-Z0-9_]+\}?\}?\}/g)?.slice(0, 5).join(', ');
+    issues.push({ rule: 'unresolved-token', detail: `Unresolved token(s): ${leftover}` });
+  }
   // Required tokens per template
   const need: Record<string, string[]> = {
     champion: ['TITLE', 'SUBTITLE', 'PRIZE'],
@@ -173,7 +262,7 @@ export function qualityCheck(brand: Brand, c: Campaign, html: string): QualityIs
     'feature-announcement': ['TITLE'],
   };
   for (const k of need[c.template] || []) {
-    if (html.includes(`{{${k}}}`)) issues.push({ rule: 'missing-data', detail: `Required token ${k} not filled for ${c.template}` });
+    if (html.includes(`{{${k}}}`) || html.includes(`{{{${k}}}}`)) issues.push({ rule: 'missing-data', detail: `Required token ${k} not filled for ${c.template}` });
   }
   return issues;
 }

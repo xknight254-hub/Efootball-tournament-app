@@ -1,0 +1,181 @@
+/* ============================================================
+   TOSS BRAND STUDIO — DESIGN SYSTEM (primitives)
+   Every premium template inherits these. No hardcoded colors;
+   all read from brand CSS vars (see brandCss.ts).
+   Layers remain independent (bg / fx / hero / overlay / text /
+   cards / cta / branding) so a future engine can animate them.
+   ============================================================ */
+
+/* ── Spacing scale (never hardcode margins) ── */
+:root{
+  --sp-xs: 8px;  --sp-sm: 14px; --sp-md: 22px; --sp-lg: 34px; --sp-xl: 52px;
+  --safe-b: 6%;            /* bottom safe zone */
+  --safe-x: 6.5%;          /* side safe zone */
+}
+
+/* ── Typography hierarchy ── */
+.t-status{
+  font-family:var(--f-mono); font-weight:800; font-size:var(--fs-micro);
+  letter-spacing:.24em; text-transform:uppercase; color:var(--c-accent);
+}
+.t-name{
+  font-family:var(--f-display); font-weight:900; color:#fff; line-height:.92;
+  text-transform:uppercase; letter-spacing:.005em;
+  text-shadow:0 4px 30px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.6);
+}
+.t-sub{ font-family:var(--f-headline); font-weight:600; color:#cfd3da; font-size:var(--fs-title); }
+.t-stat{ font-family:var(--f-headline); font-weight:700; color:#fff; font-size:var(--fs-subtitle); }
+.t-body{ font-family:var(--f-body); color:rgba(255,255,255,.74); font-size:var(--fs-body); line-height:1.55; }
+
+/* ── Glass card ── */
+.glass{
+  position:relative;
+  background:rgba(18,18,22,.42);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:var(--r-lg);
+  box-shadow:0 18px 50px -18px rgba(0,0,0,.75);
+  padding:var(--sp-sm) var(--sp-md);
+}
+.glass.solid{ background:rgba(14,14,18,.92); backdrop-filter:none; }
+.glass.outline{ background:transparent; box-shadow:none; }
+.glass.gradient{ background:linear-gradient(135deg,var(--c-accent),rgba(0,0,0,.25)); border-color:transparent; }
+
+/* Info card (prize / players / date / venue / code) */
+.info-card{ display:flex; flex-direction:column; gap:4px; min-width:120px; }
+.info-card .k{ font-family:var(--f-mono); font-size:var(--fs-micro); letter-spacing:.16em;
+  text-transform:uppercase; color:var(--c-muted); }
+.info-card .v{ font-family:var(--f-headline); font-weight:800; font-size:var(--fs-subtitle); color:#fff; }
+.info-card .v.gold{ color:var(--c-accent); }
+
+/* ── CTA button ── */
+.cta{
+  display:inline-flex; align-items:center; justify-content:center; gap:12px;
+  align-self:flex-start;
+  background:linear-gradient(135deg,var(--c-accent),#ff8a1e);
+  color:#0c0c0e; font-family:var(--f-headline); font-weight:800;
+  font-size:var(--fs-subtitle); padding:18px 40px; border-radius:999px;
+  letter-spacing:.03em; text-transform:uppercase;
+  box-shadow:0 14px 34px -8px var(--c-accent), 0 2px 0 rgba(255,255,255,.25) inset;
+  border:none;
+}
+.cta:active{ transform:translateY(2px) scale(.99); filter:brightness(.96); }
+.cta svg{ width:1.1em; height:1.1em; }
+
+/* ── Badges ── */
+.badge{
+  display:inline-flex; align-items:center; gap:7px;
+  font-family:var(--f-mono); font-weight:800; font-size:var(--fs-micro);
+  letter-spacing:.16em; text-transform:uppercase;
+  padding:9px 16px; border-radius:999px;
+}
+.badge .ico{ width:1.05em; height:1.05em; }
+.badge.solid{ background:var(--c-accent); color:#0c0c0e; }
+.badge.glass{ background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#fff; backdrop-filter:blur(8px); }
+.badge.outline{ background:transparent; border:1px solid var(--c-accent); color:var(--c-accent); }
+.badge.live{ background:#e0231b; color:#fff; animation:pulse 1.6s ease-in-out infinite; }
+.badge.success{ background:var(--c-success); color:#06210f; }
+.badge.gold{ background:linear-gradient(135deg,var(--c-gold),#b8860b); color:#1a1405; }
+
+/* ── Shadows ── */
+.sh-soft{ box-shadow:0 8px 24px -10px rgba(0,0,0,.5); }
+.sh-med{ box-shadow:0 14px 36px -14px rgba(0,0,0,.65); }
+.sh-lg{ box-shadow:0 26px 64px -22px rgba(0,0,0,.8); }
+.sh-card{ box-shadow:0 18px 50px -18px rgba(0,0,0,.75); }
+.sh-glow{ box-shadow:0 14px 34px -8px var(--c-accent); }
+.sh-black{ box-shadow:0 24px 60px -20px rgba(0,0,0,.9); }
+
+/* ── Overlays (sit above hero, below text) ── */
+.ov{ position:absolute; inset:0; pointer-events:none; z-index:1; }
+.ov-bottom{ background:linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.5) 32%, rgba(0,0,0,0) 62%); }
+.ov-top{ background:linear-gradient(to bottom, rgba(0,0,0,.7) 0%, rgba(0,0,0,0) 40%); }
+.ov-left{ background:linear-gradient(to right, rgba(0,0,0,.8) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 72%); }
+.ov-right{ background:linear-gradient(to left, rgba(0,0,0,.8) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,0) 72%); }
+.ov-full{ background:rgba(8,8,11,.55); }
+.ov-glass{ background:rgba(255,255,255,.06); backdrop-filter:blur(6px); }
+.ov-blur{ backdrop-filter:blur(3px); background:rgba(8,8,11,.25); }
+.ov-orange{ background:radial-gradient(120% 90% at 50% 110%, rgba(255,120,30,.55) 0%, rgba(255,120,30,.12) 38%, rgba(0,0,0,0) 70%); }
+.ov-glow{ background:radial-gradient(80% 60% at 50% 0%, rgba(255,140,40,.28) 0%, rgba(0,0,0,0) 60%); }
+
+/* ── Backgrounds (reusable library) ── */
+.bg-stadium{ background:
+  radial-gradient(120% 80% at 50% -10%, #1b2a4a 0%, #0b1020 55%, #050608 100%); }
+.bg-flood{ background:
+  radial-gradient(40% 60% at 18% 20%, rgba(120,170,255,.22), transparent 60%),
+  radial-gradient(40% 60% at 82% 20%, rgba(120,170,255,.18), transparent 60%),
+  linear-gradient(180deg,#070b16,#03040a); }
+.bg-geo{ background:
+  conic-gradient(from 200deg at 70% 30%, rgba(255,120,30,.18), transparent 30%),
+  conic-gradient(from 20deg at 20% 80%, rgba(90,120,255,.16), transparent 30%),
+  linear-gradient(135deg,#0a0d16,#050608); }
+.bg-orange{ background:linear-gradient(135deg,#2a1405,#120a04 60%,#050302); }
+.bg-black{ background:linear-gradient(180deg,#0a0a0d,#040405); }
+.bg-mesh{ background:
+  radial-gradient(50% 50% at 20% 20%, rgba(255,120,30,.16), transparent 60%),
+  radial-gradient(50% 50% at 85% 70%, rgba(80,120,255,.14), transparent 60%),
+  linear-gradient(160deg,#0a0c14,#050608); }
+.bg-smoke{ background:
+  radial-gradient(60% 50% at 50% 120%, rgba(60,64,80,.5), transparent 70%),
+  linear-gradient(180deg,#0c0e15,#050608); }
+.bg-arena{ background:
+  radial-gradient(120% 80% at 50% 120%, rgba(255,120,30,.4) 0%, rgba(255,120,30,.08) 40%, transparent 70%),
+  linear-gradient(180deg,#0a0d18,#04050b); }
+.bg-min{ background:#08090c; }
+.bg-esports{ background:
+  linear-gradient(135deg,#10032a 0%,#06030f 50%,#020308 100%),
+  radial-gradient(60% 60% at 80% 10%, rgba(170,60,255,.22), transparent 60%); }
+
+/* ── Hero image handling ── */
+.hero-media{ position:absolute; inset:0; z-index:0; overflow:hidden; }
+.hero-media img{ width:100%; height:100%; object-fit:cover; object-position:center top; }
+.hero-media.cutout img{ object-fit:contain; object-position:center bottom; filter:drop-shadow(0 30px 60px rgba(0,0,0,.6)); }
+.hero-media.edge{ object-position:center; }
+
+/* ── Layout scaffolding ── */
+.stage{ position:relative; width:100%; height:100%; overflow:hidden; isolation:isolate; }
+.layer{ position:absolute; inset:0; }
+.content{ position:relative; z-index:3; display:flex; flex-direction:column; height:100%;
+  padding:var(--safe-x); }
+.content.bottom{ justify-content:flex-end; padding-bottom:var(--safe-b); }
+.content.top{ justify-content:flex-start; padding-top:var(--safe-b); }
+.content.center{ justify-content:center; }
+.row{ display:flex; align-items:center; gap:var(--sp-sm); }
+.row.wrap{ flex-wrap:wrap; }
+.col{ display:flex; flex-direction:column; gap:var(--sp-sm); }
+.gap-xs{ gap:var(--sp-xs); } .gap-sm{ gap:var(--sp-sm); }
+.gap-md{ gap:var(--sp-md); } .gap-lg{ gap:var(--sp-lg); }
+.spacer{ flex:1 1 auto; }
+
+/* safe-zone text alignment helpers */
+.align-bl{ align-items:flex-start; text-align:left; }
+.align-br{ align-items:flex-end; text-align:right; }
+.align-bc{ align-items:center; text-align:center; }
+.align-cl{ align-items:flex-start; text-align:left; justify-content:center; }
+.align-tl{ align-items:flex-start; text-align:left; }
+
+/* ── Branding strip ── */
+.brandbar{ position:relative; z-index:3; display:flex; align-items:center; justify-content:space-between;
+  gap:var(--sp-sm); }
+.brandbar .logo img{ height:var(--lockup); width:auto; }
+.brandbar .wm{ font-family:var(--f-mono); font-size:var(--fs-caption); color:rgba(255,255,255,.5);
+  letter-spacing:.08em; }
+.foot{ position:relative; z-index:3; display:flex; align-items:center; justify-content:space-between; gap:var(--sp-sm);
+  font-family:var(--f-mono); font-size:var(--fs-caption); color:rgba(255,255,255,.5); letter-spacing:.06em; }
+.sponsored img{ max-height:42px; width:auto; opacity:.92; }
+
+/* ── QR ── */
+.qr{ width:96px; height:96px; border-radius:var(--r-md); background:#fff; padding:6px; border:1px solid rgba(255,255,255,.2); }
+
+/* ── Champion ribbon / winner ── */
+.ribbon{ position:absolute; top:7%; left:0; z-index:4;
+  background:linear-gradient(135deg,var(--c-gold),#b8860b); color:#1a1405;
+  font-family:var(--f-headline); font-weight:900; text-transform:uppercase; letter-spacing:.06em;
+  padding:12px 26px 12px 22px; font-size:var(--fs-subtitle);
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.7); clip-path:polygon(0 0,100% 0,88% 100%,0 100%); }
+
+/* ── Animatable keyframes (future engine) ── */
+@keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
+@keyframes pulse-glow{ 0%,100%{ opacity:.85; filter:brightness(1) } 50%{ opacity:1; filter:brightness(1.25) } }
+@keyframes fade-in{ from{ opacity:0 } to{ opacity:1 } }
+@keyframes rise{ from{ opacity:0; transform:translateY(28px) } to{ opacity:1; transform:translateY(0) } }
