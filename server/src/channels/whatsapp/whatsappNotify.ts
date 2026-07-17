@@ -27,15 +27,65 @@ export async function sendDirectMessage(
   }
 }
 
-/** Publish a text update to the TOSS WhatsApp Status (broadcast story). */
-export async function publishStatus(sock: WASocket, text: string): Promise<boolean> {
+// Optional recipient targeting for a status. When omitted the status is
+// broadcast to the account's full contact list (phone-app default).
+export interface StatusTarget {
+  // Plain phone numbers or full JIDs. Accepts "+15551234567", "15551234567",
+  // or "15551234567@s.whatsapp.net". Resolved to JIDs below.
+  jidList?: string[];
+}
+
+export interface StatusContent {
+  text?: string;                 // caption (text status, or caption for media)
+  image?: { url: string } | Buffer;  // local path, URL, or raw buffer
+  video?: { url: string } | Buffer;
+  videoSeconds?: number;         // story duration for video (default 30)
+}
+
+/**
+ * Publish a WhatsApp Status (broadcast story) on behalf of the connected
+ * account. Supports text, image, and video — the full Baileys status surface.
+ * `target.jidList` restricts visibility to specific recipients; omit to send
+ * to all contacts. No-op-safe: returns false on any failure, never throws.
+ */
+export async function sendStatus(
+  sock: WASocket,
+  content: StatusContent,
+  target?: StatusTarget
+): Promise<boolean> {
   try {
-    await sock.sendMessage(STATUS_JID, { text });
+    const message: any = {};
+    if (content.image) message.image = content.image;
+    if (content.video) {
+      message.video = content.video;
+      message.seconds = content.videoSeconds ?? 30;
+    }
+    if (content.text) message.text = content.text;
+    if (!message.image && !message.video && !message.text) {
+      console.error('[whatsapp] sendStatus: empty content');
+      return false;
+    }
+    const opts: any = {};
+    if (target?.jidList && target.jidList.length) {
+      opts.statusJidList = target.jidList.map(normalizeStatusJid);
+    }
+    await sock.sendMessage(STATUS_JID, message, opts);
     return true;
   } catch (e: any) {
     console.error('[whatsapp] Status publish failed', e?.message);
     return false;
   }
+}
+
+function normalizeStatusJid(v: string): string {
+  if (v.includes('@')) return v;
+  const digits = v.replace(/[^0-9]/g, '');
+  return `${digits}@s.whatsapp.net`;
+}
+
+/** Publish a text update to the TOSS WhatsApp Status (broadcast story). */
+export async function publishStatus(sock: WASocket, text: string): Promise<boolean> {
+  return sendStatus(sock, { text });
 }
 
 function reverseLookup(userId: number): string | null {

@@ -16,7 +16,7 @@ import { processVerification } from '../../services/verificationService.js';
 import db from '../../db.js';
 import { linkStore } from './linkStore.js';
 import { getSettings } from './whatsappSettings.js';
-import { publishStatus, startReminderScheduler, runReminderCheck } from './whatsappNotify.js';
+import { publishStatus, sendStatus, startReminderScheduler, runReminderCheck, type StatusContent, type StatusTarget } from './whatsappNotify.js';
 import { getIO } from '../../socket/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -37,10 +37,22 @@ export function getQrCode(): string { return _qrCode; }
 let _pairingCode = '';
 export function getPairingCode(): string { return _pairingCode; }
 
-/** Publish a message to the TOSS WhatsApp Status (admin-triggered). */
+/** Publish a text update to the TOSS WhatsApp Status (admin-triggered). */
 export async function publishAdminStatus(text: string): Promise<boolean> {
   if (!whatsappSock) return false;
   return publishStatus(whatsappSock, text);
+}
+
+/**
+ * Publish a media/rich WhatsApp Status (admin-triggered). Supports text,
+ * image, and video. Optionally restrict viewers via target.jidList.
+ */
+export async function sendAdminStatus(
+  content: StatusContent,
+  target?: StatusTarget
+): Promise<boolean> {
+  if (!whatsappSock) return false;
+  return sendStatus(whatsappSock, content, target);
 }
 
 /** Run the reminder sweep immediately (admin-triggered). */

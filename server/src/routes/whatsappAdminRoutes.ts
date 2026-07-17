@@ -13,6 +13,7 @@ import { whatsappConfig, JWT_SECRET } from '../channels/whatsapp/config.js';
 import { AI_PROVIDERS } from '../channels/whatsapp/whatsappSettings.js';
 import {
   publishAdminStatus,
+  sendAdminStatus,
   triggerReminders,
   startWhatsAppChannel,
   stopWhatsAppChannel,
@@ -143,11 +144,21 @@ router.post('/logout', async (req, res) => {
 });
 
 // ─── WhatsApp Status publish (admin-triggered) ───
+// Accepts text, image, or video via a media URL/path. Examples:
+//   { "text": "TOSS is live 🔥" }
+//   { "image": "/var/www/img/winner.jpg", "text": "Congrats!" }
+//   { "video": "https://.../clip.mp4", "videoSeconds": 30 }
+//   { "text": "VIP only", "jidList": ["15551234567", "447700900000"] }
+// jidList (optional) restricts the status to those recipients.
 router.post('/status', async (req, res) => {
-  const text = (req.body?.text as string) || '';
-  if (!text.trim()) return res.status(400).json({ error: 'text required' });
+  const { text, image, video, videoSeconds, jidList } = req.body || {};
+  if (!text && !image && !video)
+    return res.status(400).json({ error: 'text, image, or video required' });
   try {
-    const ok = await publishAdminStatus(text);
+    const ok = await sendAdminStatus(
+      { text, image: image ? { url: image } : undefined, video: video ? { url: video } : undefined, videoSeconds },
+      jidList ? { jidList } : undefined
+    );
     if (ok) res.json({ ok: true });
     else res.status(409).json({ error: 'WhatsApp channel not connected' });
   } catch (e: any) {
