@@ -37,6 +37,7 @@ const FIELDS: Record<string, { key: string; label: string; placeholder?: string;
     { key: 'subtitle', label: 'Subtitle', placeholder: '32 Players' },
     { key: 'cta', label: 'CTA', placeholder: 'Register Now' },
     { key: 'tournamentCode', label: 'Tournament Code', placeholder: 'TOSS-7F3A' },
+    { key: 'qrText', label: 'QR Link (optional)', placeholder: 'https://toss.gg/join?code=TOSS-7F3A' },
   ],
   match: [
     { key: 'teamA', label: 'Team A', placeholder: 'xKnight' },
@@ -85,8 +86,11 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
     return v;
   });
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(initialCampaign?.heroImageUrl || null);
+  const [sponsorLogoUrl, setSponsorLogoUrl] = useState<string | null>(initialCampaign?.sponsorLogoUrl || null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingSponsor, setUploadingSponsor] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const sponsorRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -116,8 +120,9 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
     }
     // uploaded media asset (hero/sponsor)
     if (heroImageUrl) c.heroImageUrl = heroImageUrl;
+    if (sponsorLogoUrl) c.sponsorLogoUrl = sponsorLogoUrl;
     return c;
-  }, [template, size, accent, vals, heroImageUrl]);
+  }, [template, size, accent, vals, heroImageUrl, sponsorLogoUrl]);
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -129,6 +134,19 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
       toastErr(e.message || 'Upload failed');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleUploadSponsor = async (file: File) => {
+    setUploadingSponsor(true);
+    try {
+      const r = await api.marketing.upload(file);
+      setSponsorLogoUrl(r.url);
+      toastOk('Sponsor logo uploaded');
+    } catch (e: any) {
+      toastErr(e.message || 'Upload failed');
+    } finally {
+      setUploadingSponsor(false);
     }
   };
 
@@ -221,6 +239,25 @@ export function BrandStudio({ initialCampaign }: { initialCampaign?: any }) {
               )}
             </div>
             <p className="text-[10px] text-[var(--color-text-dim)] mt-1">Used as hero/sponsor image on feature & announcement templates.</p>
+          </div>
+
+          {/* Sponsor logo upload */}
+          <div>
+            <label className="text-xs font-medium text-[var(--color-text-muted)] block mb-2">Sponsor Logo (optional)</label>
+            <input ref={sponsorRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadSponsor(f); }} />
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => sponsorRef.current?.click()} isLoading={uploadingSponsor} className="text-sm">
+                {uploadingSponsor ? 'Uploading…' : 'Upload sponsor'}
+              </Button>
+              {sponsorLogoUrl && (
+                <div className="flex items-center gap-2">
+                  <img src={sponsorLogoUrl} alt="sponsor" className="h-8 rounded object-contain" style={{ border: '1px solid var(--color-border)' }} />
+                  <button onClick={() => setSponsorLogoUrl(null)} className="text-xs" style={{ color: '#f87171' }}>Remove</button>
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-[var(--color-text-dim)] mt-1">Shown on announcement, feature & registration templates.</p>
           </div>
 
           {/* Dynamic fields */}

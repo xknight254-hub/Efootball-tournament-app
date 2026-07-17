@@ -3,6 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { chromium, type Browser } from 'playwright-core';
 import sharp from 'sharp';
+import QRCode from 'qrcode';
 import type { Brand, Campaign, RenderResult, RenderSize, QualityIssue } from '../types/index.js';
 import { loadBrand, assetPath } from '../engine/brand.js';
 import { brandCss } from '../engine/brandCss.js';
@@ -69,8 +70,14 @@ function inlineAsset(rel: string): string | null {
   }
 }
 
+/** Generate a QR code data-URI from text/URL. */
+async function qrDataUri(text: string): Promise<string> {
+  const buf = await QRCode.toBuffer(text, { margin: 1, width: 240, errorCorrectionLevel: 'M' });
+  return `data:image/png;base64,${buf.toString('base64')}`;
+}
+
 /** Normalize a campaign into flat token map for the chosen template. */
-function tokensFor(brand: Brand, c: Campaign): Record<string, string> {
+function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string, string> {
   const a = brand.accentPresets[c.accent as string] ? c.accent as string : undefined;
   const logo = inlineAsset(brand.logo.path) || '';
   const map: Record<string, string> = {
@@ -96,8 +103,10 @@ function tokensFor(brand: Brand, c: Campaign): Record<string, string> {
     PERIOD: (c.period as string) || '',
     BODY: (c.body as string) || '',
     FOOTER: (c.footer as string) || '',
-    QR: c.qrCode ? `<img class="qr" src="${c.qrCode}" alt="QR" />` : '',
-    SPONSOR: c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" />` : '') : '',
+    QR: qr ? `<img class="qr" src="${qr}" alt="QR" />` : '',
+    SPONSOR: c.sponsorLogoUrl
+      ? `<img class="sponsor" src="${c.sponsorLogoUrl}" alt="sponsor" />`
+      : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" />` : '') : ''),
     ROWS: (c.rows && Array.isArray(c.rows) && c.rows.length) ? c.rows.join('') : '',
     WIN_A: (c as any).winner === 'A' ? 'win' : '',
     WIN_B: (c as any).winner === 'B' ? 'win' : '',
@@ -167,7 +176,12 @@ export async function renderCampaign(c: Campaign, opts: RenderOpts = {}): Promis
   const dim = RENDER_SIZES[sizeKey];
   if (!dim) throw new Error(`Unknown size: ${sizeKey}`);
 
-  const html = inject(loadTemplate(c.template), tokensFor(brand, c));
+  // Optional QR code: generate from qrText (or reuse a pre-supplied qrCode data-uri).
+  let qr: string | undefined;
+  if (c.qrText) qr = await qrDataUri(String(c.qrText));
+  else if ((c as any).qrCode) qr = (c as any).qrCode as string;
+
+  const html = inject(loadTemplate(c.template), tokensFor(brand, c, qr));
   const issues = qualityCheck(brand, c, html);
   if (issues.length) {
     throw new Error(`Quality check failed: ${issues.map(i => `${i.rule} (${i.detail})`).join('; ')}`);

@@ -84,6 +84,11 @@ h1{
   color:var(--c-accent);border:1px solid var(--c-accent);border-radius:var(--r-pill);
   padding:6px 14px;background:rgba(0,0,0,.25);
 }
+/* bottombar: footer + sponsor + qr */
+.bottombar{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:2;margin-top:24px}
+.sponsored{display:flex;align-items:center}
+.sponsored img.sponsor{max-height:40px;width:auto;opacity:.9}
+.qr{width:84px;height:84px;border-radius:var(--r-md);background:#fff;padding:5px;border:1px solid var(--c-line)}
 </style>
 </head>
 <body>
@@ -107,6 +112,12 @@ h1{
     {{PLAYER}}
 
     <div class="cta">▶ {{CTA}}</div>
+  </div>
+
+  <div class="bottombar">
+    <div class="footer">{{FOOTER}}</div>
+    <div class="sponsored">{{SPONSOR}}</div>
+    {{QR}}
   </div>
 
   <div class="wm">{{WATERMARK}}</div>
