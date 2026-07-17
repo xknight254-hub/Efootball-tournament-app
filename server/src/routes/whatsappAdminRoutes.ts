@@ -309,8 +309,16 @@ router.post('/marketing/render', async (req, res) => {
   if (!campaign || !campaign.template)
     return res.status(400).json({ error: 'campaign.template required' });
   try {
-    const r = await renderCampaign(campaign);
-    res.json({ ok: true, imagePath: r.imagePath, url: r.url, width: r.width, height: r.height, template: r.template, renderTimeMs: r.renderTimeMs });
+    const r = await renderCampaign(campaign, {
+      size: req.body?.size,
+      format: req.body?.format,
+      quality: req.body?.quality,
+      layout: req.body?.layout,
+      platform: req.body?.platform,
+      rotate: req.body?.rotate,
+      family: req.body?.family,
+    });
+    res.json({ ok: true, imagePath: r.imagePath, url: r.url, width: r.width, height: r.height, template: r.template, layout: r.layout, renderTimeMs: r.renderTimeMs });
   } catch (e: any) {
     res.status(422).json({ error: e.message });
   }
@@ -345,6 +353,42 @@ router.post('/marketing/render-gif', async (req, res) => {
   } catch (e: any) {
     res.status(422).json({ error: e.message });
   }
+});
+
+// ─── Brand Rendering Engine: list layout families + metadata ──
+import { CATALOG, selectLayout, layoutsForFamily, resetRotation, type Platform } from '../modules/marketing/renderer/layouts.js';
+
+router.get('/marketing/layouts', (_req, res) => {
+  const families = Array.from(new Set(CATALOG.map((l) => l.family)));
+  const byFamily: Record<string, any[]> = {};
+  for (const f of families) byFamily[f] = layoutsForFamily(f).map((l) => ({
+    id: l.id, shell: l.shell, heroPos: l.heroPos, textPos: l.textPos,
+    cardStyle: l.cardStyle, ctaStyle: l.ctaStyle, bg: l.bg, overlay: l.overlay,
+    orientation: l.orientation, supportsAnimation: l.supportsAnimation, priority: l.priority,
+  }));
+  res.json({ ok: true, families, total: CATALOG.length, layouts: byFamily });
+});
+
+router.post('/marketing/layouts/select', (req, res) => {
+  const { family, platform, orientation, hasHero, rotate, preferredLayout } = req.body || {};
+  try {
+    const sel = selectLayout({
+      family: family || 'announcement',
+      platform: (platform as Platform) || undefined,
+      orientation,
+      hasHero,
+      rotate: rotate ?? true,
+      preferredLayout,
+    });
+    res.json({ ok: true, layout: sel });
+  } catch (e: any) {
+    res.status(422).json({ error: e.message });
+  }
+});
+
+router.post('/marketing/layouts/reset', (req, res) => {
+  resetRotation(req.body?.family);
+  res.json({ ok: true });
 });
 
 // ─── Brand Rendering Engine: upload a media asset (hero/sponsor) ──

@@ -88,10 +88,11 @@ export const RENDER_SIZES: Record<RenderSize, { w: number; h: number; aspect: st
 // ─── Render result ─────────────────────────────────────────
 export interface RenderResult {
   imagePath: string;   // absolute on disk
-  url: string;          // served URL, e.g. /marketing-out/xxx.png
+  url: string;         // served URL, e.g. /marketing-out/xxx.png
   width: number;
   height: number;
   template: string;
+  layout?: string;     // selected layout id, e.g. "registration-open:hero-v2"
   renderTimeMs: number;
 }
 

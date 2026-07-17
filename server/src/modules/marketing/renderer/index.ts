@@ -8,6 +8,7 @@ import type { Brand, Campaign, RenderResult, RenderSize, QualityIssue } from '..
 import { loadBrand, assetPath } from '../engine/brand.js';
 import { brandCss } from '../engine/brandCss.js';
 import { RENDER_SIZES } from '../types/index.js';
+import { selectLayout, layoutTokens, type Layout } from './layouts.js';
 export { RENDER_SIZES };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -129,11 +130,10 @@ export function infoCard(k: string, v: string, variant = 'glass', gold = false):
   return `<div class="info-card glass ${variant}"><span class="k">${k}</span><span class="v${gold ? ' gold' : ''}">${v}</span></div>`;
 }
 
-/** CTA button. Maps known labels to lucide-safe glyphs (text only; icon optional). */
-export function ctaButton(label: string, icon?: string): string {
+/** CTA button. style: gradient|full|outline|glass|pill (matches layout ctaStyle). */
+export function ctaButton(label: string, style = 'gradient'): string {
   const lbl = label || 'Register Now';
-  const ico = icon ? `<span>${icon}</span>` : '';
-  return `<div class="cta">${ico}${lbl}</div>`;
+  return `<div class="cta ${style}">${lbl}</div>`;
 }
 
 /** Background class from a campaign bg hint, defaulting to arena/orange theme. */
@@ -161,7 +161,10 @@ export function brandFooter(code: string, website: string, qrHtml = '', sponsorH
 }
 
 /** Normalize a campaign into flat token map for the chosen template. */
-export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string, string> {
+export interface TokenOpts { cardStyle?: string; ctaStyle?: string; }
+export function tokensFor(brand: Brand, c: Campaign, qr?: string, opts: TokenOpts = {}): Record<string, string> {
+  const cardStyle: string = opts.cardStyle && ['glass','solid','outline','gradient'].includes(opts.cardStyle) ? opts.cardStyle : 'glass';
+  const ctaStyle: string = opts.ctaStyle && ['gradient','full','outline','glass','pill'].includes(opts.ctaStyle) ? opts.ctaStyle : 'gradient';
   const a = brand.accentPresets[c.accent as string] ? c.accent as string : undefined;
   const logo = inlineAsset(brand.logo.path) || '';
   const map: Record<string, string> = {
@@ -178,7 +181,10 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     DATE: (c.date as string) || '',
     DEADLINE: (c.registrationDeadline as string) || '',
     CTA: (c.cta as string) || brand.cta.label,
-    CTA_HTML: ctaButton((c.cta as string) || brand.cta.label),
+    CTA_HTML: ctaButton((c.cta as string) || brand.cta.label, ctaStyle),
+    KICKER: (c.kicker as string) || (c.stage as string) || (c.status === 'live' ? 'Live Now' : (c.status ? String(c.status).toUpperCase() : 'TOSS')) || 'TOSS',
+    SIDE: (c as any).heroPos === 'right' ? 'right' : '',
+    MATCHUP: (c.teamA && c.teamB) ? `<div class="row gap-md" style="align-items:stretch"><span class="team-badge">${c.teamA}</span><span class="t-stat" style="align-self:center">VS</span><span class="team-badge">${c.teamB}</span></div>` : '',
     TOURNAMENT_CODE: (c.tournamentCode as string) || '',
     TOURNAMENT_CODE_BADGE: badge((c.tournamentCode as string) ? `CODE ${c.tournamentCode}` : '', 'glass'),
     STATUS_BADGE: badge(
@@ -190,7 +196,6 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     PLAYERS: (c.players as string) || '',
     TEAM_A: (c.teamA as string) || '',
     TEAM_B: (c.teamB as string) || '',
-    MATCHUP: (c.teamA && c.teamB) ? `${c.teamA} vs ${c.teamB}` : '',
     SCORE_A: (c.scoreA !== undefined ? `${c.scoreA}` : ''),
     SCORE_B: (c.scoreB !== undefined ? `${c.scoreB}` : ''),
     ROUND: (c.round as string) || '',
@@ -199,12 +204,12 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     BODY: (c.body as string) || '',
     BODY_CARD: (c.body as string) ? `<div class="glass" style="max-width:72%"><p class="t-body">${c.body}</p></div>` : '',
     FOOTER: (c.footer as string) || '',
-    PRIZE_CARD: infoCard('Prize', (c.prizeBadge as string) || (c.prize as string) || '—', 'glass', true),
-    PLAYERS_CARD: infoCard('Players', (c.players as string) || ((c.participantCount != null) ? `${c.participantCount}/${c.maxPlayers || ''}` : '—')),
-    DATE_CARD: infoCard('Kickoff', (c.date as string) || '—'),
-    DEADLINE_CARD: infoCard('Deadline', (c.registrationDeadline as string) || '—'),
-    VENUE_CARD: infoCard('Venue', (c.venue as string) || '—'),
-    QR: qr ? `<img class="qr" src="${qr}" alt="QR" />` : '',
+    PRIZE_CARD: infoCard('Prize', (c.prizeBadge as string) || (c.prize as string) || '—', cardStyle as any, true),
+    PLAYERS_CARD: infoCard('Players', (c.players as string) || ((c.participantCount != null) ? `${c.participantCount}/${c.maxPlayers || ''}` : '—'), cardStyle as any),
+    DATE_CARD: infoCard('Kickoff', (c.date as string) || '—', cardStyle as any),
+    DEADLINE_CARD: infoCard('Deadline', (c.registrationDeadline as string) || '—', cardStyle as any),
+    VENUE_CARD: infoCard('Venue', (c.venue as string) || '—', cardStyle as any),
+    WINNER_CARD: infoCard('Winner', (c.winnerName as string) || (c.teamName as string) || (c.prize as string) || '—', 'gradient'),
     SPONSOR: c.sponsorLogoUrl
       ? `<div class="sponsored"><img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" /></div>`
       : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<div class="sponsored"><img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" /></div>` : '') : ''),
@@ -212,7 +217,6 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     WIN_A: (c as any).winner === 'A' ? 'win' : '',
     WIN_B: (c as any).winner === 'B' ? 'win' : '',
     CHAMPION_RIBBON: (c.ribbon || c.champion) ? `<div class="ribbon">🏆 Champion</div>` : '',
-    WINNER_CARD: infoCard('Winner', (c.winnerName as string) || (c.teamName as string) || (c.prize as string) || '—', 'gradient'),
     SEASON_LABEL: (c.season as string) ? `Season ${c.season}` : 'New Season',
     BRAND_BAR: brandBar(logo, brand.watermark.text),
     BRAND_FOOTER: brandFooter((c.tournamentCode as string) || '', brand.social?.website || 'toss.gg', qr ? `<img class="qr" src="${qr}" alt="QR" />` : '', c.sponsorLogoUrl ? `<div class="sponsored"><img class="sponsor" src="${inlinePublic(c.sponsorLogoUrl as string) || c.sponsorLogoUrl}" alt="sponsor" /></div>` : (c.sponsorLogo ? (inlineAsset(c.sponsorLogo as string) ? `<div class="sponsored"><img class="sponsor" src="${inlineAsset(c.sponsorLogo as string)}" alt="sponsor" /></div>` : '') : '')),
@@ -222,12 +226,12 @@ export function tokensFor(brand: Brand, c: Campaign, qr?: string): Record<string
     if (h) map.HERO_IMAGE = h;
   }
   if (c.heroImageUrl) map.HERO_IMAGE = inlinePublic(c.heroImageUrl as string) || (c.heroImageUrl as string);
-  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<div class="hero-media"><img src="${map.HERO_IMAGE}" alt="" /></div>` : '';
+  map.HERO_IMAGE_MEDIA = map.HERO_IMAGE ? `<div class="hero-media ${map.HERO_MODE || ''}"><img src="${map.HERO_IMAGE}" alt="" /></div>` : '';
   return map;
 }
 
 /** Quality gate. Returns issues; empty array = pass. */
-export function qualityCheck(brand: Brand, c: Campaign, html: string): QualityIssue[] {
+export function qualityCheck(brand: Brand, c: Campaign, html: string, layout?: Layout): QualityIssue[] {
   const issues: QualityIssue[] = [];
   if (!c.title) issues.push({ rule: 'missing-title', detail: 'Campaign has no title' });
   // Logo must be present and inlined (data URI) — never a broken/relative URL.
@@ -244,25 +248,22 @@ export function qualityCheck(brand: Brand, c: Campaign, html: string): QualityIs
     const leftover = html.match(/\{\{?\{?[A-Z0-9_]+\}?\}?\}/g)?.slice(0, 5).join(', ');
     issues.push({ rule: 'unresolved-token', detail: `Unresolved token(s): ${leftover}` });
   }
-  // Required tokens per template
+  // Family-level required content (replaces per-template; families are broader).
   const need: Record<string, string[]> = {
-    champion: ['TITLE', 'SUBTITLE', 'PRIZE'],
-    'live-now': ['TITLE', 'TEAM_A', 'TEAM_B'],
-    'tournament-announcement': ['TITLE'],
-    'registration-open': ['TITLE'],
-    fixture: ['TITLE', 'TEAM_A', 'TEAM_B'],
-    'match-reminder': ['TITLE', 'TEAM_A', 'TEAM_B'],
-    halftime: ['TITLE', 'TEAM_A', 'TEAM_B'],
-    'final-score': ['TITLE', 'TEAM_A', 'TEAM_B'],
-    standings: ['TITLE', 'ROWS'],
-    'top-scorers': ['TITLE', 'ROWS'],
+    champion: ['TITLE', 'SUBTITLE'],
+    'match-result': ['TITLE'],
+    'leaderboard': ['TITLE'],
     'player-of-the-match': ['TITLE', 'SUBTITLE'],
-    'new-season': ['TITLE'],
+    fixture: ['TITLE'],
+    announcement: ['TITLE'],
+    promotion: ['TITLE'],
     maintenance: ['TITLE'],
-    'feature-announcement': ['TITLE'],
+    'registration-open': ['TITLE'],
+    'registration-closing': ['TITLE'],
   };
-  for (const k of need[c.template] || []) {
-    if (html.includes(`{{${k}}}`) || html.includes(`{{{${k}}}}`)) issues.push({ rule: 'missing-data', detail: `Required token ${k} not filled for ${c.template}` });
+  const family = layout?.family || (c as any).family || '';
+  for (const k of need[family] || []) {
+    if (html.includes(`{{${k}}}`) || html.includes(`{{{${k}}}}`)) issues.push({ rule: 'missing-data', detail: `Required token ${k} not filled for ${family}` });
   }
   return issues;
 }
@@ -271,28 +272,83 @@ export interface RenderOpts {
   size?: RenderSize;
   format?: 'png' | 'jpeg';
   quality?: number;
+  layout?: string;       // explicit layout id/name (e.g. "hero-v2")
+  platform?: string;     // instagram | whatsapp | facebook | telegram | twitter
+  rotate?: boolean;      // avoid recently used layouts
+  family?: string;       // override campaign family
 }
+
+// Map legacy template ids → new layout families (backward compatible).
+const TEMPLATE_TO_FAMILY: Record<string, string> = {
+  'tournament-announcement': 'announcement',
+  'registration-open': 'registration-open',
+  'registration-closing': 'registration-closing',
+  'feature-announcement': 'announcement',
+  'live-now': 'match-result',
+  champion: 'champion',
+  'new-season': 'announcement',
+  'match-result': 'match-result',
+  'final-score': 'match-result',
+  'leaderboard': 'leaderboard',
+  standings: 'leaderboard',
+  'top-scorers': 'leaderboard',
+  'player-of-the-match': 'player-of-the-match',
+  fixture: 'fixture',
+  'match-reminder': 'fixture',
+  'halftime': 'match-result',
+  promotion: 'promotion',
+  maintenance: 'maintenance',
+};
 
 /**
  * Render a campaign into a branded image.
- * Pipeline: validate -> load template -> inject brand+data -> screenshot -> sharp -> store.
+ * Pipeline: validate -> select layout -> load shell -> inject brand+data -> screenshot -> sharp -> store.
  */
 export async function renderCampaign(c: Campaign, opts: RenderOpts = {}): Promise<RenderResult> {
   const t0 = Date.now();
   const brand = loadBrand();
-  if (!TEMPLATES[c.template]) throw new Error(`Unknown template: ${c.template}`);
+  if (!TEMPLATES[c.template] && !opts.family && !c.family) {
+    // still allow legacy template key; family derived below.
+  }
 
-  const sizeKey: RenderSize = opts.size || (c.size as RenderSize) || '1080x1080';
+  const sizeKey: RenderSize = opts.size || (c.size as RenderSize) || '1080x1350';
   const dim = RENDER_SIZES[sizeKey];
   if (!dim) throw new Error(`Unknown size: ${sizeKey}`);
+
+  // ── Layout selection ──
+  const family = opts.family || (c as any).family || TEMPLATE_TO_FAMILY[c.template] || 'announcement';
+  const hasHero = !!(c.heroImage || c.heroImageUrl);
+  const sel = selectLayout({
+    family,
+    platform: (opts.platform as any) || (c as any).platform,
+    orientation: sizeKey,
+    hasHero,
+    rotate: opts.rotate ?? true,
+    preferredLayout: opts.layout || (c as any).layout,
+  });
+  const lt = layoutTokens(sel);
 
   // Optional QR code: generate from qrText (or reuse a pre-supplied qrCode data-uri).
   let qr: string | undefined;
   if (c.qrText) qr = await qrDataUri(String(c.qrText));
   else if ((c as any).qrCode) qr = (c as any).qrCode as string;
 
-  const html = inject(loadTemplate(c.template), tokensFor(brand, c, qr));
-  const issues = qualityCheck(brand, c, html);
+  const map = tokensFor(brand, c, qr, { cardStyle: lt.CARD_STYLE, ctaStyle: lt.CTA_STYLE });
+  // Overlay layout-driven tokens onto the map.
+  map.SHELL = lt.SHELL;
+  map.HERO_POS = lt.HERO_POS;
+  map.TEXT_POS = lt.TEXT_POS;
+  map.CARD_STYLE = lt.CARD_STYLE;
+  map.CTA_STYLE = lt.CTA_STYLE;
+  map.BG = lt.BG;
+  map.OVERLAY = lt.OVERLAY;
+  map.HERO_MODE = lt.HERO_MODE;
+
+  const shellFile = lt.FILE;
+  const shellPath = join(TMPL_DIR, shellFile);
+  if (!existsSync(shellPath)) throw new Error(`Shell template missing: ${shellFile}`);
+  const html = inject(readFileSync(shellPath, 'utf8'), map);
+  const issues = qualityCheck(brand, c, html, sel);
   if (issues.length) {
     throw new Error(`Quality check failed: ${issues.map(i => `${i.rule} (${i.detail})`).join('; ')}`);
   }
@@ -318,7 +374,8 @@ export async function renderCampaign(c: Campaign, opts: RenderOpts = {}): Promis
     url: `/marketing-out/${fname}`,
     width: dim.w,
     height: dim.h,
-    template: c.template,
+    template: `${family}:${sel.id.split(':')[1]}`,
+    layout: sel.id,
     renderTimeMs: Date.now() - t0,
   };
 }

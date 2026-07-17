@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Russo+One&family=Sora:wght@600;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>{{{BRAND_CSS}}}</style>
+</head>
+<body class="{{BG}}">
+  <div class="stage {{HERO_POS}}">
+    {{HERO_IMAGE_MEDIA}}
+    <div class="ov {{OVERLAY}}"></div>
+    <div class="content">
+      {{BRAND_BAR}}
+      <div class="main {{TEXT_POS}}">
+        <div class="row wrap gap-xs">{{STATUS_BADGE}}{{COUNTDOWN}}</div>
+        <div class="col gap-xs" style="margin-top:var(--sp-xl)">
+          <div class="t-status">{{KICKER}}</div>
+          <h1 class="t-name" style="font-size:calc(var(--fs-display) * .82)">{{TITLE}}</h1>
+          <div class="t-sub">{{SUBTITLE}}</div>
+        </div>
+        <div class="info-row strip {{CARD_STYLE}}">{{PRIZE_CARD}}{{DATE_CARD}}{{DEADLINE_CARD}}</div>
+        {{CTA_HTML}}
+      </div>
+      {{BRAND_FOOTER}}
+    </div>
+  </div>
+</body>
+</html>
