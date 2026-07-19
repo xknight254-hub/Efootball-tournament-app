@@ -313,12 +313,18 @@ function table(): string {
       'SELECT id, name, format, status, entry_fee, prize_pool FROM tournaments ORDER BY created_at DESC LIMIT ?'
     )
     .all(whatsappConfig.maxTournaments) as any[];
-  if (rows.length === 0) return 'No tournaments yet.';
+  if (rows.length === 0)
+    return 'No tournaments open right now — new ones drop often, check back soon 🎾';
   const lines = rows.map(
     (t) =>
-      `#${t.id} ${t.name} · ${t.format} · ${t.status} · KSH ${t.entry_fee || 0}`
+      `#${t.id} ${t.name} · ${t.format} · ${t.status} · Ksh ${t.entry_fee || 0}`
   );
-  return ['📋 *Tournaments*', ...lines].join('\n');
+  return [
+    `🏆 *Live Tournaments* (${rows.length})`,
+    ...lines,
+    '',
+    'Send `join <id>` to jump in 🎟️',
+  ].join('\n');
 }
 
 function rank(): string {
@@ -335,12 +341,18 @@ function rank(): string {
       ORDER BY wager_earnings DESC, wins DESC LIMIT ?`
     )
     .all(whatsappConfig.maxRankings) as any[];
-  if (rows.length === 0) return 'No ranked players yet.';
+  if (rows.length === 0)
+    return 'No ranked players yet — go win some matches and top the board 👑';
   const lines = rows.map(
     (r, i) =>
-      `${i + 1}. ${r.username} · ${r.wins}W-${r.losses}L · KSH ${r.wager_earnings || 0}`
+      `${i + 1}. ${r.username} · ${r.wins}W-${r.losses}L · Ksh ${r.wager_earnings || 0}`
   );
-  return ['🏆 *Rankings*', ...lines].join('\n');
+  return [
+    `🏆 *Top Players* (${rows.length})`,
+    ...lines,
+    '',
+    'Send `me` to see your own record 📊',
+  ].join('\n');
 }
 
 function fixtures(idStr?: string): string {
